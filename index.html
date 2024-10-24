@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Moving Cows and Ricbin Blocks in a Barn</title>
+  <style>
+    body { margin: 0; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/three/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three/examples/js/controls/OrbitControls.js"></script>
+<script>
+  // Scene setup
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+  const renderer = new THREE.WebGLRenderer();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
+
+  // Enable shadow rendering
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Optional for soft shadows
+
+  // Orbit controls
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  camera.position.set(0, 50, 50);
+  controls.update();
+
+  // Create a barn frame (walls, ceiling, floor) with transparency for the walls
+  const wallMaterial = new THREE.MeshBasicMaterial({
+    color: 0x8B4513,   // brown walls
+    side: THREE.DoubleSide,
+    transparent: true, // enable transparency
+    opacity: 0.5       // set opacity to 50%
+     ,   roughness: 0.7,
+    metalness: 0.3,
+  });
+
+ // const wallMaterial = new THREE.MeshStandardMaterial({
+ //    color: 0x8B4513,   // brown walls
+ //    roughness: 0.7,
+ //    metalness: 0.3,
+ //    side: THREE.DoubleSide,
+ //    transparent: true,
+ //    opacity: 0.5 // 50% transparent
+ //  });
+  const floorGeometry = new THREE.PlaneGeometry(50, 50);
+  // const floorMaterial = new THREE.MeshBasicMaterial({ color: 0x808080, side: THREE.DoubleSide }); // grey floor
+    const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x808080, side: THREE.DoubleSide , roughness: 0.8, metalness: 0.9 });
+
+  const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+  floor.rotation.x = Math.PI / 2;
+  floor.receiveShadow = true; // The floor should receive shadows
+  scene.add(floor);
+
+  // Create 4 transparent walls
+  const wallGeometry = new THREE.PlaneGeometry(50, 10); // wall size
+  const backWall = new THREE.Mesh(wallGeometry, wallMaterial);
+  backWall.position.set(0, 5, -25); // move to back
+  scene.add(backWall);
+
+  const frontWall = new THREE.Mesh(wallGeometry, wallMaterial);
+  frontWall.position.set(0, 5, 25); // move to front
+  frontWall.rotation.y = Math.PI; // face the other way
+  scene.add(frontWall);
+
+  const leftWall = new THREE.Mesh(wallGeometry, wallMaterial);
+  leftWall.rotation.y = Math.PI / 2; // rotate for side wall
+  leftWall.position.set(-25, 5, 0); // move to left
+  scene.add(leftWall);
+
+  const rightWall = new THREE.Mesh(wallGeometry, wallMaterial);
+  rightWall.rotation.y = -Math.PI / 2; // rotate for side wall
+  rightWall.position.set(25, 5, 0); // move to right
+  scene.add(rightWall);
+
+  // Add a saddle roof (zadeldak)
+  const roofWidth = 50;
+  const roofHeight = 30;
+  const roofDepth = 30;
+
+  const roofGeometry1 = new THREE.PlaneGeometry(roofWidth, roofDepth); // One side of the roof
+  const roofGeometry2 = new THREE.PlaneGeometry(roofWidth, roofDepth); // Other side of the roof
+
+  const roofMaterial = new THREE.MeshBasicMaterial({ 
+      color: 0x8B4513, 
+      side: THREE.DoubleSide, 
+      transparent: true, 
+      opacity: 0.5 
+  });
+
+  // Create two meshes for the roof planes
+  const roof1 = new THREE.Mesh(roofGeometry1, roofMaterial);
+  const roof2 = new THREE.Mesh(roofGeometry2, roofMaterial);
+
+  rot = Math.PI / 2.9;
+  // Position and rotate the first roof plane
+  roof1.rotation.x = -rot; // Angle for the first plane
+  roof1.position.set(0, 17, roofHeight / 2.3); // Adjust position
+  roof1.castShadow = true; // Roof can cast shadows
+
+  // Position and rotate the second roof plane
+  roof2.rotation.x = rot; // Angle for the second plane
+  roof2.position.set(0, 17, -roofHeight / 2.3); // Adjust position
+  roof2.castShadow = true; // Roof can cast shadows
+
+  // Add the roof to the scene
+  scene.add(roof1);
+  scene.add(roof2);
+
+  // Create a PointLight at the top of the roof that casts shadows
+  const light1 = new THREE.PointLight(0xffffff, 1, 100); // White light, intensity 1, distance 100
+  light1.position.set(0, 20, 0); // Position at the top of the roof
+  light1.castShadow = true; // Enable shadow casting for the light
+  scene.add(light1);
+
+  // Optional: Add a second light for symmetry
+  const light2 = new THREE.PointLight(0xffffff, 1, 100); // Another white light
+  light2.position.set(0, 20, -roofHeight / 2.3); // Adjust position near the other side of the roof
+  light2.castShadow = true; // Enable shadow casting for this light as well
+  scene.add(light2);
+
+  // Add 2 rows of 32 blue blocks ("ricbin") in the middle of the barn
+  const ricbinBlocks = [];
+  const blueBlockGeometry = new THREE.BoxGeometry(1, 1, 1);
+  const blueBlockMaterial = new THREE.MeshBasicMaterial({ color: 0x0099ff }); // Blue blocks
+
+  // First row of blue blocks
+  for (let i = 0; i < 32; i++) {
+    const ricbin = new THREE.Mesh(blueBlockGeometry, blueBlockMaterial);
+    ricbin.position.set(-15 + i * 1.05, 0.5, 2); // Spaced by 0.05 units
+    ricbin.name = "ricbin";
+    ricbinBlocks.push(ricbin);
+    scene.add(ricbin);
+  }
+
+  // Second row of blue blocks
+  for (let i = 0; i < 32; i++) {
+    const ricbin = new THREE.Mesh(blueBlockGeometry, blueBlockMaterial);
+    ricbin.position.set(-15 + i * 1.05, 0.5, -2); // Spaced by 0.05 units
+    ricbin.name = "ricbin";
+    ricbinBlocks.push(ricbin);
+    scene.add(ricbin);
+  }
+
+  // Load texture for cow spots
+  const textureLoader = new THREE.TextureLoader();
+  const cowTexture = textureLoader.load('cow.jpg'); // Replace with cow spots texture URL
+
+  // Array for cubes (the "koeien")
+  const cubes = [];
+  const cubeSpeed = 0.05;
+  const cubeSize = 1;
+
+  // Create cubes with random positions and cow spots texture
+  for (let i = 0; i < 40; i++) {
+    const cubeGeometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
+    const cubeMaterial = new THREE.MeshBasicMaterial({ map: cowTexture });
+    const koe = new THREE.Mesh(cubeGeometry, cubeMaterial);
+
+    // Random starting position inside the barn
+    koe.position.set(
+      Math.random() * 40 - 20, // x position
+      cubeSize / 2,            // y position to sit on the floor
+      Math.random() * 40 - 20  // z position
+    );
+
+    // Random direction
+    koe.userData.direction = new THREE.Vector3(
+      Math.random() * 2 - 1,
+      0,
+      Math.random() * 2 - 1
+    ).normalize();
+
+    koe.name = "koe";
+    koe.castShadow = true; // Each cow casts shadows
+    cubes.push(koe);
+    scene.add(koe);
+  }
+
+  // Function to avoid collisions with other cubes and ricbin blocks
+  function avoidCollision(cube, index) {
+    // Avoid collisions with other cubes (koeien)
+    for (let i = 0; i < cubes.length; i++) {
+      if (i !== index) {
+        const otherCube = cubes[i];
+        const distance = cube.position.distanceTo(otherCube.position);
+        if (distance < cubeSize) {
+          const direction = new THREE.Vector3().subVectors(cube.position, otherCube.position).normalize();
+          cube.userData.direction.add(direction).normalize();
+        }
+      }
+    }
+
+    // Avoid collision with the ricbin blocks
+    ricbinBlocks.forEach(ricbin => {
+      const distanceToRicbin = cube.position.distanceTo(ricbin.position);
+      if (distanceToRicbin < 1.5) {
+        const direction = new THREE.Vector3().subVectors(cube.position, ricbin.position).normalize();
+        cube.userData.direction.add(direction).normalize();
+      }
+    });
+  }
+
+  // Animation loop
+  function animate() {
+    requestAnimationFrame(animate);
+
+    // Update cube positions
+    cubes.forEach((cube, index) => {
+      avoidCollision(cube, index);
+
+      // Move cubes in their respective directions
+      cube.position.add(cube.userData.direction.clone().multiplyScalar(cubeSpeed));
+
+      // Bounce off the barn walls
+      if (cube.position.x > 20 || cube.position.x < -20) cube.userData.direction.x *= -1;
+      if (cube.position.z > 20 || cube.position.z < -2) cube.userData.direction.z *= -1;
+    });
+
+    controls.update(); // Update controls
+    renderer.render(scene, camera);
+  }
+
+  animate();
+</script>
+
+
+
+</body>
+</html>
