@@ -273,11 +273,33 @@
     clearcoatRoughness: 0.1,
   });
 
-  for (let i = 0; i < 35; i++) {
-    const ricbin = new THREE.Mesh(blueBlockGeometry, blueBlockMaterial);
-    ricbin.position.set(-15 + i * 1.05, 0.5, 2);
-    ricbinBlocks.push(ricbin);
-    scene.add(ricbin);
+  for (let i = 0; i < 32; i++) {
+    
+
+
+
+    loader.load('ric.glb', (gltf) => {
+      const ricbin = gltf.scene;
+      ricbin.scale.set(6, 6, 6); // Scale the cow model
+      ricbin.position.set(-15 + i * 1.05, 0.5, 2);
+      ricbin.rotation.y =-2.4
+      ricbin.castShadow = true;
+      ricbinBlocks.push(ricbin);
+
+
+
+
+      scene.add(ricbin);
+
+    }, undefined, (error) => {
+      console.error(error);
+    });
+
+
+
+
+
+    // scene.add(ricbin);
   }
 
   for (let i = 0; i < 32; i++) {
