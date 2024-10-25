@@ -37,7 +37,7 @@
   });
 
   // Set initial camera position and orientation
-  camera.position.set(0, 5, 10); // Adjust height and distance
+  camera.position.set(0, 3, 10); // Adjust height and distance
   camera.lookAt(0, 0, 0); // Make sure the camera looks at the scene
 
   // Movement variables
@@ -263,7 +263,7 @@
 
   // Create ricbin blocks with reflective material
   const ricbinBlocks = [];
-  const blueBlockGeometry = new THREE.BoxGeometry(1, 1, 1);
+  const blueBlockGeometry = new THREE.BoxGeometry(20, 5, 5);
   const blueBlockMaterial = new THREE.MeshPhysicalMaterial({
     color: 0x0099ff,
     metalness: 0.8,
@@ -273,41 +273,43 @@
     clearcoatRoughness: 0.1,
   });
 
-  for (let i = 0; i < 32; i++) {
+  // for (let i = 0; i < 32; i++) {
     
 
-
-
-    loader.load('ric.glb', (gltf) => {
-      const ricbin = gltf.scene;
-      ricbin.scale.set(6, 6, 6); // Scale the cow model
-      ricbin.position.set(-15 + i * 1.05, 0.5, 2);
-      ricbin.rotation.y =-2.4
-      ricbin.castShadow = true;
-      ricbinBlocks.push(ricbin);
+  const skybox = new THREE.Mesh(blueBlockGeometry, blueBlockMaterial);
+  skybox.position.set(25, 8, 0);
+  scene.add(skybox);
 
 
 
+// Eén keer laden en vervolgens klonen
+loader.load('ric2.glb', (gltf) => {
+  const ricbinTemplate = gltf.scene;
+  ricbinTemplate.scale.set(8, 8, 8);
+  ricbinTemplate.castShadow = true;
 
-      scene.add(ricbin);
-
-    }, undefined, (error) => {
-      console.error(error);
-    });
-
-
-
-
-
-    // scene.add(ricbin);
-  }
-
+  // Instancing voor eerste reeks objecten
   for (let i = 0; i < 32; i++) {
-    const ricbin = new THREE.Mesh(blueBlockGeometry, blueBlockMaterial);
-    ricbin.position.set(-15 + i * 1.05, 0.5, -2);
+    const ricbin = ricbinTemplate.clone(); // Maak een kloon van het geladen model
+    ricbin.position.set(-15 + i * 1.05, 0, 2);
+    ricbin.rotation.y = -2.4;
     ricbinBlocks.push(ricbin);
     scene.add(ricbin);
   }
+
+  // Instancing voor tweede reeks objecten
+  for (let i = 0; i < 32; i++) {
+    const ricbin = ricbinTemplate.clone(); // Maak een kloon van het geladen model
+    ricbin.position.set(-15 + i * 1.05, 0, -2);
+    ricbin.rotation.y = 0.745;
+    ricbinBlocks.push(ricbin);
+    scene.add(ricbin);
+  }
+}, undefined, (error) => {
+  console.error(error);
+});
+
+
 
   // Animation loop
   function animate() {
