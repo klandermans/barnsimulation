@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Random Cow Movement</title>
+  <style>
+    body { margin: 0; overflow: hidden; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/three/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three/examples/js/loaders/GLTFLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three/examples/js/controls/PointerLockControls.js"></script>
+<script>
+  // Scene setup
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+  const renderer = new THREE.WebGLRenderer();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(window.devicePixelRatio); // Sharp rendering
+  document.body.appendChild(renderer.domElement);
+
+  // Enable shadow rendering
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+  // Pointer Lock Controls for first-person view
+  const controls = new THREE.PointerLockControls(camera, document.body);
+  document.body.addEventListener('click', () => {
+    controls.lock(); // Lock the pointer when clicked
+  });
+
+  controls.addEventListener('unlock', () => {
+    console.log("Pointer unlocked");
+  });
+
+  // Set initial camera position and orientation
+  camera.position.set(0, 5, 10); // Adjust height and distance
+  camera.lookAt(0, 0, 0); // Make sure the camera looks at the scene
+
+  // Movement variables
+  const movement = { forward: false, backward: false, left: false, right: false };
+  const speed = 0.1;
+
+  document.addEventListener('keydown', (event) => {
+    switch (event.code) {
+      case 'ArrowUp':
+      case 'KeyW':
+        movement.forward = true;
+        break;
+      case 'ArrowDown':
+      case 'KeyS':
+        movement.backward = true;
+        break;
+      case 'ArrowLeft':
+      case 'KeyA':
+        movement.left = true;
+        break;
+      case 'ArrowRight':
+      case 'KeyD':
+        movement.right = true;
+        break;
+    }
+  });
+
+  document.addEventListener('keyup', (event) => {
+    switch (event.code) {
+      case 'ArrowUp':
+      case 'KeyW':
+        movement.forward = false;
+        break;
+      case 'ArrowDown':
+      case 'KeyS':
+        movement.backward = false;
+        break;
+      case 'ArrowLeft':
+      case 'KeyA':
+        movement.left = false;
+        break;
+      case 'ArrowRight':
+      case 'KeyD':
+        movement.right = false;
+        break;
+    }
+  });
+
+  // Function to handle keyboard movement
+  function handleKeyboardMovement() {
+    if (movement.forward) controls.moveForward(speed);
+    if (movement.backward) controls.moveForward(-speed);
+    if (movement.left) controls.moveRight(-speed);
+    if (movement.right) controls.moveRight(speed);
+  }
+
+  // Handle gamepad input
+  function handleGamepadInput() {
+    const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+
+    if (gamepads[0]) {
+      const gamepad = gamepads[0];
+
+      // Left joystick: axes[0] for X-axis (left-right), axes[1] for Y-axis (up-down)
+      const leftX = gamepad.axes[0]; // Left-right movement
+      const leftY = gamepad.axes[1]; // Forward-backward movement
+
+      // Right joystick: axes[2] for camera look left-right, axes[3] for camera look up-down
+      const rightX = gamepad.axes[2];
+      const rightY = gamepad.axes[3];
+
+      // Move forward or backward based on Y-axis of left joystick
+      if (Math.abs(leftY) > 0.1) {  // Adding a deadzone to prevent drift
+        controls.moveForward(leftY * speed * -1); // Inverted Y-axis for forward-backward movement
+      }
+
+      // Move left or right based on X-axis of left joystick
+      if (Math.abs(leftX) > 0.1) {
+        controls.moveRight(leftX * speed); // Move camera left and right
+      }
+
+      // Look left or right based on X-axis of right joystick (camera rotation)
+      if (Math.abs(rightX) > 0.1) {
+        camera.rotation.y -= rightX * 0.05; // Adjust the multiplier for rotation sensitivity
+      }
+
+      // Look up or down based on Y-axis of right joystick
+      if (Math.abs(rightY) > 0.1) {
+        camera.rotation.x -= rightY * 0.05; // Adjust the multiplier for rotation sensitivity
+      }
+    }
+  }
+
+  // Load cow.glb and replace cube cows
+  const loader = new THREE.GLTFLoader();
+  const cowModels = [];
+  const mixers = []; // Array to store animation mixers
+  const cowSpeed = 0.05; // Adjust the speed of cow movement
+  const cowScale = 3; // Adjust the scale of the cow model
+
+  for (let i = 0; i < 64; i++) {
+    loader.load('cow4.glb', (gltf) => {
+      const cow = gltf.scene;
+      cow.scale.set(cowScale, cowScale, cowScale); // Scale the cow model
+      cow.position.set(
+        Math.random() * 10 - 20,
+        1, // Adjust the y position to ensure the cow is above ground level
+        Math.random() * 10 - 20
+      );
+      cow.userData.direction = new THREE.Vector3(
+        Math.random() * 2 - 1,
+        0,
+        Math.random() * 2 - 1
+      ).normalize();
+
+      cow.name = "cow";
+      cow.castShadow = true;
+      cowModels.push(cow);
+      scene.add(cow);
+
+      // Animation setup using AnimationMixer
+      const mixer = new THREE.AnimationMixer(cow);
+      mixers.push(mixer);
+
+      // Assuming the GLB file contains animations
+      if (gltf.animations.length > 0) {
+        const action = mixer.clipAction(gltf.animations[0]);
+        action.play(); // Play the first animation (walking or idle animation)
+      }
+    }, undefined, (error) => {
+      console.error(error);
+    });
+  }
+
+  // Function to randomly change direction
+  function randomDirectionChange(cow) {
+    // Generate a random number to decide if the cow should change direction
+    const changeChance = Math.random();
+    if (changeChance < 0.02) { // 2% kans per frame dat de richting verandert
+      const newDirection = new THREE.Vector3(
+        Math.random() * 2 - 1,
+        0,
+        Math.random() * 2 - 1
+      ).normalize();
+      cow.userData.direction = newDirection;
+      cow.rotation.y = Math.atan2(newDirection.x, newDirection.z); // Draai de koe in de nieuwe richting
+    }
+  }
+
+  // Function to handle cow movement and collision detection
+  function moveCow(cow, ricbinBlocks, walls) {
+    const forwardDirection = new THREE.Vector3();
+    cow.getWorldDirection(forwardDirection); // Get the forward direction of the cow
+
+    // Move cow forward
+    cow.position.add(forwardDirection.multiplyScalar(cowSpeed));
+
+    // Randomly change direction
+    randomDirectionChange(cow);
+
+    // Collision with ricbin blocks
+    ricbinBlocks.forEach(block => {
+      const distance = cow.position.distanceTo(block.position);
+      if (distance < 1.5) {
+        // Reverse the direction if collision with ricbin is detected
+        cow.userData.direction.negate();
+        cow.rotation.y += Math.PI; // Turn the cow around
+      }
+    });
+
+    // Collision with walls
+    if (
+      cow.position.x < -24.5 || cow.position.x > 24.5 ||
+      cow.position.z < -24.5 || cow.position.z > 24.5
+    ) {
+      // Reverse direction if a wall is hit
+      cow.userData.direction.negate();
+      cow.rotation.y += Math.PI; // Turn the cow around
+    }
+  }
+
+  // Lighting: Add both directional and ambient lights
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+  directionalLight.position.set(10, 20, 10); // Position of the light source
+  directionalLight.castShadow = true; // Enable shadows
+  scene.add(directionalLight);
+
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // Weak ambient light
+  scene.add(ambientLight);
+
+  // Barn setup (floor, walls, roof)
+  const floorGeometry = new THREE.PlaneGeometry(50, 50);
+  const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x808080, side: THREE.DoubleSide });
+  const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+  floor.rotation.x = Math.PI / 2;
+  floor.receiveShadow = true;
+  scene.add(floor);
+
+  // Add barn walls using MeshStandardMaterial
+  const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+  const wallGeometry = new THREE.PlaneGeometry(50, 10);
+
+  const backWall = new THREE.Mesh(wallGeometry, wallMaterial);
+  backWall.position.set(0, 5, -25);
+  scene.add(backWall);
+
+  const frontWall = new THREE.Mesh(wallGeometry, wallMaterial);
+  frontWall.position.set(0, 5, 25);
+  frontWall.rotation.y = Math.PI;
+  scene.add(frontWall);
+
+  const leftWall = new THREE.Mesh(wallGeometry, wallMaterial);
+  leftWall.rotation.y = Math.PI / 2;
+  leftWall.position.set(-25, 5, 0);
+  scene.add(leftWall);
+
+  const rightWall = new THREE.Mesh(wallGeometry, wallMaterial);
+  rightWall.rotation.y = -Math.PI / 2;
+  rightWall.position.set(25, 5, 0);
+  scene.add(rightWall);
+
+  const walls = [backWall, frontWall, leftWall, rightWall]; // Store walls for collision detection
+
+  // Create ricbin blocks with reflective material
+  const ricbinBlocks = [];
+  const blueBlockGeometry = new THREE.BoxGeometry(1, 1, 1);
+  const blueBlockMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0x0099ff,
+    metalness: 0.8,
+    roughness: 0.2,
+    reflectivity: 0.9,
+    clearcoat: 1,
+    clearcoatRoughness: 0.1,
+  });
+
+  for (let i = 0; i < 32; i++) {
+    const ricbin = new THREE.Mesh(blueBlockGeometry, blueBlockMaterial);
+    ricbin.position.set(-15 + i * 1.05, 0.5, 2);
+    ricbinBlocks.push(ricbin);
+    scene.add(ricbin);
+  }
+
+  for (let i = 0; i < 32; i++) {
+    const ricbin = new THREE.Mesh(blueBlockGeometry, blueBlockMaterial);
+    ricbin.position.set(-15 + i * 1.05, 0.5, -2);
+    ricbinBlocks.push(ricbin);
+    scene.add(ricbin);
+  }
+
+  // Animation loop
+  function animate() {
+    requestAnimationFrame(animate);
+
+    const delta = renderer.info.render.frame / 60; // Time since the last frame
+
+    // Update all mixers for animation
+    mixers.forEach(mixer => {
+      mixer.update(delta);
+    });
+
+    // Move the cows and check for collisions with ricbin blocks and walls
+    cowModels.forEach((cow, index) => {
+      moveCow(cow, ricbinBlocks, walls);
+    });
+
+    // Handle keyboard and gamepad input
+    handleKeyboardMovement();
+    handleGamepadInput();
+
+    renderer.render(scene, camera);
+  }
+
+  animate();
+</script>
+
+</body>
+</html>
