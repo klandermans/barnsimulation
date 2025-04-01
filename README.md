@@ -3,7 +3,19 @@
 
 https://klandermans.github.io/barnsimulation/
 
-This project is a Three.js scene that simulates a barn with moving "cows" (cubes) and rows of static "ricbin blocks" (blue cubes). The barn structure includes walls, a saddle roof, and interactive lighting effects. The cows avoid collisions with each other and the ricbin blocks, and the entire scene is illuminated by a point light. Shadows are rendered dynamically to add depth and realism.
+## About this project
+
+This project is a Three.js scene that simulates a barn with moving "cows" (represented as cubes) and rows of static ricbin blocks (blue cubes). The barn structure includes walls, a saddle roof, and interactive lighting effects. The cows move through the barn while avoiding collisions with each other and the ricbin blocks. A point light dynamically illuminates the entire scene, with shadows rendered to add depth and realism.
+
+## Purpose
+
+I created this project to inspire colleagues within Wageningen University & Research by showing how we can use simple 3D visualizations to make data or concepts more tangible, even in domains like agriculture and animal science.
+
+I’m not a game developer — I built this using tools and resources that were quickly available to me. My goal was not perfection, but creativity and exploration. I hope it sparks ideas and invites others to build further on it, improve it, or use it in ways I haven’t thought of yet.
+
+Let me know what you think, and feel free to fork and experiment!
+
+
 
 ## Features
 
