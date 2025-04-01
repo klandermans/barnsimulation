@@ -1,7 +1,7 @@
 
 # Barn simulation
 
-Click here for running example >> https://klandermans.github.io/barnsimulation/
+Click here for a running example >> https://klandermans.github.io/barnsimulation/
 
 ## About this project
 
