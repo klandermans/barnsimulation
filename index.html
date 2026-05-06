@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Barn Simulator</title>
+    <title>Barn Simulator - Lab Portal</title>
     <style>
-        /* Reset some default styles */
+        /* Reset default styles */
         * {
             margin: 0;
             padding: 0;
@@ -16,69 +16,173 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            background: linear-gradient(to bottom right, #f0f8ff, #e6e6fa);
-            font-family: Arial, sans-serif;
-            color: #333;
+            min-height: 100vh;
+            /* Dark, technical background gradient */
+            background: radial-gradient(circle at center, #0a192f 0%, #02060c 100%);
+            /* Technical, monospaced font family */
+            font-family: 'Courier New', Courier, monospace;
+            color: #e0f2f1; /* Light, cool text color */
+            overflow: hidden; /* Keep it contained like a screen */
+            padding: 20px;
         }
 
-        .container {
-            text-align: center;
-            padding: 20px;
-            background-color: #ffffff;
-            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
-            width: 80%;
-            max-width: 500px;
+        /* Scanline effect for screen texture */
+        body::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.05),
+                rgba(0, 0, 0, 0.05) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+        }
+
+        .lab-container {
+            text-align: left; /* Align left for technical readouts */
+            padding: 40px;
+            background-color: rgba(10, 25, 47, 0.85); /* Semi-transparent lab dark */
+            box-shadow: 0px 0px 30px rgba(0, 255, 255, 0.2); /* Subtle cyan glow */
+            border-radius: 12px;
+            width: 100%;
+            max-width: 700px;
+            border: 1px solid rgba(0, 255, 255, 0.1);
+            position: relative;
+        }
+
+        /* Portal header style */
+        .lab-header {
+            border-bottom: 2px solid rgba(0, 255, 255, 0.3);
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            position: relative;
         }
 
         h1 {
-            font-size: 2em;
-            color: #4b0082;
+            font-size: 2.5em;
+            color: #00ffff; /* Bright Cyan for titles */
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.7);
         }
 
-        p {
-            margin: 10px 0;
+        /* Metadata info box */
+        .protocol-label {
+            position: absolute;
+            top: 0;
+            right: 0;
+            font-size: 0.8em;
+            color: rgba(0, 255, 255, 0.5);
+            background: rgba(0, 0, 0, 0.3);
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        p.welcome-text {
+            margin: 15px 0 30px 0;
             font-size: 1.1em;
-            color: #555;
+            color: #b0bec5;
+            line-height: 1.6;
+            border-left: 3px solid rgba(0, 255, 255, 0.3);
+            padding-left: 15px;
         }
 
-        hr {
-            border: 0;
-            height: 1px;
-            background: #ddd;
-            margin: 20px 0;
+        /* Modular link container */
+        .access-modules {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
         }
 
-        .link {
-            display: inline-block;
+        /* Styled as technical access modules */
+        .link-module {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             font-size: 1.2em;
-            color: #ffffff;
-            background-color: #4b0082;
-            padding: 12px 20px;
-            border-radius: 5px;
+            color: #00ffff;
+            background-color: rgba(0, 0, 0, 0.4);
+            padding: 20px 30px;
+            border-radius: 8px;
             text-decoration: none;
-            transition: background-color 0.3s ease;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
         }
 
-        .link:hover {
-            background-color: #6a0dad;
+        /* Hover interaction: glowing module */
+        .link-module:hover {
+            background-color: rgba(0, 255, 255, 0.1);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+            transform: translateY(-2px);
+            border: 1px solid rgba(0, 255, 255, 0.5);
         }
+
+        /* Icon/Arrow for the module */
+        .link-module::after {
+            content: ":: ACCESS >";
+            font-size: 0.7em;
+            color: rgba(0, 255, 255, 0.5);
+            margin-left: 20px;
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+
+        .link-module:hover::after {
+            opacity: 1;
+            color: #00ffff;
+        }
+
+        /* Remove the horizontal lines, we use gap now */
+        hr {
+            display: none;
+        }
+
+        /* Input specific detail text within the link */
+        .input-detail {
+            font-size: 0.8em;
+            color: rgba(176, 190, 197, 0.8); /* Faded cool gray */
+            display: block;
+            margin-top: 5px;
+        }
+
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Barn Simulator</h1>
-        <p>Welcome to the ultimate barn simulation experience! Choose your adventure below:</p>
-        <hr>
-        <a href="camera" class="link">View Camera</a>
-        <hr>
-        <a href="game" class="link">Barn Simulation Experience (W, A, D & mouse, or with gamepad)</a>
+    <div class="lab-container">
+        <div class="lab-header">
+            <h1>Barn Simulator</h1>
+            <span class="protocol-label">PROTOCOL: BLCA-v4.2</span>
+        </div>
+        
+        <p class="welcome-text">Initialising system... Welcome to the ultimate barn simulation experience. Select access node below:</p>
+        
+        <div class="access-modules">
+            <a href="camera" class="link-module">
+                View Camera
+            </a>
 
-        <hr>
-        <a href="nlas" class="link">Nlas Simulation Experience (Cursors  / W, A, D & mouse, or with gamepad)</a>
+            <a href="game" class="link-module">
+                <div>
+                    Barn Simulation Experience
+                    <span class="input-detail">(Inputs: W, A, D & Mouse, or Gamepad)</span>
+                </div>
+            </a>
 
-
+            <a href="nlas" class="link-module">
+                <div>
+                    Nlas Simulation Experience
+                    <span class="input-detail">(Inputs: Cursors / W, A, D & Mouse, or Gamepad)</span>
+                </div>
+            </a>
+        </div>
     </div>
 </body>
 </html>
