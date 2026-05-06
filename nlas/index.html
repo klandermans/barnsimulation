@@ -289,7 +289,7 @@
         loadedChunks[chunkId] = 'loading';
         console.log("Fetching chunk", chunkId);
         
-        fetch(`/chunk/${chunkId}`)
+        fetch(`chunk/${chunkId}`)
             .then(r => {
                 if(!r.ok) throw new Error("HTTP error " + r.status);
                 return r.json();
