@@ -1,0 +1,385 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>3D Cow Tracker - Three.js</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #ui { 
+            position: absolute; top: 15px; left: 15px; 
+            background: rgba(255,255,255,0.9); 
+            padding: 15px; border-radius: 8px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            min-width: 300px;
+        }
+        #ui h3 { margin-top: 0; margin-bottom: 10px; color: #333; }
+        .controls { display: flex; align-items: center; margin-bottom: 10px; }
+        #playBtn { 
+            padding: 8px 15px; background: #007bff; color: white; 
+            border: none; border-radius: 4px; cursor: pointer; 
+            font-weight: bold; margin-right: 15px;
+        }
+        #playBtn:hover { background: #0056b3; }
+        #slider { flex-grow: 1; }
+        .info { font-size: 14px; color: #555; margin-bottom: 5px; }
+        #loading { color: #d9534f; font-weight: bold; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div id="ui">
+    <h3>🐮 3D Stal & Koeien</h3>
+    <div class="controls">
+        <button id="playBtn">Play</button>
+        <input type="range" id="slider" min="0" max="90000" value="0">
+    </div>
+    <div class="info" id="frameInfo">Frame: 0 / 90000</div>
+    <div class="info" id="timeInfo">Tijd: 0.0s</div>
+    <div class="info" id="cowInfo">Koeien in beeld: 0</div>
+    <div id="loading">Data inladen vanaf server (kan even duren)...</div>
+</div>
+
+<div id="container"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+<script>
+    // Config
+    const TOTAL_FRAMES = 30*500;
+    const CHUNK_SIZE = 500;
+    
+    // State
+    let framesData = new Array(TOTAL_FRAMES); // Sparse array for chunks
+    let loadedChunks = {}; // e.g. {0: 'loading', 1: 'loaded'}
+    let currentFrame = 0;
+    let isPlaying = false;
+
+    // ThreeJS Setup
+    THREE.Object3D.DefaultUp.set(0, 0, 1);
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xe0f7fa); // Lichte lucht kleur
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 10, 100000);
+    camera.position.set(5000, -8000, 12000);
+
+    const renderer = new THREE.WebGLRenderer({antialias: true});
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.getElementById('container').appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.target.set(5000, 10000, 0);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.update();
+
+    // Keyboard controls voor "lopen"
+    const keys = { w: false, a: false, s: false, d: false, ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
+    window.addEventListener('keydown', (e) => { if(keys.hasOwnProperty(e.key)) keys[e.key] = true; });
+    window.addEventListener('keyup', (e) => { if(keys.hasOwnProperty(e.key)) keys[e.key] = false; });
+
+    function handleWalking() {
+        const moveSpeed = 150; // mm per frame
+        const direction = new THREE.Vector3();
+        camera.getWorldDirection(direction);
+        direction.z = 0; // Blijf op de grond
+        direction.normalize();
+
+        const side = new THREE.Vector3().crossVectors(camera.up, direction).normalize();
+
+        if (keys.w || keys.ArrowUp) {
+            camera.position.addScaledVector(direction, moveSpeed);
+            controls.target.addScaledVector(direction, moveSpeed);
+        }
+        if (keys.s || keys.ArrowDown) {
+            camera.position.addScaledVector(direction, -moveSpeed);
+            controls.target.addScaledVector(direction, -moveSpeed);
+        }
+        if (keys.a || keys.ArrowLeft) {
+            camera.position.addScaledVector(side, moveSpeed);
+            controls.target.addScaledVector(side, moveSpeed);
+        }
+        if (keys.d || keys.ArrowRight) {
+            camera.position.addScaledVector(side, -moveSpeed);
+            controls.target.addScaledVector(side, -moveSpeed);
+        }
+    }
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.4);
+    dirLight.position.set(10000, 10000, 20000);
+    scene.add(dirLight);
+
+    // Bepaal de grenzen van de stal voor de grond
+    let minX = Infinity, maxX = -Infinity;
+    let minY = Infinity, maxY = -Infinity;
+    const floorPlan = {"Door": [[0, 18250], [1150, 15250]], "KR": [[1300, 18250], [2390, 15250]], "Service Area": [[9380, 18250], [10800, 4200]], "cubicle_A": [[2390, 18250.0], [9290, 15250]], "cubicle_B": [[0.0, 12720], [5750, 10220]], "cubicle_C": [[0.0, 10220], [5750, 7720]], "feed_passage": [[0.0, 4000.0], [10800.0, 2500.0]], "feeding_rack": [[0.0, 4200.0], [10800.0, 4000.0]], "slat_1a": [[1042.5, 4349.6], [1042.5, 7570.4]], "slat_1b": [[542.5, 12858.75], [542.5, 15101.25]], "slat_1c": [[6920, 7860.5], [6920, 12579.5]], "slat_2a": [[2142.5, 4349.6], [2142.5, 7570.4]], "slat_2b": [[1642.5, 12858.75], [1642.5, 15101.25]], "slat_2c": [[8030, 7860.5], [8030, 12579.5]], "slat_3a": [[3242.5, 4349.6], [3242.5, 7570.4]], "slat_3b": [[2742.5, 12858.75], [2742.5, 15101.25]], "slat_3c": [[9140, 7860.5], [9140, 12579.5]], "slat_4a": [[4342.5, 4349.6], [4342.5, 7570.4]], "slat_4b": [[3842.5, 12858.75], [3842.5, 15101.25]], "slat_5a": [[5442.5, 4349.6], [5442.5, 7570.4]], "slat_5b": [[4942.5, 12858.75], [4942.5, 15101.25]], "slat_6a": [[6542.5, 4349.6], [6542.5, 7570.4]], "slat_6b": [[6042.5, 12858.75], [6042.5, 15101.25]], "slat_7a": [[7642.5, 4349.6], [7642.5, 7570.4]], "slat_7b": [[7142.5, 12858.75], [7142.5, 15101.25]], "slat_8a": [[8742.5, 4349.6], [8742.5, 7570.4]], "slat_8b": [[8242.5, 12858.75], [8242.5, 15101.25]], "slat_a1_opening": [[0, 4349.6], [9380, 4349.6]], "slat_a8_opening": [[0, 7570.4], [9380, 7570.4]], "slat_b10_opening": [[0, 12858.75], [9380, 12858.75]], "slat_b15_opening": [[0, 15101.25], [9380, 15101.25]], "slat_c13_opening": [[5870, 12579.5], [9380, 12579.5]], "slat_c2_opening": [[5870, 7860.5], [9380, 7860.5]], "wall_A": [[5750, 12720], [5870, 7720]], "wall_b": [[1150, 18250], [1300, 15250]]};
+    
+    for (let key in floorPlan) {
+        let coords = floorPlan[key];
+        minX = Math.min(minX, coords[0][0], coords[1][0]);
+        maxX = Math.max(maxX, coords[0][0], coords[1][0]);
+        minY = Math.min(minY, coords[0][1], coords[1][1]);
+        maxY = Math.max(maxY, coords[0][1], coords[1][1]);
+    }
+    
+    // Lichtbruine grond exact afgestemd op de stal
+    let groundW = (maxX - minX) + 1000; // 1 meter extra marge rondom
+    let groundH = (maxY - minY) + 1000;
+    let groundCX = (maxX + minX) / 2;
+    let groundCY = (maxY + minY) / 2;
+
+    const groundGeom = new THREE.PlaneGeometry(groundW, groundH);
+    const groundMat = new THREE.MeshStandardMaterial({ color: 0xbc9b6a, roughness: 1.0 });
+    const ground = new THREE.Mesh(groundGeom, groundMat);
+    ground.position.set(groundCX, groundCY, -5); 
+    scene.add(ground);
+
+    const gridHelper = new THREE.GridHelper(Math.max(groundW, groundH), 20, 0x8c6239, 0x8c6239);
+    gridHelper.rotation.x = Math.PI / 2;
+    gridHelper.position.set(groundCX, groundCY, -4);
+    scene.add(gridHelper);
+
+    const axesHelper = new THREE.AxesHelper(3000);
+    scene.add(axesHelper);
+
+    // Bouw Stal
+    const fpMaterial = new THREE.MeshBasicMaterial({ color: 0x8b5a2b, transparent: true, opacity: 0.2, side: THREE.DoubleSide });
+    const edgeMaterial = new THREE.LineBasicMaterial({ color: 0x5c4033 });
+    const slatEdgeMaterial = new THREE.LineBasicMaterial({ color: 0x333333 });
+
+    for (let key in floorPlan) {
+        let coords = floorPlan[key];
+        let x1 = coords[0][0], y1 = coords[0][1];
+        let x2 = coords[1][0], y2 = coords[1][1];
+
+        if (key.includes("slat")) {
+            // Slats als simpele 1D lijnen in plaats van vlakken
+            let points = [new THREE.Vector3(x1, y1, 2), new THREE.Vector3(x2, y2, 2)];
+            let lineGeom = new THREE.BufferGeometry().setFromPoints(points);
+            let line = new THREE.Line(lineGeom, slatEdgeMaterial);
+            scene.add(line);
+        } else {
+            let w = Math.abs(x2 - x1);
+            let h = Math.abs(y2 - y1);
+            if (w === 0) w = 1; 
+            if (h === 0) h = 1; 
+            let cx = (x1 + x2) / 2;
+            let cy = (y1 + y2) / 2;
+
+            let geom = new THREE.PlaneGeometry(w, h);
+            let mesh = new THREE.Mesh(geom, fpMaterial);
+            mesh.position.set(cx, cy, 1);
+            scene.add(mesh);
+
+            let edges = new THREE.EdgesGeometry(geom);
+            let line = new THREE.LineSegments(edges, edgeMaterial);
+            line.position.set(cx, cy, 2);
+            scene.add(line);
+        }
+    }
+
+    // Bouw Cameras
+    const camCoords = {"217": [9238.377, 9900.058, 4804.996], "218": [396.4734, 10038.96, 4843.1], "219": [5148.143, 14969.01, 5629.784], "221": [470.8995, 10538.52, 4838.071], "222": [4629.804, 3303.612, 5622.846], "223": [4612.065, 14951.8, 5637.818], "224": [9167.643, 10376.84, 4835.977], "225": [5143.774, 3319.927, 5630.942]};
+    const camMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+    const camGeom = new THREE.BoxGeometry(300, 300, 300);
+
+    for (let key in camCoords) {
+        let pos = camCoords[key];
+        let mesh = new THREE.Mesh(camGeom, camMat);
+        mesh.position.set(pos[0], pos[1], pos[2]);
+        scene.add(mesh);
+        
+        let points = [new THREE.Vector3(pos[0], pos[1], pos[2]), new THREE.Vector3(pos[0], pos[1], 0)];
+        let lineGeom = new THREE.BufferGeometry().setFromPoints(points);
+        let line = new THREE.Line(lineGeom, new THREE.LineDashedMaterial({ color: 0x999999, dashSize: 200, gapSize: 100 }));
+        line.computeLineDistances();
+        scene.add(line);
+    }
+
+    // Koeien Data & Animatie State
+    let cowObjects = {}; 
+    const cowColors = [
+        0x1f77b4, 0xff7f0e, 0x2ca02c, 0xd62728, 0x9467bd, 
+        0x8c564b, 0xe377c2, 0x7f7f7f, 0xbcbd22, 0x17becf,
+        0x393b79, 0x5254a3, 0x6b6ecf, 0x9c9ede, 0x637939
+    ];
+
+    function updateCows(cows) {
+        for (let id in cowObjects) {
+            cowObjects[id].spheres.forEach(s => s.visible = false);
+            cowObjects[id].lines.forEach(l => l.visible = false);
+        }
+        
+        if(!cows) return;
+
+        cows.forEach(cow => {
+            let id = cow.id;
+            if (!cowObjects[id]) {
+                let color = cowColors[id % cowColors.length];
+                let mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.4 });
+                let geom = new THREE.SphereGeometry(150, 16, 16); 
+                
+                let spheres = [];
+                for(let i=0; i<4; i++) {
+                    let s = new THREE.Mesh(geom, mat);
+                    scene.add(s);
+                    spheres.push(s);
+                }
+                
+                let lineMat = new THREE.LineBasicMaterial({ color: color, linewidth: 4 });
+                let lines = [];
+                for(let i=0; i<3; i++) {
+                    let lGeom = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+                    let l = new THREE.Line(lGeom, lineMat);
+                    scene.add(l);
+                    lines.push(l);
+                }
+                cowObjects[id] = { spheres, lines };
+            }
+            
+            let obj = cowObjects[id];
+            
+            for(let i=0; i<4; i++) {
+                let p = cow.kps[i];
+                if (p[0] !== null) {
+                    obj.spheres[i].position.set(p[0], p[1], p[2]);
+                    obj.spheres[i].visible = true;
+                } else {
+                    obj.spheres[i].visible = false;
+                }
+            }
+            
+            const skeleton = [[0,1], [1,2], [2,3]];
+            for(let i=0; i<3; i++) {
+                let p1 = cow.kps[skeleton[i][0]];
+                let p2 = cow.kps[skeleton[i][1]];
+                if (p1[0] !== null && p2[0] !== null) {
+                    obj.lines[i].geometry.setFromPoints([
+                        new THREE.Vector3(p1[0], p1[1], p1[2]),
+                        new THREE.Vector3(p2[0], p2[1], p2[2])
+                    ]);
+                    obj.lines[i].visible = true;
+                } else {
+                    obj.lines[i].visible = false;
+                }
+            }
+        });
+    }
+
+    function updateUI() {
+        document.getElementById('frameInfo').innerText = `Frame: ${currentFrame} / ${TOTAL_FRAMES - 1}`;
+        document.getElementById('slider').value = currentFrame;
+        
+        let seconds = currentFrame / 25.0; // 25 FPS base
+        document.getElementById('timeInfo').innerText = `Tijd: ~${seconds.toFixed(1)}s`;
+        
+        if(framesData[currentFrame] && framesData[currentFrame].cows) {
+            document.getElementById('cowInfo').innerText = `Koeien in beeld: ${framesData[currentFrame].cows.length}`;
+        } else {
+            document.getElementById('cowInfo').innerText = `Koeien in beeld: laden...`;
+        }
+    }
+
+    function loadChunk(chunkId) {
+        if (chunkId * CHUNK_SIZE >= TOTAL_FRAMES && chunkId !== 0) return; 
+        if (loadedChunks[chunkId]) return; 
+        
+        loadedChunks[chunkId] = 'loading';
+        console.log("Fetching chunk", chunkId);
+        
+        fetch(`/chunk/${chunkId}`)
+            .then(r => {
+                if(!r.ok) throw new Error("HTTP error " + r.status);
+                return r.json();
+            })
+            .then(data => {
+                console.log("Received chunk", chunkId, data.length + " frames");
+                let startIdx = chunkId * CHUNK_SIZE;
+                for(let i=0; i<data.length; i++) {
+                    framesData[startIdx + i] = data[i];
+                }
+                loadedChunks[chunkId] = 'loaded';
+                
+                if(chunkId === 0) {
+                    document.getElementById('loading').style.display = 'none';
+                    if (framesData[currentFrame]) {
+                        updateCows(framesData[currentFrame].cows);
+                        updateUI();
+                    }
+                }
+            })
+            .catch(err => {
+                console.error("Chunk load error:", err);
+                document.getElementById('loading').innerText = "Fout bij laden data: " + err.message;
+            });
+    }
+
+    // Load initial chunk
+    loadChunk(0);
+
+    // Controls
+    document.getElementById('playBtn').onclick = () => { 
+        isPlaying = !isPlaying; 
+        document.getElementById('playBtn').innerText = isPlaying ? "Pause" : "Play";
+    };
+    
+    document.getElementById('slider').oninput = (e) => {
+        currentFrame = parseInt(e.target.value);
+        let requiredChunk = Math.floor(currentFrame / CHUNK_SIZE);
+        loadChunk(requiredChunk);
+        
+        if(framesData[currentFrame]) {
+            updateCows(framesData[currentFrame].cows);
+        }
+        updateUI();
+    };
+
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }, false);
+
+    // Animatie Loop
+    let lastTime = 0;
+    const fps = 25; 
+    const frameDuration = 1000 / fps;
+
+    function animate(time) {
+        requestAnimationFrame(animate);
+        
+        handleWalking(); // Zorg dat we kunnen lopen met toetsen
+        
+        if (isPlaying) {
+            if (time - lastTime > frameDuration) {
+                currentFrame++;
+                if (currentFrame >= TOTAL_FRAMES) currentFrame = 0;
+                
+                let currentChunk = Math.floor(currentFrame / CHUNK_SIZE);
+                // Ensure current chunk is loading
+                loadChunk(currentChunk);
+                // Prefetch next chunk
+                loadChunk(currentChunk + 1);
+
+                if(framesData[currentFrame]) {
+                    updateCows(framesData[currentFrame].cows);
+                    updateUI();
+                } else {
+                    // Buffering...
+                    document.getElementById('cowInfo').innerText = "Buffering...";
+                }
+                
+                lastTime = time;
+            }
+        }
+        
+        controls.update();
+        renderer.render(scene, camera);
+    }
+    animate(0);
+
+</script>
+</body>
+</html>
