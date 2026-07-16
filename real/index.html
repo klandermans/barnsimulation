@@ -657,8 +657,13 @@
             if (loadingEl) loadingEl.style.display = 'none';
             initCows();
         });
+    }, undefined, function (err) {
+        console.error("Error loading cow model:", err);
+        clearInterval(loaderTimer);
+        document.getElementById('loading').innerText = "Neural Geometry Engine Error: " + err.message;
+    });
 
-    // Helper functions for cow AI state machine and obstacle checks
+    // Helper functions for cow AI state machine and obstacle checks (globally accessible)
     function isPosInObstacle(x, y) {
         // 1. Service Area
         if (x >= 9380 && x <= 10800 && y >= 4200 && y <= 18250) return true;
@@ -696,11 +701,6 @@
             return { x, y, angle };
         }
     }
-    }, undefined, function (err) {
-        console.error("Error loading cow model:", err);
-        clearInterval(loaderTimer);
-        document.getElementById('loading').innerText = "Neural Geometry Engine Error: " + err.message;
-    });
 
     // Initialize Cows List
     function initCows() {
@@ -772,7 +772,7 @@
             wAngle = pos.angle;
             
             // Lay down: roll model and lower it
-            model.rotation.x = -1.4;
+            model.rotateOnAxis(new THREE.Vector3(1, 0, 0), -1.4);
             model.position.z = 200;
         } else {
             wAngle = Math.random() * Math.PI * 2;
@@ -926,6 +926,16 @@
         cowsList.forEach((cow, idx) => {
             cow.group.visible = showModels;
             
+            // Reset to default standing rotation and height every frame
+            cow.model.rotation.set(rotX, rotY, rotZ);
+            cow.model.position.z = cow.defaultModelZ;
+            
+            // If lying down, apply the local roll rotation and lower position
+            if (cow.state === "lying") {
+                cow.model.rotateOnAxis(new THREE.Vector3(1, 0, 0), -1.4);
+                cow.model.position.z = 200; // lower relative to default standing height
+            }
+            
             if (isPlaying) {
                 // Initialize state if not present (defensive)
                 if (!cow.state) {
@@ -970,8 +980,6 @@
                         } while (isPosInObstacle(rx, ry) && tries < 100);
                         
                         cow.group.position.set(rx, ry, -5);
-                        cow.model.rotation.x = 0;
-                        cow.model.position.z = cow.defaultModelZ;
                         
                         // Play walk animation
                         if (cow.mixer) {
@@ -992,10 +1000,6 @@
                         cow.group.position.set(pos.x, pos.y, -5);
                         cow.wanderAngle = pos.angle;
                         cow.group.rotation.z = pos.angle;
-                        
-                        // Lay down: roll model and lower it
-                        cow.model.rotation.x = -1.4; // rolled on side
-                        cow.model.position.z = 200; // lower relative to default standing height
                         
                         // Freeze animation
                         if (cow.mixer) {
