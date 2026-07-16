@@ -754,8 +754,11 @@
         const cowGroup = new THREE.Group();
         scene.add(cowGroup);
         
+        const rollGroup = new THREE.Group();
+        cowGroup.add(rollGroup);
+        
         const model = cloneSkinnedMesh(cowModel);
-        cowGroup.add(model);
+        rollGroup.add(model);
         
         // Apply domain randomization: individual cow texture colors to create different breeds/patterns
         model.traverse(child => {
@@ -797,7 +800,8 @@
         // Dynamically compute the bounding box of the rotated model to align the bottom of the feet exactly with the ground (Z=0 in group)
         model.updateMatrixWorld(true);
         const localBox = new THREE.Box3().setFromObject(model);
-        model.position.z = -localBox.min.z;
+        const defaultModelZ = -localBox.min.z;
+        model.position.z = defaultModelZ;
         
         const state = Math.random() < 0.3 ? "lying" : "walking";
         const stateTimer = 10 + Math.random() * 40;
@@ -809,9 +813,9 @@
             ry = pos.y;
             wAngle = pos.angle;
             
-            // Lay down: roll model and lower it
-            model.rotation.set(-1.4, rotY, rotZ);
-            model.position.z = defaultModelZ * 0.35;
+            // Lay down: roll rollGroup, model remains upright relative to rollGroup
+            rollGroup.rotation.x = -1.4;
+            rollGroup.position.z = -defaultModelZ * 0.65;
         } else {
             wAngle = Math.random() * Math.PI * 2;
             let tries = 0;
@@ -919,10 +923,9 @@
         boxHelper.layers.set(1); // Set to Layer 1 (skeletons/boxes layer)
         scene.add(boxHelper);
         
-        const defaultModelZ = -localBox.min.z;
-        
         return {
             group: cowGroup,
+            rollGroup,
             model,
             mixer,
             spheres,
@@ -966,13 +969,13 @@
         cowsList.forEach((cow, idx) => {
             cow.group.visible = showModels;
             
-            // Reset to default standing rotation and height or apply lying down values every frame
+            // Apply roll and translation to rollGroup based on state
             if (cow.state === "lying") {
-                cow.model.rotation.set(-1.4, rotY, rotZ);
-                cow.model.position.z = cow.defaultModelZ * 0.35;
+                cow.rollGroup.rotation.x = -1.4;
+                cow.rollGroup.position.z = -cow.defaultModelZ * 0.65;
             } else {
-                cow.model.rotation.set(rotX, rotY, rotZ);
-                cow.model.position.z = cow.defaultModelZ;
+                cow.rollGroup.rotation.x = 0;
+                cow.rollGroup.position.z = 0;
             }
             
             if (isPlaying) {
