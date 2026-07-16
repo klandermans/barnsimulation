@@ -178,6 +178,14 @@
         <label style="cursor: pointer; font-size: 13px; color: #e0f2f1; display: flex; align-items: center;"><input type="checkbox" id="showModels" checked style="margin-right: 6px;"> Render Skinned Meshes</label>
         <label style="cursor: pointer; font-size: 13px; color: #e0f2f1; display: flex; align-items: center;"><input type="checkbox" id="showKeypoints" checked style="margin-right: 6px;"> Superimpose 19-Joint Skeletons</label>
         <label style="cursor: pointer; font-size: 13px; color: #e0f2f1; display: flex; align-items: center;"><input type="checkbox" id="show3DBoxes" checked style="margin-right: 6px;"> Show 3D Bounding Boxes</label>
+        
+        <div style="margin-top: 4px; display: flex; flex-direction: column; gap: 4px;">
+            <span style="font-size: 11px; color: #b0bec5; font-weight: bold; font-family: monospace;">2D BBOX METHOD:</span>
+            <select id="bboxTypeSelect" style="background: rgba(10, 25, 47, 0.8); color: #00ffff; border: 1px solid rgba(0,255,255,0.3); border-radius: 4px; padding: 4px; font-family: inherit; font-size: 11px; cursor: pointer; outline: none; font-weight: bold; width: 100%;">
+                <option value="object" selected>Object-Based (3D Mesh outline)</option>
+                <option value="keypoints">Keypoint-Based (19 Joints)</option>
+            </select>
+        </div>
     </div>
 
     <!-- Simultaneous Recording of all 8 cameras -->
@@ -1377,6 +1385,8 @@
             });
             cowBoxesModal.sort((a, b) => a.dist - b.dist);
             
+            const bboxType = document.getElementById('bboxTypeSelect')?.value ?? 'object';
+
             cowsList.forEach((cow, cowIndex) => {
                 const cowWorldPos = new THREE.Vector3();
                 cow.group.getWorldPosition(cowWorldPos);
@@ -1391,6 +1401,10 @@
 
                 // 1. Project 19 keypoints (used strictly for YOLO Pose keypoints coordinate logging)
                 const keypointData = [];
+                let kp_x_min = 2; let kp_x_max = -1;
+                let kp_y_min = 2; let kp_y_max = -1;
+                let kp_visible_count = 0;
+
                 cow.spheres.forEach((sphere, sIdx) => {
                     const projVec = new THREE.Vector3();
                     projVec.copy(sphere.position);
@@ -1431,46 +1445,78 @@
                                 }
                             }
                         }
+
+                        if (pv > 0) {
+                            if (sx < kp_x_min) kp_x_min = sx;
+                            if (sx > kp_x_max) kp_x_max = sx;
+                            if (sy < kp_y_min) kp_y_min = sy;
+                            if (sy > kp_y_max) kp_y_max = sy;
+                            kp_visible_count++;
+                        }
                     }
                     keypointData.push(`${sx.toFixed(5)},${sy.toFixed(5)},${pv}`);
                 });
 
-                // 2. Project the 8 corners of the 3D Bounding Box (used for accurate 2D Bounding Box detection)
-                const cowBox = new THREE.Box3().setFromObject(cow.model);
-                const corners = [
-                    new THREE.Vector3(cowBox.min.x, cowBox.min.y, cowBox.min.z),
-                    new THREE.Vector3(cowBox.min.x, cowBox.min.y, cowBox.max.z),
-                    new THREE.Vector3(cowBox.min.x, cowBox.max.y, cowBox.min.z),
-                    new THREE.Vector3(cowBox.min.x, cowBox.max.y, cowBox.max.z),
-                    new THREE.Vector3(cowBox.max.x, cowBox.min.y, cowBox.min.z),
-                    new THREE.Vector3(cowBox.max.x, cowBox.min.y, cowBox.max.z),
-                    new THREE.Vector3(cowBox.max.x, cowBox.max.y, cowBox.min.z),
-                    new THREE.Vector3(cowBox.max.x, cowBox.max.y, cowBox.max.z)
-                ];
+                let x1, x2, y1, y2;
+                let hasBox = false;
 
-                let x_min = 2; let x_max = -1;
-                let y_min = 2; let y_max = -1;
-                let inFrontCount = 0;
-
-                corners.forEach(corner => {
-                    const proj = corner.clone().project(modalCamera);
-                    const sx = (proj.x + 1) / 2;
-                    const sy = (-proj.y + 1) / 2;
-                    if (proj.z >= -1 && proj.z <= 1) {
-                        if (sx < x_min) x_min = sx;
-                        if (sx > x_max) x_max = sx;
-                        if (sy < y_min) y_min = sy;
-                        if (sy > y_max) y_max = sy;
-                        inFrontCount++;
+                if (bboxType === 'keypoints') {
+                    if (kp_visible_count > 0) {
+                        const w = kp_x_max - kp_x_min;
+                        const h = kp_y_max - kp_y_min;
+                        
+                        const padLeft = 0.05 * w;
+                        const padRight = 0.05 * w;
+                        const padTop = 0.05 * h;
+                        const padBottom = 0.015 * h; // pad slightly to enclose hooves without capturing shadows
+                        
+                        x1 = Math.max(0, kp_x_min - padLeft);
+                        x2 = Math.min(1, kp_x_max + padRight);
+                        y1 = Math.max(0, kp_y_min - padTop);
+                        y2 = Math.min(1, kp_y_max + padBottom);
+                        hasBox = true;
                     }
-                });
+                } else {
+                    // Object-based: Project the 8 corners of the 3D Bounding Box
+                    const cowBox = new THREE.Box3().setFromObject(cow.model);
+                    const corners = [
+                        new THREE.Vector3(cowBox.min.x, cowBox.min.y, cowBox.min.z),
+                        new THREE.Vector3(cowBox.min.x, cowBox.min.y, cowBox.max.z),
+                        new THREE.Vector3(cowBox.min.x, cowBox.max.y, cowBox.min.z),
+                        new THREE.Vector3(cowBox.min.x, cowBox.max.y, cowBox.max.z),
+                        new THREE.Vector3(cowBox.max.x, cowBox.min.y, cowBox.min.z),
+                        new THREE.Vector3(cowBox.max.x, cowBox.min.y, cowBox.max.z),
+                        new THREE.Vector3(cowBox.max.x, cowBox.max.y, cowBox.min.z),
+                        new THREE.Vector3(cowBox.max.x, cowBox.max.y, cowBox.max.z)
+                    ];
+
+                    let x_min = 2; let x_max = -1;
+                    let y_min = 2; let y_max = -1;
+                    let inFrontCount = 0;
+
+                    corners.forEach(corner => {
+                        const proj = corner.clone().project(modalCamera);
+                        const sx = (proj.x + 1) / 2;
+                        const sy = (-proj.y + 1) / 2;
+                        if (proj.z >= -1 && proj.z <= 1) {
+                            if (sx < x_min) x_min = sx;
+                            if (sx > x_max) x_max = sx;
+                            if (sy < y_min) y_min = sy;
+                            if (sy > y_max) y_max = sy;
+                            inFrontCount++;
+                        }
+                    });
+
+                    if (inFrontCount > 0) {
+                        x1 = Math.max(0, Math.min(1, x_min));
+                        x2 = Math.max(0, Math.min(1, x_max));
+                        y1 = Math.max(0, Math.min(1, y_min));
+                        y2 = Math.max(0, Math.min(1, y_max));
+                        hasBox = true;
+                    }
+                }
                 
-                if (inFrontCount > 0) {
-                    const x1 = Math.max(0, Math.min(1, x_min));
-                    const x2 = Math.max(0, Math.min(1, x_max));
-                    const y1 = Math.max(0, Math.min(1, y_min));
-                    const y2 = Math.max(0, Math.min(1, y_max));
-                    
+                if (hasBox) {
                     const x_center = (x1 + x2) / 2;
                     const y_center = (y1 + y2) / 2;
                     const width = x2 - x1;
@@ -1539,6 +1585,8 @@
                 });
                 cowBoxesCam.sort((a, b) => a.dist - b.dist);
                 
+                const bboxType = document.getElementById('bboxTypeSelect')?.value ?? 'object';
+
                 cowsList.forEach((cow, cowIndex) => {
                     const cowWorldPos = new THREE.Vector3();
                     cow.group.getWorldPosition(cowWorldPos);
@@ -1550,6 +1598,10 @@
 
                     // 1. Project 19 keypoints (used strictly for YOLO Pose keypoints coordinate logging)
                     const keypointData = [];
+                    let kp_x_min = 2; let kp_x_max = -1;
+                    let kp_y_min = 2; let kp_y_max = -1;
+                    let kp_visible_count = 0;
+
                     cow.spheres.forEach((sphere, sIdx) => {
                         const projVec = new THREE.Vector3();
                         projVec.copy(sphere.position);
@@ -1590,46 +1642,78 @@
                                     }
                                 }
                             }
+
+                            if (pv > 0) {
+                                if (sx < kp_x_min) kp_x_min = sx;
+                                if (sx > kp_x_max) kp_x_max = sx;
+                                if (sy < kp_y_min) kp_y_min = sy;
+                                if (sy > kp_y_max) kp_y_max = sy;
+                                kp_visible_count++;
+                            }
                         }
                         keypointData.push(`${sx.toFixed(5)},${sy.toFixed(5)},${pv}`);
                     });
                     
-                    // 2. Project the 8 corners of the 3D Bounding Box (used for accurate 2D Bounding Box detection)
-                    const cowBox = new THREE.Box3().setFromObject(cow.model);
-                    const corners = [
-                        new THREE.Vector3(cowBox.min.x, cowBox.min.y, cowBox.min.z),
-                        new THREE.Vector3(cowBox.min.x, cowBox.min.y, cowBox.max.z),
-                        new THREE.Vector3(cowBox.min.x, cowBox.max.y, cowBox.min.z),
-                        new THREE.Vector3(cowBox.min.x, cowBox.max.y, cowBox.max.z),
-                        new THREE.Vector3(cowBox.max.x, cowBox.min.y, cowBox.min.z),
-                        new THREE.Vector3(cowBox.max.x, cowBox.min.y, cowBox.max.z),
-                        new THREE.Vector3(cowBox.max.x, cowBox.max.y, cowBox.min.z),
-                        new THREE.Vector3(cowBox.max.x, cowBox.max.y, cowBox.max.z)
-                    ];
+                    let x1, x2, y1, y2;
+                    let hasBox = false;
 
-                    let x_min = 2; let x_max = -1;
-                    let y_min = 2; let y_max = -1;
-                    let inFrontCount = 0;
-
-                    corners.forEach(corner => {
-                        const proj = corner.clone().project(vCam);
-                        const sx = (proj.x + 1) / 2;
-                        const sy = (-proj.y + 1) / 2;
-                        if (proj.z >= -1 && proj.z <= 1) {
-                            if (sx < x_min) x_min = sx;
-                            if (sx > x_max) x_max = sx;
-                            if (sy < y_min) y_min = sy;
-                            if (sy > y_max) y_max = sy;
-                            inFrontCount++;
+                    if (bboxType === 'keypoints') {
+                        if (kp_visible_count > 0) {
+                            const w = kp_x_max - kp_x_min;
+                            const h = kp_y_max - kp_y_min;
+                            
+                            const padLeft = 0.05 * w;
+                            const padRight = 0.05 * w;
+                            const padTop = 0.05 * h;
+                            const padBottom = 0.015 * h;
+                            
+                            x1 = Math.max(0, kp_x_min - padLeft);
+                            x2 = Math.min(1, kp_x_max + padRight);
+                            y1 = Math.max(0, kp_y_min - padTop);
+                            y2 = Math.min(1, y_max + padBottom);
+                            hasBox = true;
                         }
-                    });
+                    } else {
+                        // Object-based: Project the 8 corners of the 3D Bounding Box
+                        const cowBox = new THREE.Box3().setFromObject(cow.model);
+                        const corners = [
+                            new THREE.Vector3(cowBox.min.x, cowBox.min.y, cowBox.min.z),
+                            new THREE.Vector3(cowBox.min.x, cowBox.min.y, cowBox.max.z),
+                            new THREE.Vector3(cowBox.min.x, cowBox.max.y, cowBox.min.z),
+                            new THREE.Vector3(cowBox.min.x, cowBox.max.y, cowBox.max.z),
+                            new THREE.Vector3(cowBox.max.x, cowBox.min.y, cowBox.min.z),
+                            new THREE.Vector3(cowBox.max.x, cowBox.min.y, cowBox.max.z),
+                            new THREE.Vector3(cowBox.max.x, cowBox.max.y, cowBox.min.z),
+                            new THREE.Vector3(cowBox.max.x, cowBox.max.y, cowBox.max.z)
+                        ];
 
-                    if (inFrontCount > 0) {
-                        const x1 = Math.max(0, Math.min(1, x_min));
-                        const x2 = Math.max(0, Math.min(1, x_max));
-                        const y1 = Math.max(0, Math.min(1, y_min));
-                        const y2 = Math.max(0, Math.min(1, y_max));
-                        
+                        let x_min = 2; let x_max = -1;
+                        let y_min = 2; let y_max = -1;
+                        let inFrontCount = 0;
+
+                        corners.forEach(corner => {
+                            const proj = corner.clone().project(vCam);
+                            const sx = (proj.x + 1) / 2;
+                            const sy = (-proj.y + 1) / 2;
+                            if (proj.z >= -1 && proj.z <= 1) {
+                                if (sx < x_min) x_min = sx;
+                                if (sx > x_max) x_max = sx;
+                                if (sy < y_min) y_min = sy;
+                                if (sy > y_max) y_max = sy;
+                                inFrontCount++;
+                            }
+                        });
+
+                        if (inFrontCount > 0) {
+                            x1 = Math.max(0, Math.min(1, x_min));
+                            x2 = Math.max(0, Math.min(1, x_max));
+                            y1 = Math.max(0, Math.min(1, y_min));
+                            y2 = Math.max(0, Math.min(1, y_max));
+                            hasBox = true;
+                        }
+                    }
+
+                    if (hasBox) {
                         const x_center = (x1 + x2) / 2;
                         const y_center = (y1 + y2) / 2;
                         const width = x2 - x1;
