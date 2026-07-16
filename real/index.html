@@ -702,6 +702,25 @@
         }
     }
 
+    function getRandomLyingPositionForCubicle(cubicleName) {
+        if (cubicleName === "cubicle_A") {
+            const x = 2500 + Math.random() * 6600;
+            const y = 15600 + Math.random() * 2100;
+            const angle = Math.random() < 0.5 ? Math.PI / 2 : -Math.PI / 2;
+            return { x, y, angle };
+        } else if (cubicleName === "cubicle_B") {
+            const x = 200 + Math.random() * 5200;
+            const y = 10420 + Math.random() * 2100;
+            const angle = Math.random() < 0.5 ? 0 : Math.PI;
+            return { x, y, angle };
+        } else {
+            const x = 200 + Math.random() * 5200;
+            const y = 7920 + Math.random() * 2100;
+            const angle = Math.random() < 0.5 ? 0 : Math.PI;
+            return { x, y, angle };
+        }
+    }
+
     // Initialize Cows List
     function initCows() {
         const count = parseInt(document.getElementById('cowsCountSlider').value);
@@ -991,27 +1010,7 @@
                         }
                     }
                 } else { // walking
-                    if (cow.stateTimer <= 0 && Math.random() < 0.2) {
-                        // Go to lie down in cubicle!
-                        cow.state = "lying";
-                        cow.stateTimer = 30 + Math.random() * 45; // lie down for 30-75s
-                        
-                        const pos = getRandomLyingPosition();
-                        cow.group.position.set(pos.x, pos.y, -5);
-                        cow.wanderAngle = pos.angle;
-                        cow.group.rotation.z = pos.angle;
-                        
-                        // Freeze animation
-                        if (cow.mixer) {
-                            cow.mixer.stopAllAction();
-                            if (walkClip) {
-                                const action = cow.mixer.clipAction(walkClip);
-                                action.play();
-                                action.time = Math.random() * walkClip.duration;
-                                cow.mixer.update(0);
-                            }
-                        }
-                    }
+                    // No random lying down transition; they only lie down when colliding with a cubicle!
                 }
 
                 // If lying down, skip walking movements
@@ -1050,19 +1049,55 @@
                     const step = speedMultiplier * 10;
                     const nextX = cow.group.position.x + cow.direction.x * step;
                     const nextY = cow.group.position.y + cow.direction.y * step;
-                    
+
                     let collision = false;
+                    let hitCubicle = false;
+                    let cubicleName = null;
                     
                     // Boundaries check
                     if (nextX < 500 || nextX > 10300 || nextY < 4200 || nextY > 17700) {
                         collision = true;
-                    } else if (isPosInObstacle(nextX, nextY)) {
-                        collision = true;
+                    } else {
+                        // Check if hitting cubicle specifically
+                        if (nextX >= 2390 && nextX <= 9290 && nextY >= 15250 && nextY <= 18250) {
+                            collision = true;
+                            hitCubicle = true;
+                            cubicleName = "cubicle_A";
+                        } else if (nextX >= 0 && nextX <= 5750 && nextY >= 10220 && nextY <= 12720) {
+                            collision = true;
+                            hitCubicle = true;
+                            cubicleName = "cubicle_B";
+                        } else if (nextX >= 0 && nextX <= 5750 && nextY >= 7720 && nextY <= 10220) {
+                            collision = true;
+                            hitCubicle = true;
+                            cubicleName = "cubicle_C";
+                        } else if (isPosInObstacle(nextX, nextY)) {
+                            collision = true;
+                        }
                     }
                     
                     if (collision) {
-                        // Check if hit the feed rack at y <= 4250 (and not in service area)
-                        if (nextY <= 4250 && nextX < 9380) {
+                        if (hitCubicle) {
+                            // Lie down in this cubicle for 20 seconds!
+                            cow.state = "lying";
+                            cow.stateTimer = 20; // 20 seconds
+                            
+                            const pos = getRandomLyingPositionForCubicle(cubicleName);
+                            cow.group.position.set(pos.x, pos.y, -5);
+                            cow.wanderAngle = pos.angle;
+                            cow.group.rotation.z = pos.angle;
+                            
+                            // Freeze animation at random walk frame pose
+                            if (cow.mixer) {
+                                cow.mixer.stopAllAction();
+                                if (walkClip) {
+                                    const action = cow.mixer.clipAction(walkClip);
+                                    action.play();
+                                    action.time = Math.random() * walkClip.duration;
+                                    cow.mixer.update(0);
+                                }
+                            }
+                        } else if (nextY <= 4250 && nextX < 9380) {
                             // Eat at the rack for 20 seconds!
                             cow.state = "eating";
                             cow.stateTimer = 20; // 20 seconds
