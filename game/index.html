@@ -312,10 +312,11 @@ loader.load('ric2.glb', (gltf) => {
 
 
   // Animation loop
+  const clock = new THREE.Clock();
   function animate() {
     requestAnimationFrame(animate);
 
-    const delta = renderer.info.render.frame / 60; // Time since the last frame
+    const delta = clock.getDelta();
 
     // Update all mixers for animation
     mixers.forEach(mixer => {

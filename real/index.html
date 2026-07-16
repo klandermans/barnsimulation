@@ -1,0 +1,1446 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Bovine Telemetry System v4.2</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #ui { 
+            position: absolute; top: 15px; left: 15px; 
+            background: rgba(10, 25, 47, 0.85); /* Semi-transparent dark lab theme */
+            padding: 15px; border-radius: 8px; 
+            box-shadow: 0 4px 20px rgba(0, 255, 255, 0.2);
+            width: 240px; /* Compact width */
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            color: #e0f2f1;
+            z-index: 10000;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        #ui h3 { margin-top: 0; margin-bottom: 10px; color: #00ffff; text-shadow: 0 0 8px rgba(0, 255, 255, 0.6); font-size: 16px; }
+        .controls { display: flex; align-items: center; margin-bottom: 10px; }
+        #playBtn { 
+            padding: 8px 15px; background: #dc3545; color: white; 
+            border: none; border-radius: 4px; cursor: pointer; 
+            font-weight: bold; margin-right: 15px;
+            width: 100%;
+            font-family: inherit;
+            font-size: 11px;
+        }
+        #playBtn:hover { filter: brightness(1.2); }
+        #slider { flex-grow: 1; }
+        .info { font-size: 12px; color: #b0bec5; margin-bottom: 5px; }
+        #loading { 
+            color: #39ff14; /* Neon terminal green */
+            font-family: inherit;
+            font-size: 10px;
+            margin-top: 15px; 
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid rgba(57, 255, 20, 0.3);
+            white-space: pre-wrap;
+            line-height: 1.4;
+            box-shadow: 0 0 8px rgba(57, 255, 20, 0.1) inset;
+        }
+        
+        /* Modal overlay styling */
+        .camera-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(2, 6, 12, 0.85); /* Sleek dark background overlay */
+            backdrop-filter: blur(10px); /* Glassmorphism blur */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 20000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .camera-modal.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .camera-modal-content {
+            background: rgba(10, 25, 47, 0.95);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            box-shadow: 0 0 40px rgba(0, 255, 255, 0.25);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 800px;
+            overflow: hidden;
+            position: relative;
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+
+        .camera-modal.active .camera-modal-content {
+            transform: scale(1);
+        }
+
+        .camera-modal-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(2, 6, 12, 0.5);
+        }
+
+        .camera-modal-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #00ffff;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .camera-modal-close {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 28px;
+            cursor: pointer;
+            transition: color 0.2s;
+            line-height: 1;
+        }
+
+        .camera-modal-close:hover {
+            color: #ff3333;
+        }
+
+        .camera-modal-body {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .camera-canvas-container {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+
+        #cameraCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .camera-stats {
+            font-size: 13px;
+            color: rgba(176, 190, 197, 0.8);
+            font-family: monospace;
+            width: 100%;
+            text-align: left;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            line-height: 1.5;
+        }
+        @keyframes pulse {
+            from { opacity: 0.3; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="ui">
+    <h3>Bovine Telemetry Barn</h3>
+    <div class="controls" style="margin-bottom: 12px;">
+        <button id="playBtn" style="padding: 8px 15px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%;">PAUSE SIMULATION</button>
+    </div>
+    <div class="controls" style="margin-bottom: 10px; display: flex; flex-direction: column; gap: 5px;">
+        <span style="font-size: 13px; color: #b0bec5; font-weight: 500;">Bovine Units (Count): <span id="cowsCountVal" style="font-weight: bold; color: #00ffff;">10</span></span>
+        <input type="range" id="cowsCountSlider" min="1" max="100" value="10" style="width: 100%; cursor: pointer;">
+    </div>
+    <div class="controls" style="margin-bottom: 10px; display: flex; flex-direction: column; gap: 5px;">
+        <span style="font-size: 13px; color: #b0bec5; font-weight: 500;">Velocity Factor: <span id="speedVal" style="font-weight: bold; color: #00ffff;">30</span></span>
+        <input type="range" id="speedSlider" min="5" max="100" value="30" style="width: 100%; cursor: pointer;">
+    </div>
+    <div class="info" id="cowInfo" style="font-weight: bold; margin-bottom: 10px; color: #00ffff;">Active Bovine Entities: 10</div>
+    <div class="controls" style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px; border-top: 1px solid rgba(0, 255, 255, 0.2); padding-top: 10px;">
+        <label style="cursor: pointer; font-size: 13px; color: #e0f2f1; display: flex; align-items: center;"><input type="checkbox" id="showModels" checked style="margin-right: 6px;"> Render Skinned Meshes</label>
+        <label style="cursor: pointer; font-size: 13px; color: #e0f2f1; display: flex; align-items: center;"><input type="checkbox" id="showKeypoints" checked style="margin-right: 6px;"> Superimpose 19-Joint Skeletons</label>
+    </div>
+
+    <!-- Simultaneous Recording of all 8 cameras -->
+    <div class="controls" style="margin-top: 10px; border-top: 1px solid rgba(0, 255, 255, 0.2); padding-top: 10px;">
+        <button id="recordAllBtn" style="padding: 8px 15px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; font-family: inherit; font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 5px; box-shadow: 0 0 8px rgba(220,53,69,0.3);">
+            <span style="display: inline-block; width: 8px; height: 8px; background: white; border-radius: 50%; animation: pulse 1s infinite alternate;" id="recordAllDot"></span>
+            <span>RECORD ALL FEEDS</span>
+        </button>
+    </div>
+
+    <div class="info" style="font-size: 11px; color: #00ffff; margin-top: 12px; border-top: 1px dashed rgba(0,255,255,0.2); padding-top: 10px; font-family: monospace; line-height: 1.4; opacity: 0.85;">
+        SYSTEM INTERCEPT:<br>
+        Click on any cyan camera cone suspended in the barn to intercept its live calibrated video feed.
+    </div>
+
+    <div id="loading" style="color: #ff3333; font-weight: bold; margin-top: 10px;">Initializing Neural Geometry Engine...</div>
+</div>
+
+<div id="container"></div>
+
+<!-- Camera View Modal -->
+<div id="cameraModal" class="camera-modal">
+    <div class="camera-modal-content">
+        <div class="camera-modal-header">
+            <span id="modalTitle" class="camera-modal-title">CAMERA VIEW</span>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <button id="recordBtn" style="padding: 6px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; font-family: inherit; display: flex; align-items: center; gap: 5px; box-shadow: 0 0 8px rgba(220,53,69,0.3);">
+                    <span style="display: inline-block; width: 8px; height: 8px; background: white; border-radius: 50%; animation: pulse 1s infinite alternate;" id="recordDot"></span>
+                    <span>RECORD FEED</span>
+                </button>
+                <button id="modalCloseBtn" class="camera-modal-close">&times;</button>
+            </div>
+        </div>
+        <div class="camera-modal-body">
+            <div class="camera-canvas-container">
+                <canvas id="cameraCanvas"></canvas>
+            </div>
+            <div id="modalStats" class="camera-stats">
+                Loading calibration...
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fflate@0.7.4/umd/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FBXLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/SkeletonUtils.js"></script>
+
+<script>
+    // State
+    let isPlaying = true;
+
+    // ThreeJS Setup
+    THREE.Object3D.DefaultUp.set(0, 0, 1);
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xe0f7fa); // Lichte lucht kleur
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 10, 100000);
+    camera.position.set(5000, -8000, 12000);
+
+    const renderer = new THREE.WebGLRenderer({antialias: true});
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.getElementById('container').appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.target.set(5000, 10000, 0);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.update();
+
+    // Keyboard controls voor "lopen"
+    const keys = { w: false, a: false, s: false, d: false, ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
+    window.addEventListener('keydown', (e) => { if(keys.hasOwnProperty(e.key)) keys[e.key] = true; });
+    window.addEventListener('keyup', (e) => { if(keys.hasOwnProperty(e.key)) keys[e.key] = false; });
+
+    function handleWalking() {
+        const moveSpeed = 150; // mm per frame
+        const direction = new THREE.Vector3();
+        camera.getWorldDirection(direction);
+        direction.z = 0; // Blijf op de grond
+        direction.normalize();
+
+        const side = new THREE.Vector3().crossVectors(camera.up, direction).normalize();
+
+        if (keys.w || keys.ArrowUp) {
+            camera.position.addScaledVector(direction, moveSpeed);
+            controls.target.addScaledVector(direction, moveSpeed);
+        }
+        if (keys.s || keys.ArrowDown) {
+            camera.position.addScaledVector(direction, -moveSpeed);
+            controls.target.addScaledVector(direction, -moveSpeed);
+        }
+        if (keys.a || keys.ArrowLeft) {
+            camera.position.addScaledVector(side, moveSpeed);
+            controls.target.addScaledVector(side, moveSpeed);
+        }
+        if (keys.d || keys.ArrowRight) {
+            camera.position.addScaledVector(side, -moveSpeed);
+            controls.target.addScaledVector(side, -moveSpeed);
+        }
+    }
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+    dirLight.position.set(10000, 10000, 20000);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    dirLight.shadow.camera.near = 0.5;
+    dirLight.shadow.camera.far = 50000;
+    const d = 15000;
+    dirLight.shadow.camera.left = -d;
+    dirLight.shadow.camera.right = d;
+    dirLight.shadow.camera.top = d;
+    dirLight.shadow.camera.bottom = -d;
+    scene.add(dirLight);
+
+    // Bepaal de grenzen van de stal voor de grond
+    let minX = Infinity, maxX = -Infinity;
+    let minY = Infinity, maxY = -Infinity;
+    const floorPlan = {"Door": [[0, 18250], [1150, 15250]], "KR": [[1300, 18250], [2390, 15250]], "Service Area": [[9380, 18250], [10800, 4200]], "cubicle_A": [[2390, 18250.0], [9290, 15250]], "cubicle_B": [[0.0, 12720], [5750, 10220]], "cubicle_C": [[0.0, 10220], [5750, 7720]], "feed_passage": [[0.0, 4000.0], [10800.0, 2500.0]], "feeding_rack": [[0.0, 4200.0], [10800.0, 4000.0]], "slat_1a": [[1042.5, 4349.6], [1042.5, 7570.4]], "slat_1b": [[542.5, 12858.75], [542.5, 15101.25]], "slat_1c": [[6920, 7860.5], [6920, 12579.5]], "slat_2a": [[2142.5, 4349.6], [2142.5, 7570.4]], "slat_2b": [[1642.5, 12858.75], [1642.5, 15101.25]], "slat_2c": [[8030, 7860.5], [8030, 12579.5]], "slat_3a": [[3242.5, 4349.6], [3242.5, 7570.4]], "slat_3b": [[2742.5, 12858.75], [2742.5, 15101.25]], "slat_3c": [[9140, 7860.5], [9140, 12579.5]], "slat_4a": [[4342.5, 4349.6], [4342.5, 7570.4]], "slat_4b": [[3842.5, 12858.75], [3842.5, 15101.25]], "slat_5a": [[5442.5, 4349.6], [5442.5, 7570.4]], "slat_5b": [[4942.5, 12858.75], [4942.5, 15101.25]], "slat_6a": [[6542.5, 4349.6], [6542.5, 7570.4]], "slat_6b": [[6042.5, 12858.75], [6042.5, 15101.25]], "slat_7a": [[7642.5, 4349.6], [7642.5, 7570.4]], "slat_7b": [[7142.5, 12858.75], [7142.5, 15101.25]], "slat_8a": [[8742.5, 4349.6], [8742.5, 7570.4]], "slat_8b": [[8242.5, 12858.75], [8242.5, 15101.25]], "slat_a1_opening": [[0, 4349.6], [9380, 4349.6]], "slat_a8_opening": [[0, 7570.4], [9380, 7570.4]], "slat_b10_opening": [[0, 12858.75], [9380, 12858.75]], "slat_b15_opening": [[0, 15101.25], [9380, 15101.25]], "slat_c13_opening": [[5870, 12579.5], [9380, 12579.5]], "slat_c2_opening": [[5870, 7860.5], [9380, 7860.5]], "wall_A": [[5750, 12720], [5870, 7720]], "wall_b": [[1150, 18250], [1300, 15250]]};
+    
+    for (let key in floorPlan) {
+        let coords = floorPlan[key];
+        minX = Math.min(minX, coords[0][0], coords[1][0]);
+        maxX = Math.max(maxX, coords[0][0], coords[1][0]);
+        minY = Math.min(minY, coords[0][1], coords[1][1]);
+        maxY = Math.max(maxY, coords[0][1], coords[1][1]);
+    }
+    
+    // Lichtbruine grond exact afgestemd op de stal
+    let groundW = (maxX - minX) + 1000; // 1 meter extra marge rondom
+    let groundH = (maxY - minY) + 1000;
+    let groundCX = (maxX + minX) / 2;
+    let groundCY = (maxY + minY) / 2;
+
+    const groundGeom = new THREE.PlaneGeometry(groundW, groundH);
+    const groundMat = new THREE.MeshStandardMaterial({ color: 0xbc9b6a, roughness: 1.0 });
+    const ground = new THREE.Mesh(groundGeom, groundMat);
+    ground.position.set(groundCX, groundCY, -5); 
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    const gridHelper = new THREE.GridHelper(Math.max(groundW, groundH), 20, 0x8c6239, 0x8c6239);
+    gridHelper.rotation.x = Math.PI / 2;
+    gridHelper.position.set(groundCX, groundCY, -4);
+    scene.add(gridHelper);
+
+    const axesHelper = new THREE.AxesHelper(3000);
+    scene.add(axesHelper);
+
+    // Bouw Stal
+    const fpMaterial = new THREE.MeshBasicMaterial({ color: 0x8b5a2b, transparent: true, opacity: 0.2, side: THREE.DoubleSide });
+    const edgeMaterial = new THREE.LineBasicMaterial({ color: 0x5c4033 });
+    const slatEdgeMaterial = new THREE.LineBasicMaterial({ color: 0x333333 });
+
+    for (let key in floorPlan) {
+        let coords = floorPlan[key];
+        let x1 = coords[0][0], y1 = coords[0][1];
+        let x2 = coords[1][0], y2 = coords[1][1];
+
+        if (key.includes("slat")) {
+            // Slats als simpele 1D lijnen in plaats van vlakken
+            let points = [new THREE.Vector3(x1, y1, 2), new THREE.Vector3(x2, y2, 2)];
+            let lineGeom = new THREE.BufferGeometry().setFromPoints(points);
+            let line = new THREE.Line(lineGeom, slatEdgeMaterial);
+            scene.add(line);
+        } else {
+            let w = Math.abs(x2 - x1);
+            let h = Math.abs(y2 - y1);
+            if (w === 0) w = 1; 
+            if (h === 0) h = 1; 
+            let cx = (x1 + x2) / 2;
+            let cy = (y1 + y2) / 2;
+
+            let geom = new THREE.PlaneGeometry(w, h);
+            let mesh = new THREE.Mesh(geom, fpMaterial);
+            mesh.position.set(cx, cy, 1);
+            scene.add(mesh);
+
+            let edges = new THREE.EdgesGeometry(geom);
+            let line = new THREE.LineSegments(edges, edgeMaterial);
+            line.position.set(cx, cy, 2);
+            scene.add(line);
+        }
+    }
+
+    // Bouw Cameras (calibrated from JSON)
+    const camMat = new THREE.MeshStandardMaterial({ color: 0x00ffff, emissive: 0x003333, roughness: 0.2 }); // Cyan glowing cameras
+    const camGeom = new THREE.ConeGeometry(150, 400, 4); // 4-sided pyramid
+    camGeom.rotateX(Math.PI / 2); // Orient cone tip along +Z to work with lookAt
+    
+    let calibrationData = {};
+    const cameraMeshes = [];
+
+    // Background multi-camera recording structures
+    const virtualCameras = {};
+    const hiddenCanvases = {};
+    const hiddenContexts = {};
+    const mediaRecordersAll = {};
+    const recordedChunksAll = {};
+    const csvBuffers = {};
+    let isRecordingAll = false;
+    let recordAllTimer = null;
+    let recordAllSeconds = 0;
+    let recordingFrameCount = 0;
+    let zipArchive = null;
+    let finishedRecordersCount = 0;
+
+    fetch('calibration.json')
+        .then(res => res.json())
+        .then(data => {
+            calibrationData = data;
+            createCalibratedCameras();
+        })
+        .catch(err => {
+            console.error("Failed to load calibration.json, falling back to static coords:", err);
+            createStaticCameras();
+        });
+
+    function createCalibratedCameras() {
+        for (let key in calibrationData) {
+            const calib = calibrationData[key];
+            const pos = calib.wc_T;
+            const wc_R = calib.wc_R;
+            
+            const mesh = new THREE.Mesh(camGeom, camMat);
+            mesh.position.set(pos[0], pos[1], pos[2]);
+            mesh.userData = { camId: key };
+            
+            // Look vector (third column of wc_R: [wc_R[0][2], wc_R[1][2], wc_R[2][2]])
+            const lookDir = new THREE.Vector3(wc_R[0][2], wc_R[1][2], wc_R[2][2]).normalize();
+            
+            // Align mesh (since we rotated geometry, its default direction is +Z) to point along lookDir
+            const target = new THREE.Vector3().addVectors(mesh.position, lookDir);
+            mesh.lookAt(target);
+            
+            scene.add(mesh);
+            cameraMeshes.push(mesh);
+            
+            // Vertical line to floor
+            let points = [new THREE.Vector3(pos[0], pos[1], pos[2]), new THREE.Vector3(pos[0], pos[1], 0)];
+            let lineGeom = new THREE.BufferGeometry().setFromPoints(points);
+            let line = new THREE.Line(lineGeom, new THREE.LineDashedMaterial({ color: 0x008888, dashSize: 200, gapSize: 100, transparent: true, opacity: 0.5 }));
+            line.computeLineDistances();
+            scene.add(line);
+
+            // Set up virtual camera and hidden canvas for background recording
+            const fov = 2 * Math.atan(1080 / (2 * calib.fy)) * 180 / Math.PI;
+            const vCam = new THREE.PerspectiveCamera(fov, 320 / 180, 10, 50000);
+            vCam.position.set(pos[0], pos[1], pos[2]);
+            const upDir = new THREE.Vector3(-wc_R[0][1], -wc_R[1][1], -wc_R[2][1]).normalize();
+            vCam.up.copy(upDir);
+            vCam.lookAt(target);
+            virtualCameras[key] = vCam;
+
+            const hiddenCanvas = document.createElement('canvas');
+            hiddenCanvas.width = 320;
+            hiddenCanvas.height = 180;
+            hiddenCanvases[key] = hiddenCanvas;
+            hiddenContexts[key] = hiddenCanvas.getContext('2d');
+        }
+    }
+
+    function createStaticCameras() {
+        const camCoords = {"217": [9238.377, 9900.058, 4804.996], "218": [396.4734, 10038.96, 4843.1], "219": [5148.143, 14969.01, 5629.784], "221": [470.8995, 10538.52, 4838.071], "222": [4629.804, 3303.612, 5622.846], "223": [4612.065, 14951.8, 5637.818], "224": [9167.643, 10376.84, 4835.977], "225": [5143.774, 3319.927, 5630.942]};
+        for (let key in camCoords) {
+            let pos = camCoords[key];
+            let mesh = new THREE.Mesh(camGeom, camMat);
+            mesh.position.set(pos[0], pos[1], pos[2]);
+            mesh.userData = { camId: key };
+            mesh.lookAt(pos[0], pos[1], 0);
+            scene.add(mesh);
+            cameraMeshes.push(mesh);
+            
+            let points = [new THREE.Vector3(pos[0], pos[1], pos[2]), new THREE.Vector3(pos[0], pos[1], 0)];
+            let lineGeom = new THREE.BufferGeometry().setFromPoints(points);
+            let line = new THREE.Line(lineGeom, new THREE.LineDashedMaterial({ color: 0x999999, dashSize: 200, gapSize: 100 }));
+            line.computeLineDistances();
+            scene.add(line);
+        }
+    }
+
+    // Koeien Animatie & Interactie State
+    let cowsList = [];
+    let rotX = 0;
+    let rotY = Math.PI / 2;
+    let rotZ = Math.PI / 2;
+
+    const keypointBoneNames = [
+        'DEF-spine.018',                  // 1. Nose
+        'DEF-Border-collie_ear02.L.001',  // 2. Left Eye
+        'DEF-Border-collie_ear02.R.001',  // 3. Right Eye
+        'DEF-Border-collie_ear01.L.001',  // 4. Left Ear
+        'DEF-Border-collie_ear01.R.001',  // 5. Right Ear
+        'DEF-spine.004',                  // 6. Withers
+        'DEF-tail',                       // 7. Tailhead
+        'DEF-shoulder.L',                 // 8. Left Front Shoulder
+        'DEF-front_thigh.L',              // 9. Left Front Knee
+        'DEF-front_foot.L',               // 10. Left Front Foot
+        'DEF-shoulder.R',                 // 11. Right Front Shoulder
+        'DEF-front_thigh.R',              // 12. Right Front Knee
+        'DEF-front_foot.R',               // 13. Right Front Foot
+        'DEF-thigh.L',                    // 14. Left Back Hip
+        'DEF-shin.L',                     // 15. Left Back Knee
+        'DEF-foot.L',                     // 16. Left Back Foot
+        'DEF-thigh.R',                    // 17. Right Back Hip
+        'DEF-shin.R',                     // 18. Right Back Knee
+        'DEF-foot.R'                      // 19. Right Back Foot
+    ];
+    
+    // Indices for left and right side keypoints (0-indexed based on keypointBoneNames)
+    const leftSideIndices = [1, 3, 7, 8, 9, 13, 14, 15]; // Left Eye, Left Ear, Left Legs
+    const rightSideIndices = [2, 4, 10, 11, 12, 16, 17, 18]; // Right Eye, Right Ear, Right Legs
+    
+    // Nerdy Terminal Loader Animation
+    const loadingEl = document.getElementById('loading');
+    const loadingLogs = [
+        "[SYS] INITIALIZING NEURAL GEOMETRY SYSTEM...",
+        "[SYS] CONNECTING TO APPDATA CALIBRATION MATRIX...",
+        "[CALIB] DECODING INTRINSIC PROPERTIES...",
+        "[CALIB] 8 TELEMETRY NODES SYNCHRONIZED.",
+        "[GEOM] IMPORTING RIGGED BOVINE MESH [SK_COW.FBX]...",
+        "[ANIM] RESOLVING POSE SEQUENCER [A_COW_WALK_01.FBX]...",
+        "[RIG] MAPPING 19 SKELETAL JOINTS CONCURRENTLY...",
+        "[RENDER] COMPILING WEBGL VERTEX SHADERS..."
+    ];
+    let logIdx = 0;
+    let loaderTimer = setInterval(() => {
+        if (!loadingEl) return;
+        let text = "";
+        for (let i = 0; i <= logIdx; i++) {
+            if (i < loadingLogs.length) {
+                text += loadingLogs[i] + "\n";
+            }
+        }
+        const spinner = ["|", "/", "-", "\\"][logIdx % 4];
+        if (logIdx < loadingLogs.length - 1) {
+            const pct = Math.min(100, Math.floor((logIdx + 1) / loadingLogs.length * 100));
+            const bars = "█".repeat(Math.floor(pct / 10)) + "░".repeat(10 - Math.floor(pct / 10));
+            text += `[LOAD] [${bars}] ${pct}% ${spinner}`;
+        } else {
+            text += `[LOAD] DOWNLOAD COMPLETE, SPINNING COWS... ${spinner}`;
+        }
+        loadingEl.innerText = text;
+        logIdx++;
+    }, 250);
+
+    // Helper function to clone skinned meshes properly (re-binding the skeleton bones)
+    function cloneSkinnedMesh(source) {
+        if (!source) return null;
+        return THREE.SkeletonUtils.clone(source);
+    }
+
+    // Texture Loading for Cow Model
+    const textureLoader = new THREE.TextureLoader();
+    const baseColorMap = textureLoader.load('RSG_Shepherd_Pack_FBX/Cow/Textures/T_Cow_B.png');
+    const normalMap = textureLoader.load('RSG_Shepherd_Pack_FBX/Cow/Textures/T_Cow_N.png');
+    const roughnessMap = textureLoader.load('RSG_Shepherd_Pack_FBX/Cow/Textures/T_Cow_R.png');
+
+    function applyTexturesToMaterial(mat) {
+        if (Array.isArray(mat)) {
+            mat.forEach(applyTexturesToMaterial);
+            return;
+        }
+        mat.map = baseColorMap;
+        mat.normalMap = normalMap;
+        mat.roughnessMap = roughnessMap;
+        mat.roughness = 0.8;
+        mat.metalness = 0.1;
+        mat.needsUpdate = true;
+    }
+
+    let cowModel = null;
+    let walkClip = null;
+    let modelScaleFactor = 1.0;
+    let modelYOffset = 0.0;
+
+    // FBX Loader
+    const fbxLoader = new THREE.FBXLoader();
+    fbxLoader.load('RSG_Shepherd_Pack_FBX/Cow/SK_Cow.fbx', function (fbx) {
+        cowModel = fbx;
+        fbx.traverse(function (child) {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+                if (child.material) {
+                    applyTexturesToMaterial(child.material);
+                }
+            }
+        });
+        
+        // Calculate scale factor once based on bounding box
+        const box = new THREE.Box3().setFromObject(cowModel);
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const targetLength = 1800; // 1.8 meters total cow length
+        modelScaleFactor = targetLength / maxDim;
+        modelYOffset = -box.min.y;
+
+        // Load walk animation
+        fbxLoader.load('RSG_Shepherd_Pack_FBX/Cow/Animations/A_Cow_Walk_01.fbx', function (animFbx) {
+            if (animFbx.animations && animFbx.animations.length > 0) {
+                walkClip = animFbx.animations[0];
+                
+                // Strip root bone translation and rotation tracks to prevent animation from moving or tilting the cow
+                walkClip.tracks = walkClip.tracks.filter(track => {
+                    const name = track.name.toLowerCase();
+                    if (name.includes('position')) {
+                        return false;
+                    }
+                    if (name.includes('quaternion') && (name.includes('rig') || name.includes('root') || name.includes('original') || name.includes('mesh') || name.includes('cow'))) {
+                        return false;
+                    }
+                    return true;
+                });
+            }
+            
+            clearInterval(loaderTimer);
+            if (loadingEl) {
+                loadingEl.innerText = loadingLogs.join("\n") + "\n[SYS] MESH & SKELETON SYNCED.\n[SYS] BOVINE ENGINE ONLINE.";
+                setTimeout(() => { loadingEl.style.display = 'none'; }, 800);
+            }
+            initCows();
+        }, undefined, function (err) {
+            console.error("Error loading walk animation:", err);
+            clearInterval(loaderTimer);
+            if (loadingEl) {
+                loadingEl.style.display = 'none';
+            }
+            initCows();
+        });
+    }, undefined, function (err) {
+        console.error("Error loading cow model:", err);
+        clearInterval(loaderTimer);
+        document.getElementById('loading').innerText = "Neural Geometry Engine Error: " + err.message;
+    });
+
+    // Initialize Cows List
+    function initCows() {
+        const count = parseInt(document.getElementById('cowsCountSlider').value);
+        adjustCowsCount(count);
+    }
+
+    // Create a single cow wrapped in an outer group to handle position/rotation safely
+    function createCow() {
+        if (!cowModel) return null;
+        
+        // Outer group coordinates position and yaw to guarantee the cow remains upright and flat on the ground
+        const cowGroup = new THREE.Group();
+        scene.add(cowGroup);
+        
+        const model = cloneSkinnedMesh(cowModel);
+        cowGroup.add(model);
+        
+        // Rotate model to stand upright (local Y-up -> world Z-up) and face forward (+X)
+        model.rotation.set(rotX, rotY, rotZ);
+        
+        // Dynamically compute the bounding box of the rotated model to align the bottom of the feet exactly with the ground (Z=0 in group)
+        model.updateMatrixWorld(true);
+        const localBox = new THREE.Box3().setFromObject(model);
+        model.position.z = -localBox.min.z;
+        
+        // Random coordinates within safe barn borders
+        const x = Math.random() * (10300 - 500) + 500;
+        const y = Math.random() * (17700 - 3000) + 3000;
+        cowGroup.position.set(x, y, -5); // Stand on the ground at z = -5
+        
+        // Random direction angle
+        const wanderAngle = Math.random() * Math.PI * 2;
+        const direction = new THREE.Vector3(Math.cos(wanderAngle), Math.sin(wanderAngle), 0);
+        
+        // Scale and orient the group
+        cowGroup.scale.set(modelScaleFactor, modelScaleFactor, modelScaleFactor);
+        cowGroup.rotation.z = wanderAngle;
+        
+        // Find bones for keypoints (fuzzy name matching to handle variations in FBX name sanitation)
+        const normalizedKeypointNames = keypointBoneNames.map(name => name.toLowerCase().replace(/[^a-z0-9]/g, ''));
+        const keypointBones = {};
+        let foundCount = 0;
+        model.traverse(child => {
+            const normChildName = child.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const matchIdx = normalizedKeypointNames.indexOf(normChildName);
+            if (matchIdx !== -1) {
+                const originalName = keypointBoneNames[matchIdx];
+                keypointBones[originalName] = child;
+                foundCount++;
+            }
+            if (child.name === 'Cow_Rig' || normChildName === 'cowrig') {
+                keypointBones['Cow_Rig'] = child;
+            }
+        });
+        console.log(`[Cow Loader] Fuzzy Mapped ${foundCount} out of 19 keypoint bones.`);
+        
+        // Create 19 spheres representing the keypoints (radius = 30 for visibility)
+        const colors = [
+            0xff3333, 0xff3333, 0xff3333, 0xff3333, 0xff3333, // Head/Eyes/Nose/Ears (Red)
+            0xffff33, 0xffff33,                               // Withers, Tailhead (Yellow)
+            0x3333ff, 0x3333ff, 0x3333ff,                     // Left Front Leg (Blue)
+            0x33ff33, 0x33ff33, 0x33ff33,                     // Right Front Leg (Green)
+            0x3333ff, 0x3333ff, 0x3333ff,                     // Left Back Leg (Blue)
+            0x33ff33, 0x33ff33, 0x33ff33                      // Right Back Leg (Green)
+        ];
+        
+        const spheres = [];
+        const sphereGeom = new THREE.SphereGeometry(30, 16, 16);
+        
+        for (let i = 0; i < 19; i++) {
+            const mat = new THREE.MeshBasicMaterial({ color: colors[i], depthTest: false });
+            const sphere = new THREE.Mesh(sphereGeom, mat);
+            sphere.renderOrder = 999; // Ensure rendering on top of the cow model
+            scene.add(sphere);
+            spheres.push(sphere);
+        }
+        
+        // Define connections between keypoints to form a 3D skeleton
+        const connections = [
+            [0, 1], [0, 2], [1, 3], [2, 4], [1, 2], [3, 5], [4, 5], // Kop (Neus, Ogen, Oren -> Schoft)
+            [5, 6],                                                 // Wervelkolom (Schoft -> Staart)
+            [5, 7], [7, 8], [8, 9],                                 // Linkervoorpoot (Schoft -> Schouder -> Knie -> Voet)
+            [5, 10], [10, 11], [11, 12],                            // Rechtervoorpoot (Schoft -> Schouder -> Knie -> Voet)
+            [6, 13], [13, 14], [14, 15],                            // Linkerachterpoot (Staart -> Heup -> Knie -> Voet)
+            [6, 16], [16, 17], [17, 18]                             // Rechterachterpoot (Staart -> Heup -> Knie -> Voet)
+        ];
+
+        const lines = [];
+        const lineMat = new THREE.LineBasicMaterial({ color: 0xffaa00, linewidth: 3, depthTest: false }); // Goud/oranje skeletlijnen
+        
+        connections.forEach(() => {
+            const geom = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+            const line = new THREE.Line(geom, lineMat);
+            line.renderOrder = 999; // Render bovenop de koe
+            scene.add(line);
+            lines.push(line);
+        });
+
+        // Setup animation mixer
+        const mixer = new THREE.AnimationMixer(model);
+        if (walkClip) {
+            const action = mixer.clipAction(walkClip);
+            action.play();
+            // Randomize start time of animation to desynchronize their walk cycles
+            action.time = Math.random() * walkClip.duration;
+        }
+        
+        return {
+            group: cowGroup,
+            model,
+            mixer,
+            spheres,
+            lines,
+            connections,
+            direction,
+            wanderAngle,
+            bones: keypointBones
+        };
+    }
+
+    // Add/remove cows dynamically to match slider
+    function adjustCowsCount(targetCount) {
+        while (cowsList.length < targetCount) {
+            const cow = createCow();
+            if (cow) cowsList.push(cow);
+        }
+        while (cowsList.length > targetCount) {
+            const cow = cowsList.pop();
+            if (cow) {
+                scene.remove(cow.group);
+                cow.spheres.forEach(s => scene.remove(s));
+                cow.lines.forEach(l => scene.remove(l));
+            }
+        }
+        document.getElementById('cowInfo').innerText = `Active Bovine Entities: ${cowsList.length}`;
+    }
+
+    // Update positions and bones of the cows in each frame
+    function updateCowsSimulation(delta) {
+        const speedMultiplier = parseFloat(document.getElementById('speedSlider').value) / 10.0;
+        const showModels = document.getElementById('showModels').checked;
+        const showKeypoints = document.getElementById('showKeypoints').checked;
+        
+        cowsList.forEach((cow, idx) => {
+            cow.group.visible = showModels;
+            
+            if (isPlaying) {
+                // Avoid collision with other cows (radius ~1500mm to prevent clipping)
+                cowsList.forEach((otherCow, otherIdx) => {
+                    if (idx !== otherIdx) {
+                        const dist = cow.group.position.distanceTo(otherCow.group.position);
+                        if (dist < 1500) {
+                            const pushDir = new THREE.Vector3().subVectors(cow.group.position, otherCow.group.position);
+                            pushDir.z = 0; // remain on floor
+                            pushDir.normalize();
+                            
+                            // Steer away
+                            cow.direction.addScaledVector(pushDir, 0.2).normalize();
+                            cow.wanderAngle = Math.atan2(cow.direction.y, cow.direction.x);
+                        }
+                    }
+                });
+
+                // Smooth wandering behaviour
+                if (Math.random() < 0.02) {
+                    cow.wanderAngle += (Math.random() - 0.5) * 0.5;
+                    cow.direction.set(Math.cos(cow.wanderAngle), Math.sin(cow.wanderAngle), 0).normalize();
+                }
+                
+                // Move cow group
+                cow.group.position.addScaledVector(cow.direction, speedMultiplier * 10);
+                
+                // Keep within bounds of the slatted floor and cubicles
+                if (cow.group.position.x < 500) {
+                    cow.group.position.x = 500;
+                    cow.wanderAngle = Math.PI - cow.wanderAngle;
+                    cow.direction.x = Math.abs(cow.direction.x);
+                }
+                if (cow.group.position.x > 10300) {
+                    cow.group.position.x = 10300;
+                    cow.wanderAngle = Math.PI - cow.wanderAngle;
+                    cow.direction.x = -Math.abs(cow.direction.x);
+                }
+                if (cow.group.position.y < 3000) {
+                    cow.group.position.y = 3000;
+                    cow.wanderAngle = -cow.wanderAngle;
+                    cow.direction.y = Math.abs(cow.direction.y);
+                }
+                if (cow.group.position.y > 17700) {
+                    cow.group.position.y = 17700;
+                    cow.wanderAngle = -cow.wanderAngle;
+                    cow.direction.y = -Math.abs(cow.direction.y);
+                }
+                
+                // Face the moving direction (only Z rotation changes, keeping pitch/roll locked to 0)
+                cow.group.rotation.z = cow.wanderAngle;
+                
+                // Update animation clip
+                if (cow.mixer) {
+                    cow.mixer.update(delta);
+                }
+            }
+             
+             // Update bone world matrices so getWorldPosition is 100% correct
+             if (cow.group) {
+                 cow.group.updateMatrixWorld(true);
+             }
+              
+             // Position the 19 keypoint spheres at the exact world bone positions
+             const worldPos = new THREE.Vector3();
+             
+             keypointBoneNames.forEach((boneName, idx) => {
+                 const bone = cow.bones[boneName];
+                 if (bone) {
+                     bone.getWorldPosition(worldPos);
+                     cow.spheres[idx].position.copy(worldPos);
+                     cow.spheres[idx].visible = showKeypoints;
+                 } else {
+                     cow.spheres[idx].visible = false;
+                 }
+             });
+
+             // Update skeleton lines to connect keypoints
+             cow.connections.forEach((conn, idx) => {
+                 const sphereA = cow.spheres[conn[0]];
+                 const sphereB = cow.spheres[conn[1]];
+                 const line = cow.lines[idx];
+                 
+                 if (sphereA.visible && sphereB.visible) {
+                     const points = [sphereA.position, sphereB.position];
+                     line.geometry.setFromPoints(points);
+                     line.visible = showKeypoints;
+                 } else {
+                     line.visible = false;
+                 }
+             });
+        });
+    }
+
+    // UI Events
+    document.getElementById('playBtn').onclick = () => { 
+        isPlaying = !isPlaying; 
+        document.getElementById('playBtn').innerText = isPlaying ? "PAUSE SIMULATION" : "RESUME SIMULATION";
+        document.getElementById('playBtn').style.background = isPlaying ? "#dc3545" : "#28a745";
+    };
+    
+    document.getElementById('cowsCountSlider').oninput = (e) => {
+        const val = parseInt(e.target.value);
+        document.getElementById('cowsCountVal').innerText = val;
+        adjustCowsCount(val);
+    };
+    
+    document.getElementById('speedSlider').oninput = (e) => {
+        document.getElementById('speedVal').innerText = e.target.value;
+    };
+
+
+
+    // Modal & Raycasting variables
+    let modalRenderer = null;
+    let modalCamera = null;
+    let activeCameraId = null;
+    
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let pointerDownPosition = { x: 0, y: 0 };
+
+    // Pointer event listeners to detect clicks and hover states on camera cones
+    renderer.domElement.addEventListener('pointerdown', (e) => {
+        pointerDownPosition.x = e.clientX;
+        pointerDownPosition.y = e.clientY;
+    });
+
+    renderer.domElement.addEventListener('pointerup', (e) => {
+        const dx = e.clientX - pointerDownPosition.x;
+        const dy = e.clientY - pointerDownPosition.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        // Only trigger click if the mouse didn't drag/move during the interaction
+        if (dist < 3) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+            
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(cameraMeshes);
+            
+            if (intersects.length > 0) {
+                const clickedCam = intersects[0].object;
+                openCameraModal(clickedCam.userData.camId);
+            }
+        }
+    });
+
+    renderer.domElement.addEventListener('pointermove', (e) => {
+        const rect = renderer.domElement.getBoundingClientRect();
+        mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(cameraMeshes);
+        
+        if (intersects.length > 0) {
+            document.body.style.cursor = 'pointer';
+            cameraMeshes.forEach(mesh => {
+                if (mesh === intersects[0].object) {
+                    mesh.material.emissive.setHex(0x330033);
+                } else {
+                    mesh.material.emissive.setHex(0x000000);
+                }
+            });
+        } else {
+            document.body.style.cursor = 'default';
+            cameraMeshes.forEach(mesh => {
+                mesh.material.emissive.setHex(0x000000);
+            });
+        }
+    });
+
+    // Video Recording State
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let recordTimer = null;
+    let recordSeconds = 0;
+    let csvBufferSingle = "";
+    let recordingFrameCountSingle = 0;
+
+    const recordBtn = document.getElementById('recordBtn');
+
+    if (recordBtn) {
+        recordBtn.onclick = () => {
+            if (mediaRecorder && mediaRecorder.state === "recording") {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        };
+    }
+
+    function startRecording() {
+        recordedChunks = [];
+        let headers = "frame,class_id,x_center,y_center,width,height,cow_id";
+        for (let i = 1; i <= 19; i++) {
+            headers += `,px${i},py${i},pv${i}`;
+        }
+        headers += "\n";
+        csvBufferSingle = headers;
+        recordingFrameCountSingle = 0;
+        const canvas = document.getElementById('cameraCanvas');
+        if (!canvas) return;
+
+        // Capture stream at 30 fps
+        const stream = canvas.captureStream(30);
+
+        // Check for supported MIME types
+        let mimeType = 'video/mp4';
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = 'video/webm;codecs=vp9';
+        }
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = 'video/webm';
+        }
+
+        try {
+            mediaRecorder = new MediaRecorder(stream, { mimeType: mimeType });
+        } catch (e) {
+            console.error("MediaRecorder creation failed:", e);
+            alert("Video recording is not supported in this browser configuration.");
+            return;
+        }
+
+        mediaRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) {
+                recordedChunks.push(e.data);
+            }
+        };
+
+        mediaRecorder.onstop = () => {
+            // Download Video
+            const blob = new Blob(recordedChunks, { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+            a.download = `camera_${activeCameraId}_feed.${ext}`;
+            document.body.appendChild(a);
+            a.click();
+
+            // Download CSV with a 250ms delay to bypass browser single-tick download protection
+            setTimeout(() => {
+                const blobCsv = new Blob([csvBufferSingle], { type: 'text/csv;charset=utf-8;' });
+                const urlCsv = URL.createObjectURL(blobCsv);
+                const aCsv = document.createElement('a');
+                aCsv.style.display = 'none';
+                aCsv.href = urlCsv;
+                aCsv.download = `camera_${activeCameraId}_detections.csv`;
+                document.body.appendChild(aCsv);
+                aCsv.click();
+                
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    document.body.removeChild(aCsv);
+                    window.URL.revokeObjectURL(url);
+                    window.URL.revokeObjectURL(urlCsv);
+                }, 200);
+            }, 250);
+
+            // Revert record button styling
+            recordBtn.innerHTML = `
+                <span style="display: inline-block; width: 8px; height: 8px; background: white; border-radius: 50%; animation: pulse 1s infinite alternate;" id="recordDot"></span>
+                <span>RECORD FEED</span>
+            `;
+            recordBtn.style.background = "#dc3545";
+            recordBtn.style.boxShadow = "0 0 8px rgba(220,53,69,0.3)";
+        };
+
+        mediaRecorder.start();
+        recordSeconds = 0;
+        recordBtn.innerHTML = `
+            <span style="display: inline-block; width: 8px; height: 8px; background: #39ff14; border-radius: 50%; animation: pulse 0.5s infinite alternate;" id="recordDot"></span>
+            <span>STOP (00:00)</span>
+        `;
+        recordBtn.style.background = "#005a00";
+        recordBtn.style.boxShadow = "0 0 8px rgba(57,255,20,0.3)";
+
+        clearInterval(recordTimer);
+        recordTimer = setInterval(() => {
+            recordSeconds++;
+            const mins = String(Math.floor(recordSeconds / 60)).padStart(2, '0');
+            const secs = String(recordSeconds % 60).padStart(2, '0');
+            recordBtn.innerHTML = `
+                <span style="display: inline-block; width: 8px; height: 8px; background: #39ff14; border-radius: 50%; animation: pulse 0.5s infinite alternate;" id="recordDot"></span>
+                <span>STOP (${mins}:${secs})</span>
+            `;
+        }, 1000);
+    }
+
+    function stopRecording() {
+        if (mediaRecorder && mediaRecorder.state === "recording") {
+            mediaRecorder.stop();
+        }
+        clearInterval(recordTimer);
+    }
+
+    // Record All Cameras simultaneously
+    const recordAllBtn = document.getElementById('recordAllBtn');
+    if (recordAllBtn) {
+        recordAllBtn.onclick = () => {
+            if (isRecordingAll) {
+                stopRecordingAll();
+            } else {
+                startRecordingAll();
+            }
+        };
+    }
+
+    function startRecordingAll() {
+        isRecordingAll = true;
+        recordAllSeconds = 0;
+        zipArchive = new JSZip(); // Initialize fresh ZIP container
+        finishedRecordersCount = 0;
+        
+        recordAllBtn.style.background = "#005a00";
+        recordAllBtn.style.boxShadow = "0 0 8px rgba(57,255,20,0.3)";
+        
+        const dot = recordAllBtn.querySelector('#recordAllDot');
+        const textSpan = recordAllBtn.querySelector('span:nth-child(2)');
+        if (dot) {
+            dot.style.background = "#39ff14";
+            dot.style.animation = "pulse 0.5s infinite alternate";
+        }
+        if (textSpan) {
+            textSpan.innerText = "STOP ALL (00:00)";
+        }
+
+        // Start recording for each camera
+        for (let camId in virtualCameras) {
+            recordedChunksAll[camId] = [];
+            let headers = "frame,class_id,x_center,y_center,width,height,cow_id";
+            for (let i = 1; i <= 19; i++) {
+                headers += `,px${i},py${i},pv${i}`;
+            }
+            headers += "\n";
+            csvBuffers[camId] = headers;
+            const stream = hiddenCanvases[camId].captureStream(30);
+            
+            let mimeType = 'video/mp4';
+            if (!MediaRecorder.isTypeSupported(mimeType)) {
+                mimeType = 'video/webm;codecs=vp9';
+            }
+            if (!MediaRecorder.isTypeSupported(mimeType)) {
+                mimeType = 'video/webm';
+            }
+
+            const recorder = new MediaRecorder(stream, { mimeType: mimeType });
+            recorder.ondataavailable = ((cId) => (e) => {
+                if (e.data && e.data.size > 0) {
+                    recordedChunksAll[cId].push(e.data);
+                }
+            })(camId);
+
+            recorder.onstop = ((cId, mType) => () => {
+                const blob = new Blob(recordedChunksAll[cId], { type: mType });
+                const ext = mType.includes('mp4') ? 'mp4' : 'webm';
+                
+                // Add the video file and the CSV detection log to the ZIP
+                zipArchive.file(`camera_${cId}_feed.${ext}`, blob);
+                zipArchive.file(`camera_${cId}_detections.csv`, csvBuffers[cId]);
+                
+                finishedRecordersCount++;
+                
+                // When all 8 cameras are fully written to the ZIP, compile and download
+                if (finishedRecordersCount === Object.keys(virtualCameras).length) {
+                    zipArchive.generateAsync({ type: "blob" }).then((zipBlob) => {
+                        const url = URL.createObjectURL(zipBlob);
+                        const a = document.createElement('a');
+                        a.style.display = 'none';
+                        a.href = url;
+                        a.download = "bovine_telemetry_dataset.zip";
+                        document.body.appendChild(a);
+                        a.click();
+                        setTimeout(() => {
+                            document.body.removeChild(a);
+                            window.URL.revokeObjectURL(url);
+                        }, 200);
+                    });
+                }
+            })(camId, mimeType);
+
+            mediaRecordersAll[camId] = recorder;
+            recorder.start();
+        }
+
+        clearInterval(recordAllTimer);
+        recordAllTimer = setInterval(() => {
+            recordAllSeconds++;
+            const mins = String(Math.floor(recordAllSeconds / 60)).padStart(2, '0');
+            const secs = String(recordAllSeconds % 60).padStart(2, '0');
+            if (textSpan) {
+                textSpan.innerText = `STOP ALL (${mins}:${secs})`;
+            }
+        }, 1000);
+    }
+
+    function stopRecordingAll() {
+        isRecordingAll = false;
+        clearInterval(recordAllTimer);
+        
+        for (let camId in mediaRecordersAll) {
+            const recorder = mediaRecordersAll[camId];
+            if (recorder && recorder.state === "recording") {
+                recorder.stop();
+            }
+        }
+
+        recordAllBtn.style.background = "#dc3545";
+        recordAllBtn.style.boxShadow = "0 0 8px rgba(220,53,69,0.3)";
+        
+        const dot = recordAllBtn.querySelector('#recordAllDot');
+        const textSpan = recordAllBtn.querySelector('span:nth-child(2)');
+        if (dot) {
+            dot.style.background = "white";
+            dot.style.animation = "pulse 1s infinite alternate";
+        }
+        if (textSpan) {
+            textSpan.innerText = "RECORD ALL FEEDS";
+        }
+    }
+
+    // Modal view handlers
+    function openCameraModal(camId) {
+        const calib = calibrationData[camId];
+        if (!calib) return;
+        
+        activeCameraId = camId;
+        
+        const modal = document.getElementById('cameraModal');
+        modal.classList.add('active');
+        document.getElementById('modalTitle').innerText = `Live View: Camera ${camId}`;
+        
+        // Vertical FOV calculation based on image size height (1080px) and fy focal length
+        const fov = 2 * Math.atan(1080 / (2 * calib.fy)) * 180 / Math.PI;
+        
+        document.getElementById('modalStats').innerHTML = `
+            <strong>Position (X, Y, Z):</strong> ${calib.wc_T[0].toFixed(2)}, ${calib.wc_T[1].toFixed(2)}, ${calib.wc_T[2].toFixed(2)} mm<br>
+            <strong>Focal Lengths (fx, fy):</strong> ${calib.fx.toFixed(2)}, ${calib.fy.toFixed(2)} px<br>
+            <strong>Vertical Field of View (FOV):</strong> ${fov.toFixed(2)}°
+        `;
+        
+        const canvas = document.getElementById('cameraCanvas');
+        const width = canvas.clientWidth;
+        const height = canvas.clientHeight;
+        
+        // Setup Modal Camera matching focal parameters
+        modalCamera = new THREE.PerspectiveCamera(fov, width / height, 10, 50000);
+        
+        const position = new THREE.Vector3(calib.wc_T[0], calib.wc_T[1], calib.wc_T[2]);
+        // Look direction from rotation matrix (column 2)
+        const lookDir = new THREE.Vector3(calib.wc_R[0][2], calib.wc_R[1][2], calib.wc_R[2][2]).normalize();
+        // Camera Up direction (negative column 1)
+        const upDir = new THREE.Vector3(-calib.wc_R[0][1], -calib.wc_R[1][1], -calib.wc_R[2][1]).normalize();
+        
+        const target = new THREE.Vector3().addVectors(position, lookDir);
+        modalCamera.position.copy(position);
+        modalCamera.up.copy(upDir);
+        modalCamera.lookAt(target);
+        
+        // WebGLRenderer for the modal canvas (preserveDrawingBuffer enables MediaRecorder captures)
+        if (!modalRenderer) {
+            modalRenderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, preserveDrawingBuffer: true });
+        }
+        modalRenderer.setSize(width, height, false);
+    }
+
+    function closeCameraModal() {
+        stopRecording(); // Stop any active recording before closing
+        const modal = document.getElementById('cameraModal');
+        modal.classList.remove('active');
+        activeCameraId = null;
+    }
+
+    document.getElementById('modalCloseBtn').onclick = closeCameraModal;
+    document.getElementById('cameraModal').onclick = (e) => {
+        if (e.target === document.getElementById('cameraModal')) {
+            closeCameraModal();
+        }
+    };
+
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        
+        if (activeCameraId && modalRenderer && modalCamera) {
+            const canvas = document.getElementById('cameraCanvas');
+            const width = canvas.clientWidth;
+            const height = canvas.clientHeight;
+            modalCamera.aspect = width / height;
+            modalCamera.updateProjectionMatrix();
+            modalRenderer.setSize(width, height, false);
+        }
+    }, false);
+
+    // Animation Loop
+    const clock = new THREE.Clock();
+
+    function animate() {
+        requestAnimationFrame(animate);
+        
+        handleWalking(); // first person controls walking
+        
+        const delta = clock.getDelta();
+        updateCowsSimulation(delta);
+        
+        controls.update();
+        renderer.render(scene, camera);
+        
+        // Render secondary view if modal is active
+        if (activeCameraId && modalRenderer && modalCamera) {
+            modalRenderer.render(scene, modalCamera);
+
+            // Log detections if recording single camera feed
+            if (mediaRecorder && mediaRecorder.state === "recording") {
+                cowsList.forEach((cow, cowIndex) => {
+                    const cowWorldPos = new THREE.Vector3();
+                    cow.group.getWorldPosition(cowWorldPos);
+                    
+                    // Direct unit vector from camera to cow
+                    const camToCow = new THREE.Vector3().subVectors(cowWorldPos, modalCamera.position).normalize();
+                    // Cow local left vector (+Y in model mesh bind pose space) transformed to world space
+                    const cowLeft = new THREE.Vector3(0, 1, 0).applyMatrix4(cow.model.matrixWorld).sub(cowWorldPos).normalize();
+                    
+                    // Dot product: < 0 means camera is on left side, >= 0 means on right side of cow
+                    const dotLeft = camToCow.dot(cowLeft);
+
+                    let x_min = 2; let x_max = -1;
+                    let y_min = 2; let y_max = -1;
+                    let visiblePointsCount = 0;
+                    const projVec = new THREE.Vector3();
+                    const keypointData = [];
+                    
+                    cow.spheres.forEach((sphere, sIdx) => {
+                        projVec.copy(sphere.position);
+                        projVec.project(modalCamera);
+                        
+                        const sx = (projVec.x + 1) / 2;
+                        const sy = (-projVec.y + 1) / 2;
+                        
+                        let pv = 0; // 0 = not labeled / out of frame
+                        if (projVec.z >= -1 && projVec.z <= 1 && sx >= 0 && sx <= 1 && sy >= 0 && sy <= 1) {
+                            if (leftSideIndices.includes(sIdx)) {
+                                pv = (dotLeft < 0) ? 2 : 1; // 2 = visible, 1 = occluded
+                            } else if (rightSideIndices.includes(sIdx)) {
+                                pv = (dotLeft >= 0) ? 2 : 1; // 2 = visible, 1 = occluded
+                            } else {
+                                pv = 2; // Nose, Withers, Tailhead are always visible
+                            }
+                            
+                            if (sx < x_min) x_min = sx;
+                            if (sx > x_max) x_max = sx;
+                            if (sy < y_min) y_min = sy;
+                            if (sy > y_max) y_max = sy;
+                            visiblePointsCount++;
+                        }
+                        
+                        keypointData.push(`${sx.toFixed(5)},${sy.toFixed(5)},${pv}`);
+                    });
+                    
+                    if (visiblePointsCount > 0) {
+                        if (x_max >= 0 && x_min <= 1 && y_max >= 0 && y_min <= 1) {
+                            const x1 = Math.max(0, Math.min(1, x_min));
+                            const x2 = Math.max(0, Math.min(1, x_max));
+                            const y1 = Math.max(0, Math.min(1, y_min));
+                            const y2 = Math.max(0, Math.min(1, y_max));
+                            
+                            const x_center = (x1 + x2) / 2;
+                            const y_center = (y1 + y2) / 2;
+                            const width = x2 - x1;
+                            const height = y2 - y1;
+                            
+                            if (width > 0.01 && height > 0.01) {
+                                const classId = 0; // Cow class
+                                const keypointsStr = keypointData.join(",");
+                                csvBufferSingle += `${recordingFrameCountSingle},${classId},${x_center.toFixed(5)},${y_center.toFixed(5)},${width.toFixed(5)},${height.toFixed(5)},cow_${cowIndex},${keypointsStr}\n`;
+                            }
+                        }
+                    }
+                });
+                recordingFrameCountSingle++;
+            }
+        }
+
+        // Render background views for simultaneous recording of all 8 cameras
+        if (isRecordingAll) {
+            const oldWidth = window.innerWidth;
+            const oldHeight = window.innerHeight;
+            
+            // Set lightweight offscreen resolution to draw to contexts
+            renderer.setSize(320, 180, false);
+            
+            for (let camId in virtualCameras) {
+                const vCam = virtualCameras[camId];
+                renderer.render(scene, vCam);
+                hiddenContexts[camId].drawImage(renderer.domElement, 0, 0, 320, 180);
+                
+                cowsList.forEach((cow, cowIndex) => {
+                    const cowWorldPos = new THREE.Vector3();
+                    cow.group.getWorldPosition(cowWorldPos);
+                    
+                    const camToCow = new THREE.Vector3().subVectors(cowWorldPos, vCam.position).normalize();
+                    const cowLeft = new THREE.Vector3(0, 1, 0).applyMatrix4(cow.model.matrixWorld).sub(cowWorldPos).normalize();
+                    
+                    const dotLeft = camToCow.dot(cowLeft);
+
+                    let x_min = 2; let x_max = -1;
+                    let y_min = 2; let y_max = -1;
+                    let visiblePointsCount = 0;
+                    const projVec = new THREE.Vector3();
+                    const keypointData = [];
+                    
+                    cow.spheres.forEach((sphere, sIdx) => {
+                        projVec.copy(sphere.position);
+                        projVec.project(vCam);
+                        
+                        const sx = (projVec.x + 1) / 2;
+                        const sy = (-projVec.y + 1) / 2;
+                        
+                        let pv = 0; // 0 = not labeled
+                        if (projVec.z >= -1 && projVec.z <= 1 && sx >= 0 && sx <= 1 && sy >= 0 && sy <= 1) {
+                            if (leftSideIndices.includes(sIdx)) {
+                                pv = (dotLeft < 0) ? 2 : 1;
+                            } else if (rightSideIndices.includes(sIdx)) {
+                                pv = (dotLeft >= 0) ? 2 : 1;
+                            } else {
+                                pv = 2;
+                            }
+                            
+                            if (sx < x_min) x_min = sx;
+                            if (sx > x_max) x_max = sx;
+                            if (sy < y_min) y_min = sy;
+                            if (sy > y_max) y_max = sy;
+                            visiblePointsCount++;
+                        }
+                        
+                        keypointData.push(`${sx.toFixed(5)},${sy.toFixed(5)},${pv}`);
+                    });
+                    
+                    if (visiblePointsCount > 0) {
+                        if (x_max >= 0 && x_min <= 1 && y_max >= 0 && y_min <= 1) {
+                            const x1 = Math.max(0, Math.min(1, x_min));
+                            const x2 = Math.max(0, Math.min(1, x_max));
+                            const y1 = Math.max(0, Math.min(1, y_min));
+                            const y2 = Math.max(0, Math.min(1, y_max));
+                            
+                            const x_center = (x1 + x2) / 2;
+                            const y_center = (y1 + y2) / 2;
+                            const width = x2 - x1;
+                            const height = y2 - y1;
+                            
+                            if (width > 0.01 && height > 0.01) {
+                                const classId = 0; // Cow class
+                                const keypointsStr = keypointData.join(",");
+                                csvBuffers[camId] += `${recordingFrameCount},${classId},${x_center.toFixed(5)},${y_center.toFixed(5)},${width.toFixed(5)},${height.toFixed(5)},cow_${cowIndex},${keypointsStr}\n`;
+                            }
+                        }
+                    }
+                });
+            }
+            
+            recordingFrameCount++;
+            
+            // Restore main size
+            renderer.setSize(oldWidth, oldHeight, true);
+        }
+    }
+    
+    // Start loop
+    animate();
+</script>
+</body>
+</html>
