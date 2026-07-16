@@ -589,6 +589,7 @@
     let cowModel = null;
     let walkClip = null;
     let eatingClip = null;
+    let idleClip = null;
     let modelScaleFactor = 1.0;
     let modelYOffset = 0.0;
 
@@ -639,12 +640,30 @@
                     });
                 }
                 
-                clearInterval(loaderTimer);
-                if (loadingEl) {
-                    loadingEl.innerText = loadingLogs.join("\n") + "\n[SYS] MESH & SKELETON SYNCED.\n[SYS] BOVINE ENGINE ONLINE.";
-                    setTimeout(() => { loadingEl.style.display = 'none'; }, 800);
-                }
-                initCows();
+                // Load idle animation
+                fbxLoader.load('RSG_Shepherd_Pack_FBX/Cow/Animations/A_Cow_Idle_01.fbx', function (animIdle) {
+                    if (animIdle.animations && animIdle.animations.length > 0) {
+                        idleClip = animIdle.animations[0];
+                        idleClip.tracks = idleClip.tracks.filter(track => {
+                            const name = track.name.toLowerCase();
+                            if (name.includes('position')) return false;
+                            if (name.includes('quaternion') && (name.includes('rig') || name.includes('root') || name.includes('original') || name.includes('mesh') || name.includes('cow'))) return false;
+                            return true;
+                        });
+                    }
+                    
+                    clearInterval(loaderTimer);
+                    if (loadingEl) {
+                        loadingEl.innerText = loadingLogs.join("\n") + "\n[SYS] MESH & SKELETON SYNCED.\n[SYS] BOVINE ENGINE ONLINE.";
+                        setTimeout(() => { loadingEl.style.display = 'none'; }, 800);
+                    }
+                    initCows();
+                }, undefined, function (err) {
+                    console.error("Error loading idle animation:", err);
+                    clearInterval(loaderTimer);
+                    if (loadingEl) loadingEl.style.display = 'none';
+                    initCows();
+                });
             }, undefined, function (err) {
                 console.error("Error loading eating animation:", err);
                 clearInterval(loaderTimer);
@@ -884,11 +903,13 @@
             const action = mixer.clipAction(walkClip);
             action.play();
             action.time = Math.random() * walkClip.duration;
-        } else if (state === "lying" && walkClip) {
-            const action = mixer.clipAction(walkClip);
-            action.play();
-            action.time = Math.random() * walkClip.duration;
-            mixer.update(0); // freeze at random walk frame pose
+        } else if (state === "lying") {
+            const clip = idleClip || walkClip;
+            if (clip) {
+                const action = mixer.clipAction(clip);
+                action.play();
+                action.time = Math.random() * clip.duration;
+            }
         }
 
         // Create 3D Bounding Box Helper for main view visualization (neon green wireframe box)
@@ -1012,15 +1033,8 @@
                     // No random lying down transition; they only lie down when colliding with a cubicle!
                 }
 
-                // If lying down, skip walking movements
-                if (cow.state === "lying") {
-                    // Skip movement and mixer update (mixer is frozen)
-                } else if (cow.state === "eating") {
-                    // Update eating animation, skip walking movements
-                    if (cow.mixer) {
-                        cow.mixer.update(delta);
-                    }
-                } else {
+                // If not lying and not eating, perform walking movements
+                if (cow.state !== "lying" && cow.state !== "eating") {
                     // Standard walking movement:
                     // Avoid collision with other cows (radius ~1500mm to prevent clipping)
                     cowsList.forEach((otherCow, otherIdx) => {
@@ -1086,14 +1100,14 @@
                             cow.wanderAngle = pos.angle;
                             cow.group.rotation.z = pos.angle;
                             
-                            // Freeze animation at random walk frame pose
+                            // Play idle/lying animation for lying cow
                             if (cow.mixer) {
                                 cow.mixer.stopAllAction();
-                                if (walkClip) {
-                                    const action = cow.mixer.clipAction(walkClip);
+                                const clip = idleClip || walkClip;
+                                if (clip) {
+                                    const action = cow.mixer.clipAction(clip);
                                     action.play();
-                                    action.time = Math.random() * walkClip.duration;
-                                    cow.mixer.update(0);
+                                    action.time = Math.random() * clip.duration;
                                 }
                             }
                         } else if (nextY <= 4250 && nextX < 9380) {
@@ -1124,11 +1138,11 @@
                     
                     // Face moving direction
                     cow.group.rotation.z = cow.wanderAngle;
-                    
-                    // Update animation clip
-                    if (cow.mixer) {
-                        cow.mixer.update(delta);
-                    }
+                }
+                
+                // Update animation mixer for all states (keeps lying cows breathing and eating cows chewing!)
+                if (cow.mixer) {
+                    cow.mixer.update(delta);
                 }
             }
              
