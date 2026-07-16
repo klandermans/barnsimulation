@@ -434,9 +434,9 @@
             line.computeLineDistances();
             scene.add(line);
 
-            // Set up virtual camera and hidden canvas for background recording
+            // Set up virtual camera and hidden canvas for background recording (720p HD resolution)
             const fov = 2 * Math.atan(1080 / (2 * calib.fy)) * 180 / Math.PI;
-            const vCam = new THREE.PerspectiveCamera(fov, 320 / 180, 10, 50000);
+            const vCam = new THREE.PerspectiveCamera(fov, 1280 / 720, 10, 50000);
             vCam.position.set(pos[0], pos[1], pos[2]);
             const upDir = new THREE.Vector3(-wc_R[0][1], -wc_R[1][1], -wc_R[2][1]).normalize();
             vCam.up.copy(upDir);
@@ -444,8 +444,8 @@
             virtualCameras[key] = vCam;
 
             const hiddenCanvas = document.createElement('canvas');
-            hiddenCanvas.width = 320;
-            hiddenCanvas.height = 180;
+            hiddenCanvas.width = 1280;
+            hiddenCanvas.height = 720;
             hiddenCanvases[key] = hiddenCanvas;
             hiddenContexts[key] = hiddenCanvas.getContext('2d');
         }
@@ -1027,7 +1027,11 @@
         }
 
         try {
-            mediaRecorder = new MediaRecorder(stream, { mimeType: mimeType });
+            // Set 15 Mbps bitrate for ultra high quality single camera recording
+            mediaRecorder = new MediaRecorder(stream, { 
+                mimeType: mimeType,
+                videoBitsPerSecond: 15000000 
+            });
         } catch (e) {
             console.error("MediaRecorder creation failed:", e);
             alert("Video recording is not supported in this browser configuration.");
@@ -1159,7 +1163,10 @@
                 mimeType = 'video/webm';
             }
 
-            const recorder = new MediaRecorder(stream, { mimeType: mimeType });
+            const recorder = new MediaRecorder(stream, { 
+                mimeType: mimeType,
+                videoBitsPerSecond: 5000000 // 5 Mbps per camera for high-quality HD feeds
+            });
             recorder.ondataavailable = ((cId) => (e) => {
                 if (e.data && e.data.size > 0) {
                     recordedChunksAll[cId].push(e.data);
@@ -1255,8 +1262,8 @@
         `;
         
         const canvas = document.getElementById('cameraCanvas');
-        const width = canvas.clientWidth;
-        const height = canvas.clientHeight;
+        const width = canvas.clientWidth * 2; // Render at 2x resolution (HD/Retina quality)
+        const height = canvas.clientHeight * 2;
         
         // Setup Modal Camera matching focal parameters
         modalCamera = new THREE.PerspectiveCamera(fov, width / height, 10, 50000);
@@ -1306,8 +1313,8 @@
         
         if (activeCameraId && modalRenderer && modalCamera) {
             const canvas = document.getElementById('cameraCanvas');
-            const width = canvas.clientWidth;
-            const height = canvas.clientHeight;
+            const width = canvas.clientWidth * 2; // Render at 2x resolution (HD/Retina quality)
+            const height = canvas.clientHeight * 2;
             modalCamera.aspect = width / height;
             modalCamera.updateProjectionMatrix();
             modalRenderer.setSize(width, height, false);
