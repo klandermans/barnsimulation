@@ -670,6 +670,13 @@
             }
         });
         
+        // Apply individual non-uniform scale directly to the skinned mesh model
+        // In the FBX rig space: local X is length, local Y is width/fatness, local Z is height
+        const lengthScale = 1.0 + (Math.random() * 0.16 - 0.08);   // +/- 8% length
+        const fatnessScale = 1.0 + (Math.random() * 0.36 - 0.18);  // +/- 18% width/fatness (girth)
+        const heightScale = 1.0 + (Math.random() * 0.12 - 0.06);   // +/- 6% vertical height
+        model.scale.set(lengthScale, fatnessScale, heightScale);
+
         // Rotate model to stand upright (local Y-up -> world Z-up) and face forward (+X)
         model.rotation.set(rotX, rotY, rotZ);
         
@@ -687,14 +694,12 @@
         const wanderAngle = Math.random() * Math.PI * 2;
         const direction = new THREE.Vector3(Math.cos(wanderAngle), Math.sin(wanderAngle), 0);
         
-        // Scale and orient the group (randomize height, width, and length to simulate different cow sizes/ages)
-        const sizeScale = 1.0 + (Math.random() * 0.2 - 0.1); // +/- 10% overall scale
-        const lengthScale = 1.0 + (Math.random() * 0.15 - 0.075); // +/- 7.5% length scale
-        const widthScale = 1.0 + (Math.random() * 0.15 - 0.075); // +/- 7.5% width scale
+        // Scale and orient the group uniformly to avoid any non-uniform shear distortions during Z rotations
+        const sizeScale = 1.0 + (Math.random() * 0.2 - 0.1); // +/- 10% overall size/scale
         
         cowGroup.scale.set(
-            modelScaleFactor * lengthScale * sizeScale,
-            modelScaleFactor * widthScale * sizeScale,
+            modelScaleFactor * sizeScale,
+            modelScaleFactor * sizeScale,
             modelScaleFactor * sizeScale
         );
         cowGroup.rotation.z = wanderAngle;
