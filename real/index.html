@@ -804,7 +804,7 @@
         model.position.z = defaultModelZ;
         
         const state = Math.random() < 0.3 ? "lying" : "walking";
-        const stateTimer = 10 + Math.random() * 40;
+        const stateTimer = Math.random() * 30;
         
         let rx, ry, wAngle;
         if (state === "lying") {
@@ -1094,9 +1094,9 @@
                     
                     if (collision) {
                         if (hitCubicle) {
-                            // Lie down in this cubicle for 20 seconds!
+                            // Lie down in this cubicle for a random time between 0 and 30 seconds
                             cow.state = "lying";
-                            cow.stateTimer = 20; // 20 seconds
+                            cow.stateTimer = Math.random() * 30;
                             
                             const pos = getRandomLyingPositionForCubicle(cubicleName);
                             cow.group.position.set(pos.x, pos.y, -5);
@@ -1114,9 +1114,9 @@
                                 }
                             }
                         } else if (nextY <= 4250 && nextX < 9380) {
-                            // Eat at the rack for 20 seconds!
+                            // Eat at the rack for a random time between 0 and 30 seconds
                             cow.state = "eating";
-                            cow.stateTimer = 20; // 20 seconds
+                            cow.stateTimer = Math.random() * 30;
                             cow.group.position.y = 4220; // align at voerhek
                             cow.wanderAngle = -Math.PI / 2; // face feeding rack
                             cow.direction.set(0, -1, 0);
