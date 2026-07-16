@@ -639,6 +639,33 @@
         const model = cloneSkinnedMesh(cowModel);
         cowGroup.add(model);
         
+        // Apply domain randomization: individual cow texture colors to create different breeds/patterns
+        model.traverse(child => {
+            if (child.isMesh) {
+                child.material = child.material.clone(); // Clone material to make color changes individual
+                
+                const rand = Math.random();
+                let tintColor = new THREE.Color(0xffffff);
+                if (rand < 0.35) {
+                    // Holstein Black-and-white (no tint)
+                    tintColor.setHex(0xffffff);
+                } else if (rand < 0.60) {
+                    // Red-and-white (Red Holstein)
+                    tintColor.setRGB(0.75 + Math.random() * 0.1, 0.4 + Math.random() * 0.1, 0.25 + Math.random() * 0.1);
+                } else if (rand < 0.80) {
+                    // Brown / Tan (Jersey / Swiss Brown)
+                    tintColor.setRGB(0.6 + Math.random() * 0.1, 0.5 + Math.random() * 0.1, 0.4 + Math.random() * 0.1);
+                } else if (rand < 0.95) {
+                    // Black Angus / Dark Charcoal
+                    tintColor.setRGB(0.15 + Math.random() * 0.08, 0.15 + Math.random() * 0.08, 0.15 + Math.random() * 0.08);
+                } else {
+                    // Cream / White (Charolais)
+                    tintColor.setRGB(0.95, 0.92, 0.85);
+                }
+                child.material.color.copy(tintColor);
+            }
+        });
+        
         // Rotate model to stand upright (local Y-up -> world Z-up) and face forward (+X)
         model.rotation.set(rotX, rotY, rotZ);
         
@@ -656,8 +683,16 @@
         const wanderAngle = Math.random() * Math.PI * 2;
         const direction = new THREE.Vector3(Math.cos(wanderAngle), Math.sin(wanderAngle), 0);
         
-        // Scale and orient the group
-        cowGroup.scale.set(modelScaleFactor, modelScaleFactor, modelScaleFactor);
+        // Scale and orient the group (randomize height, width, and length to simulate different cow sizes/ages)
+        const sizeScale = 1.0 + (Math.random() * 0.2 - 0.1); // +/- 10% overall scale
+        const lengthScale = 1.0 + (Math.random() * 0.15 - 0.075); // +/- 7.5% length scale
+        const widthScale = 1.0 + (Math.random() * 0.15 - 0.075); // +/- 7.5% width scale
+        
+        cowGroup.scale.set(
+            modelScaleFactor * lengthScale * sizeScale,
+            modelScaleFactor * widthScale * sizeScale,
+            modelScaleFactor * sizeScale
+        );
         cowGroup.rotation.z = wanderAngle;
         
         // Find bones for keypoints (fuzzy name matching to handle variations in FBX name sanitation)
