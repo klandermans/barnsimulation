@@ -1267,11 +1267,11 @@
         `;
         
         const canvas = document.getElementById('cameraCanvas');
-        const width = canvas.clientWidth * 2; // Render at 2x resolution (HD/Retina quality)
-        const height = canvas.clientHeight * 2;
+        canvas.width = 1920;
+        canvas.height = 1080;
         
-        // Setup Modal Camera matching focal parameters
-        modalCamera = new THREE.PerspectiveCamera(fov, width / height, 10, 50000);
+        // Setup Modal Camera matching focal parameters (fixed 16:9 full HD aspect ratio)
+        modalCamera = new THREE.PerspectiveCamera(fov, 1920 / 1080, 10, 50000);
         
         const position = new THREE.Vector3(calib.wc_T[0], calib.wc_T[1], calib.wc_T[2]);
         // Look direction from rotation matrix (column 2)
@@ -1288,12 +1288,12 @@
         if (!modalRenderer) {
             modalRenderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, preserveDrawingBuffer: true });
         }
-        modalRenderer.setSize(width, height, false);
+        modalRenderer.setSize(1920, 1080, false);
 
         const overlay = document.getElementById('cameraOverlay');
         if (overlay) {
-            overlay.width = width;
-            overlay.height = height;
+            overlay.width = 1920;
+            overlay.height = 1080;
         }
     }
 
@@ -1316,20 +1316,7 @@
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
         
-        if (activeCameraId && modalRenderer && modalCamera) {
-            const canvas = document.getElementById('cameraCanvas');
-            const width = canvas.clientWidth * 2; // Render at 2x resolution (HD/Retina quality)
-            const height = canvas.clientHeight * 2;
-            modalCamera.aspect = width / height;
-            modalCamera.updateProjectionMatrix();
-            modalRenderer.setSize(width, height, false);
 
-            const overlay = document.getElementById('cameraOverlay');
-            if (overlay) {
-                overlay.width = width;
-                overlay.height = height;
-            }
-        }
     }, false);
 
     // Animation Loop
@@ -1505,13 +1492,13 @@
             const oldWidth = window.innerWidth;
             const oldHeight = window.innerHeight;
             
-            // Set lightweight offscreen resolution to draw to contexts
-            renderer.setSize(320, 180, false);
+            // Set HD offscreen resolution to draw to contexts (1280x720)
+            renderer.setSize(1280, 720, false);
             
             for (let camId in virtualCameras) {
                 const vCam = virtualCameras[camId];
                 renderer.render(scene, vCam);
-                hiddenContexts[camId].drawImage(renderer.domElement, 0, 0, 320, 180);
+                hiddenContexts[camId].drawImage(renderer.domElement, 0, 0, 1280, 720);
                 
                 const vCamPos = new THREE.Vector3();
                 vCam.getWorldPosition(vCamPos);
