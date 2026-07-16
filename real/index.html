@@ -364,6 +364,22 @@
             let lineGeom = new THREE.BufferGeometry().setFromPoints(points);
             let line = new THREE.Line(lineGeom, slatEdgeMaterial);
             scene.add(line);
+        } else if (key.includes("wall_A") || key.includes("wall_b")) {
+            // Make walls 1 meter high 3D Box (1000mm)
+            let w = Math.abs(x2 - x1);
+            let h = Math.abs(y2 - y1);
+            if (w === 0) w = 150; 
+            if (h === 0) h = 150; 
+            let cx = (x1 + x2) / 2;
+            let cy = (y1 + y2) / 2;
+
+            const wallGeom = new THREE.BoxGeometry(w, h, 1000);
+            const wallMat = new THREE.MeshStandardMaterial({ color: 0x4a2e1b, roughness: 0.8 }); // darker wood wall
+            const wallMesh = new THREE.Mesh(wallGeom, wallMat);
+            wallMesh.position.set(cx, cy, 500); // ground is z = -5, so center at z = 500 is 1000mm high standing on ground
+            wallMesh.castShadow = true;
+            wallMesh.receiveShadow = true;
+            scene.add(wallMesh);
         } else {
             let w = Math.abs(x2 - x1);
             let h = Math.abs(y2 - y1);
@@ -572,6 +588,7 @@
 
     let cowModel = null;
     let walkClip = null;
+    let eatingClip = null;
     let modelScaleFactor = 1.0;
     let modelYOffset = 0.0;
 
@@ -599,37 +616,86 @@
         modelYOffset = -box.min.y;
 
         // Load walk animation
-        fbxLoader.load('RSG_Shepherd_Pack_FBX/Cow/Animations/A_Cow_Walk_01.fbx', function (animFbx) {
-            if (animFbx.animations && animFbx.animations.length > 0) {
-                walkClip = animFbx.animations[0];
-                
-                // Strip root bone translation and rotation tracks to prevent animation from moving or tilting the cow
+        fbxLoader.load('RSG_Shepherd_Pack_FBX/Cow/Animations/A_Cow_Walk_01.fbx', function (animWalk) {
+            if (animWalk.animations && animWalk.animations.length > 0) {
+                walkClip = animWalk.animations[0];
                 walkClip.tracks = walkClip.tracks.filter(track => {
                     const name = track.name.toLowerCase();
-                    if (name.includes('position')) {
-                        return false;
-                    }
-                    if (name.includes('quaternion') && (name.includes('rig') || name.includes('root') || name.includes('original') || name.includes('mesh') || name.includes('cow'))) {
-                        return false;
-                    }
+                    if (name.includes('position')) return false;
+                    if (name.includes('quaternion') && (name.includes('rig') || name.includes('root') || name.includes('original') || name.includes('mesh') || name.includes('cow'))) return false;
                     return true;
                 });
             }
             
-            clearInterval(loaderTimer);
-            if (loadingEl) {
-                loadingEl.innerText = loadingLogs.join("\n") + "\n[SYS] MESH & SKELETON SYNCED.\n[SYS] BOVINE ENGINE ONLINE.";
-                setTimeout(() => { loadingEl.style.display = 'none'; }, 800);
-            }
-            initCows();
+            // Load eating animation
+            fbxLoader.load('RSG_Shepherd_Pack_FBX/Cow/Animations/A_Cow_Eating_01.fbx', function (animEating) {
+                if (animEating.animations && animEating.animations.length > 0) {
+                    eatingClip = animEating.animations[0];
+                    eatingClip.tracks = eatingClip.tracks.filter(track => {
+                        const name = track.name.toLowerCase();
+                        if (name.includes('position')) return false;
+                        if (name.includes('quaternion') && (name.includes('rig') || name.includes('root') || name.includes('original') || name.includes('mesh') || name.includes('cow'))) return false;
+                        return true;
+                    });
+                }
+                
+                clearInterval(loaderTimer);
+                if (loadingEl) {
+                    loadingEl.innerText = loadingLogs.join("\n") + "\n[SYS] MESH & SKELETON SYNCED.\n[SYS] BOVINE ENGINE ONLINE.";
+                    setTimeout(() => { loadingEl.style.display = 'none'; }, 800);
+                }
+                initCows();
+            }, undefined, function (err) {
+                console.error("Error loading eating animation:", err);
+                clearInterval(loaderTimer);
+                if (loadingEl) loadingEl.style.display = 'none';
+                initCows();
+            });
         }, undefined, function (err) {
             console.error("Error loading walk animation:", err);
             clearInterval(loaderTimer);
-            if (loadingEl) {
-                loadingEl.style.display = 'none';
-            }
+            if (loadingEl) loadingEl.style.display = 'none';
             initCows();
         });
+
+    // Helper functions for cow AI state machine and obstacle checks
+    function isPosInObstacle(x, y) {
+        // 1. Service Area
+        if (x >= 9380 && x <= 10800 && y >= 4200 && y <= 18250) return true;
+        
+        // 2. Wall A
+        if (x >= 5750 && x <= 5870 && y >= 7720 && y <= 12720) return true;
+        
+        // 3. Wall B (labeled wall_b in floorPlan)
+        if (x >= 1150 && x <= 1300 && y >= 15250 && y <= 18250) return true;
+        
+        // 4. Cubicle A
+        if (x >= 2390 && x <= 9290 && y >= 15250 && y <= 18250) return true;
+        
+        // 5. Cubicle B
+        if (x >= 0 && x <= 5750 && y >= 10220 && y <= 12720) return true;
+        
+        // 6. Cubicle C
+        if (x >= 0 && x <= 5750 && y >= 7720 && y <= 10220) return true;
+        
+        return false;
+    }
+
+    function getRandomLyingPosition() {
+        if (Math.random() < 0.5) {
+            // cubicle_A
+            const x = 2500 + Math.random() * 6600;
+            const y = 15600 + Math.random() * 2100;
+            const angle = Math.random() < 0.5 ? Math.PI / 2 : -Math.PI / 2;
+            return { x, y, angle };
+        } else {
+            // cubicle_B or cubicle_C
+            const x = 200 + Math.random() * 5200;
+            const y = 7900 + Math.random() * 4500;
+            const angle = Math.random() < 0.5 ? 0 : Math.PI;
+            return { x, y, angle };
+        }
+    }
     }, undefined, function (err) {
         console.error("Error loading cow model:", err);
         clearInterval(loaderTimer);
@@ -695,14 +761,31 @@
         const localBox = new THREE.Box3().setFromObject(model);
         model.position.z = -localBox.min.z;
         
-        // Random coordinates within safe barn borders
-        const x = Math.random() * (10300 - 500) + 500;
-        const y = Math.random() * (17700 - 3000) + 3000;
-        cowGroup.position.set(x, y, -5); // Stand on the ground at z = -5
+        const state = Math.random() < 0.3 ? "lying" : "walking";
+        const stateTimer = 10 + Math.random() * 40;
         
-        // Random direction angle
-        const wanderAngle = Math.random() * Math.PI * 2;
-        const direction = new THREE.Vector3(Math.cos(wanderAngle), Math.sin(wanderAngle), 0);
+        let rx, ry, wAngle;
+        if (state === "lying") {
+            const pos = getRandomLyingPosition();
+            rx = pos.x;
+            ry = pos.y;
+            wAngle = pos.angle;
+            
+            // Lay down: roll model and lower it
+            model.rotation.x = -1.4;
+            model.position.z = 200;
+        } else {
+            wAngle = Math.random() * Math.PI * 2;
+            let tries = 0;
+            do {
+                rx = 500 + Math.random() * 8800;
+                ry = 4300 + Math.random() * 10500;
+                tries++;
+            } while (isPosInObstacle(rx, ry) && tries < 100);
+        }
+        cowGroup.position.set(rx, ry, -5); // Stand on the ground at z = -5
+        
+        const direction = new THREE.Vector3(Math.cos(wAngle), Math.sin(wAngle), 0);
         
         // Scale and orient the group uniformly to avoid any non-uniform shear distortions during Z rotations
         const sizeScale = 1.0 + (Math.random() * 0.2 - 0.1); // +/- 10% overall size/scale
@@ -712,7 +795,7 @@
             modelScaleFactor * sizeScale,
             modelScaleFactor * sizeScale
         );
-        cowGroup.rotation.z = wanderAngle;
+        cowGroup.rotation.z = wAngle;
         
         // Find bones for keypoints (fuzzy name matching to handle variations in FBX name sanitation)
         const normalizedKeypointNames = keypointBoneNames.map(name => name.toLowerCase().replace(/[^a-z0-9]/g, ''));
@@ -778,11 +861,15 @@
 
         // Setup animation mixer
         const mixer = new THREE.AnimationMixer(model);
-        if (walkClip) {
+        if (state === "walking" && walkClip) {
             const action = mixer.clipAction(walkClip);
             action.play();
-            // Randomize start time of animation to desynchronize their walk cycles
             action.time = Math.random() * walkClip.duration;
+        } else if (state === "lying" && walkClip) {
+            const action = mixer.clipAction(walkClip);
+            action.play();
+            action.time = Math.random() * walkClip.duration;
+            mixer.update(0); // freeze at random walk frame pose
         }
 
         // Create 3D Bounding Box Helper for main view visualization (neon green wireframe box)
@@ -792,6 +879,8 @@
         boxHelper.layers.set(1); // Set to Layer 1 (skeletons/boxes layer)
         scene.add(boxHelper);
         
+        const defaultModelZ = -localBox.min.z;
+        
         return {
             group: cowGroup,
             model,
@@ -800,9 +889,12 @@
             lines,
             connections,
             direction,
-            wanderAngle,
+            wanderAngle: wAngle,
             bones: keypointBones,
-            boxHelper
+            boxHelper,
+            defaultModelZ,
+            state,
+            stateTimer
         };
     }
 
@@ -835,59 +927,170 @@
             cow.group.visible = showModels;
             
             if (isPlaying) {
-                // Avoid collision with other cows (radius ~1500mm to prevent clipping)
-                cowsList.forEach((otherCow, otherIdx) => {
-                    if (idx !== otherIdx) {
-                        const dist = cow.group.position.distanceTo(otherCow.group.position);
-                        if (dist < 1500) {
-                            const pushDir = new THREE.Vector3().subVectors(cow.group.position, otherCow.group.position);
-                            pushDir.z = 0; // remain on floor
-                            pushDir.normalize();
-                            
-                            // Steer away
-                            cow.direction.addScaledVector(pushDir, 0.2).normalize();
-                            cow.wanderAngle = Math.atan2(cow.direction.y, cow.direction.x);
+                // Initialize state if not present (defensive)
+                if (!cow.state) {
+                    cow.state = "walking";
+                    cow.stateTimer = 10 + Math.random() * 30;
+                }
+                
+                // Decrement state timer
+                cow.stateTimer -= delta;
+                
+                // State transitions
+                if (cow.state === "eating") {
+                    if (cow.stateTimer <= 0) {
+                        // Done eating, walk away!
+                        cow.state = "walking";
+                        cow.stateTimer = 20 + Math.random() * 40;
+                        cow.wanderAngle = Math.PI / 2; // turn back to barn
+                        cow.direction.set(0, 1, 0); // walk up
+                        
+                        // Restore walking animation
+                        if (cow.mixer) {
+                            cow.mixer.stopAllAction();
+                            if (walkClip) {
+                                const action = cow.mixer.clipAction(walkClip);
+                                action.play();
+                            }
                         }
                     }
-                });
+                } else if (cow.state === "lying") {
+                    if (cow.stateTimer <= 0) {
+                        // Stand up!
+                        cow.state = "walking";
+                        cow.stateTimer = 30 + Math.random() * 60;
+                        
+                        // Spawn outside cubicles in a safe walking alley
+                        let rx, ry;
+                        let tries = 0;
+                        do {
+                            rx = 500 + Math.random() * 8800;
+                            ry = 4500 + Math.random() * 10000;
+                            tries++;
+                        } while (isPosInObstacle(rx, ry) && tries < 100);
+                        
+                        cow.group.position.set(rx, ry, -5);
+                        cow.model.rotation.x = 0;
+                        cow.model.position.z = cow.defaultModelZ;
+                        
+                        // Play walk animation
+                        if (cow.mixer) {
+                            cow.mixer.stopAllAction();
+                            if (walkClip) {
+                                const action = cow.mixer.clipAction(walkClip);
+                                action.play();
+                            }
+                        }
+                    }
+                } else { // walking
+                    if (cow.stateTimer <= 0 && Math.random() < 0.2) {
+                        // Go to lie down in cubicle!
+                        cow.state = "lying";
+                        cow.stateTimer = 30 + Math.random() * 45; // lie down for 30-75s
+                        
+                        const pos = getRandomLyingPosition();
+                        cow.group.position.set(pos.x, pos.y, -5);
+                        cow.wanderAngle = pos.angle;
+                        cow.group.rotation.z = pos.angle;
+                        
+                        // Lay down: roll model and lower it
+                        cow.model.rotation.x = -1.4; // rolled on side
+                        cow.model.position.z = 200; // lower relative to default standing height
+                        
+                        // Freeze animation
+                        if (cow.mixer) {
+                            cow.mixer.stopAllAction();
+                            if (walkClip) {
+                                const action = cow.mixer.clipAction(walkClip);
+                                action.play();
+                                action.time = Math.random() * walkClip.duration;
+                                cow.mixer.update(0);
+                            }
+                        }
+                    }
+                }
 
-                // Smooth wandering behaviour
-                if (Math.random() < 0.02) {
-                    cow.wanderAngle += (Math.random() - 0.5) * 0.5;
-                    cow.direction.set(Math.cos(cow.wanderAngle), Math.sin(cow.wanderAngle), 0).normalize();
-                }
-                
-                // Move cow group
-                cow.group.position.addScaledVector(cow.direction, speedMultiplier * 10);
-                
-                // Keep within bounds of the slatted floor and cubicles
-                if (cow.group.position.x < 500) {
-                    cow.group.position.x = 500;
-                    cow.wanderAngle = Math.PI - cow.wanderAngle;
-                    cow.direction.x = Math.abs(cow.direction.x);
-                }
-                if (cow.group.position.x > 10300) {
-                    cow.group.position.x = 10300;
-                    cow.wanderAngle = Math.PI - cow.wanderAngle;
-                    cow.direction.x = -Math.abs(cow.direction.x);
-                }
-                if (cow.group.position.y < 3000) {
-                    cow.group.position.y = 3000;
-                    cow.wanderAngle = -cow.wanderAngle;
-                    cow.direction.y = Math.abs(cow.direction.y);
-                }
-                if (cow.group.position.y > 17700) {
-                    cow.group.position.y = 17700;
-                    cow.wanderAngle = -cow.wanderAngle;
-                    cow.direction.y = -Math.abs(cow.direction.y);
-                }
-                
-                // Face the moving direction (only Z rotation changes, keeping pitch/roll locked to 0)
-                cow.group.rotation.z = cow.wanderAngle;
-                
-                // Update animation clip
-                if (cow.mixer) {
-                    cow.mixer.update(delta);
+                // If lying down, skip walking movements
+                if (cow.state === "lying") {
+                    // Skip movement and mixer update (mixer is frozen)
+                } else if (cow.state === "eating") {
+                    // Update eating animation, skip walking movements
+                    if (cow.mixer) {
+                        cow.mixer.update(delta);
+                    }
+                } else {
+                    // Standard walking movement:
+                    // Avoid collision with other cows (radius ~1500mm to prevent clipping)
+                    cowsList.forEach((otherCow, otherIdx) => {
+                        if (idx !== otherIdx && otherCow.state === "walking") {
+                            const dist = cow.group.position.distanceTo(otherCow.group.position);
+                            if (dist < 1500) {
+                                const pushDir = new THREE.Vector3().subVectors(cow.group.position, otherCow.group.position);
+                                pushDir.z = 0; // remain on floor
+                                pushDir.normalize();
+                                
+                                // Steer away
+                                cow.direction.addScaledVector(pushDir, 0.2).normalize();
+                                cow.wanderAngle = Math.atan2(cow.direction.y, cow.direction.x);
+                            }
+                        }
+                    });
+
+                    // Smooth wandering behaviour
+                    if (Math.random() < 0.02) {
+                        cow.wanderAngle += (Math.random() - 0.5) * 0.5;
+                        cow.direction.set(Math.cos(cow.wanderAngle), Math.sin(cow.wanderAngle), 0).normalize();
+                    }
+                    
+                    // Calculate next step
+                    const step = speedMultiplier * 10;
+                    const nextX = cow.group.position.x + cow.direction.x * step;
+                    const nextY = cow.group.position.y + cow.direction.y * step;
+                    
+                    let collision = false;
+                    
+                    // Boundaries check
+                    if (nextX < 500 || nextX > 10300 || nextY < 4200 || nextY > 17700) {
+                        collision = true;
+                    } else if (isPosInObstacle(nextX, nextY)) {
+                        collision = true;
+                    }
+                    
+                    if (collision) {
+                        // Check if hit the feed rack at y <= 4250 (and not in service area)
+                        if (nextY <= 4250 && nextX < 9380) {
+                            // Eat at the rack for 20 seconds!
+                            cow.state = "eating";
+                            cow.stateTimer = 20; // 20 seconds
+                            cow.group.position.y = 4220; // align at voerhek
+                            cow.wanderAngle = -Math.PI / 2; // face feeding rack
+                            cow.direction.set(0, -1, 0);
+                            
+                            if (cow.mixer) {
+                                cow.mixer.stopAllAction();
+                                if (eatingClip) {
+                                    const action = cow.mixer.clipAction(eatingClip);
+                                    action.play();
+                                }
+                            }
+                        } else {
+                            // Standard bounce
+                            cow.direction.negate();
+                            cow.wanderAngle = Math.atan2(cow.direction.y, cow.direction.x) + (Math.random() - 0.5) * 1.5;
+                            cow.direction.set(Math.cos(cow.wanderAngle), Math.sin(cow.wanderAngle), 0).normalize();
+                        }
+                    } else {
+                        cow.group.position.x = nextX;
+                        cow.group.position.y = nextY;
+                    }
+                    
+                    // Face moving direction
+                    cow.group.rotation.z = cow.wanderAngle;
+                    
+                    // Update animation clip
+                    if (cow.mixer) {
+                        cow.mixer.update(delta);
+                    }
                 }
             }
              
