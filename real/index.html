@@ -202,7 +202,10 @@
     <div class="camera-modal-content">
         <div class="camera-modal-header">
             <span id="modalTitle" class="camera-modal-title">CAMERA VIEW</span>
-            <div style="display: flex; gap: 10px; align-items: center;">
+            <div style="display: flex; gap: 12px; align-items: center;">
+                <label style="cursor: pointer; font-size: 11px; color: #00ffff; display: flex; align-items: center; gap: 4px; font-family: inherit; margin: 0; font-weight: bold; user-select: none;">
+                    <input type="checkbox" id="showModalBoxes" checked style="margin: 0; cursor: pointer; accent-color: #00ffff;"> SHOW BOUNDING BOXES
+                </label>
                 <button id="recordBtn" style="padding: 6px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; font-family: inherit; display: flex; align-items: center; gap: 5px; box-shadow: 0 0 8px rgba(220,53,69,0.3);">
                     <span style="display: inline-block; width: 8px; height: 8px; background: white; border-radius: 50%; animation: pulse 1s infinite alternate;" id="recordDot"></span>
                     <span>RECORD FEED</span>
@@ -1343,6 +1346,20 @@
             }
 
             const isRecording = mediaRecorder && mediaRecorder.state === "recording";
+            const showBoxes = document.getElementById('showModalBoxes')?.checked ?? true;
+            
+            // Calculate world-space bounding boxes and distances for all active cows once per frame
+            const modalCamPos = new THREE.Vector3();
+            modalCamera.getWorldPosition(modalCamPos);
+            
+            const cowBoxesModal = cowsList.map((c, idx) => {
+                const box = new THREE.Box3().setFromObject(c.model);
+                const pos = new THREE.Vector3();
+                c.group.getWorldPosition(pos);
+                const dist = pos.distanceTo(modalCamPos);
+                return { cow: c, box, dist, index: idx };
+            });
+            cowBoxesModal.sort((a, b) => a.dist - b.dist);
             
             cowsList.forEach((cow, cowIndex) => {
                 const cowWorldPos = new THREE.Vector3();
@@ -1377,6 +1394,29 @@
                             pv = (dotLeft >= 0) ? 2 : 1; // 2 = visible, 1 = occluded
                         } else {
                             pv = 2; // Nose, Withers, Tailhead are always visible
+                        }
+                        
+                        // Check if blocked by any other cow closer to the camera (inter-object occlusion)
+                        if (pv === 2) {
+                            const sphereWorldPos = sphere.position;
+                            const targetDist = modalCamPos.distanceTo(sphereWorldPos);
+                            
+                            const dir = new THREE.Vector3().subVectors(sphereWorldPos, modalCamPos).normalize();
+                            const ray = new THREE.Ray(modalCamPos, dir);
+                            
+                            for (let i = 0; i < cowBoxesModal.length; i++) {
+                                const cb = cowBoxesModal[i];
+                                if (cb.cow === cow) break; // reached current cow (closer cows are checked)
+                                
+                                const intersectPoint = new THREE.Vector3();
+                                if (ray.intersectBox(cb.box, intersectPoint)) {
+                                    const intersectDist = modalCamPos.distanceTo(intersectPoint);
+                                    if (intersectDist < targetDist - 50) { // Blocked by closer cow!
+                                        pv = 1; // Label as occluded
+                                        break;
+                                    }
+                                }
+                            }
                         }
                         
                         if (sx < x_min) x_min = sx;
@@ -1420,7 +1460,7 @@
                             }
                             
                             // Draw visually ONLY to the HTML overlay (keeps WebGL canvas clean for video captures)
-                            if (overlayCtx) {
+                            if (overlayCtx && showBoxes) {
                                 const px1 = x1 * overlay.width;
                                 const py1 = y1 * overlay.height;
                                 const pw = width * overlay.width;
@@ -1461,6 +1501,19 @@
                 renderer.render(scene, vCam);
                 hiddenContexts[camId].drawImage(renderer.domElement, 0, 0, 320, 180);
                 
+                const vCamPos = new THREE.Vector3();
+                vCam.getWorldPosition(vCamPos);
+                
+                // Calculate world-space bounding boxes and distances once per camera frame
+                const cowBoxesCam = cowsList.map((c, idx) => {
+                    const box = new THREE.Box3().setFromObject(c.model);
+                    const pos = new THREE.Vector3();
+                    c.group.getWorldPosition(pos);
+                    const dist = pos.distanceTo(vCamPos);
+                    return { cow: c, box, dist, index: idx };
+                });
+                cowBoxesCam.sort((a, b) => a.dist - b.dist);
+                
                 cowsList.forEach((cow, cowIndex) => {
                     const cowWorldPos = new THREE.Vector3();
                     cow.group.getWorldPosition(cowWorldPos);
@@ -1491,6 +1544,29 @@
                                 pv = (dotLeft >= 0) ? 2 : 1;
                             } else {
                                 pv = 2;
+                            }
+                            
+                            // Check inter-object occlusion
+                            if (pv === 2) {
+                                const sphereWorldPos = sphere.position;
+                                const targetDist = vCamPos.distanceTo(sphereWorldPos);
+                                
+                                const dir = new THREE.Vector3().subVectors(sphereWorldPos, vCamPos).normalize();
+                                const ray = new THREE.Ray(vCamPos, dir);
+                                
+                                for (let i = 0; i < cowBoxesCam.length; i++) {
+                                    const cb = cowBoxesCam[i];
+                                    if (cb.cow === cow) break;
+                                    
+                                    const intersectPoint = new THREE.Vector3();
+                                    if (ray.intersectBox(cb.box, intersectPoint)) {
+                                        const intersectDist = vCamPos.distanceTo(intersectPoint);
+                                        if (intersectDist < targetDist - 50) {
+                                            pv = 1;
+                                            break;
+                                        }
+                                    }
+                                }
                             }
                             
                             if (sx < x_min) x_min = sx;
