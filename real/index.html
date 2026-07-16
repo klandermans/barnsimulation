@@ -791,8 +791,8 @@
             wAngle = pos.angle;
             
             // Lay down: roll model and lower it
-            model.rotateOnAxis(new THREE.Vector3(1, 0, 0), -1.4);
-            model.position.z = 200;
+            model.rotation.set(-1.4, rotY, rotZ);
+            model.position.z = defaultModelZ * 0.35;
         } else {
             wAngle = Math.random() * Math.PI * 2;
             let tries = 0;
@@ -945,14 +945,13 @@
         cowsList.forEach((cow, idx) => {
             cow.group.visible = showModels;
             
-            // Reset to default standing rotation and height every frame
-            cow.model.rotation.set(rotX, rotY, rotZ);
-            cow.model.position.z = cow.defaultModelZ;
-            
-            // If lying down, apply the local roll rotation and lower position
+            // Reset to default standing rotation and height or apply lying down values every frame
             if (cow.state === "lying") {
-                cow.model.rotateOnAxis(new THREE.Vector3(1, 0, 0), -1.4);
-                cow.model.position.z = 200; // lower relative to default standing height
+                cow.model.rotation.set(-1.4, rotY, rotZ);
+                cow.model.position.z = cow.defaultModelZ * 0.35;
+            } else {
+                cow.model.rotation.set(rotX, rotY, rotZ);
+                cow.model.position.z = cow.defaultModelZ;
             }
             
             if (isPlaying) {
