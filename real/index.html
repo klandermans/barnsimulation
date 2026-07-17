@@ -159,6 +159,28 @@
     </style>
 </head>
 <body>
+<div id="error-overlay" style="position:fixed; top:0; left:0; width:100vw; height:100vh; overflow-y:auto; background:rgba(180, 0, 0, 0.95); color:white; font-family:monospace; font-size:14px; z-index:999999; padding:20px; display:none; white-space:pre-wrap; border-bottom:3px solid #ff3333; box-sizing:border-box;">
+  <strong style="font-size: 18px; display: block; margin-bottom: 10px;">[RUNTIME EXCEPTION CAPTURED]</strong>
+  <div id="error-msg" style="line-height:1.5; font-weight:bold;"></div>
+</div>
+<script>
+  window.addEventListener('error', function(e) {
+    const overlay = document.getElementById('error-overlay');
+    const msg = document.getElementById('error-msg');
+    if (overlay && msg) {
+      overlay.style.display = 'block';
+      msg.innerText += '\nError: ' + e.message + '\nSource: ' + e.filename + ':' + e.lineno + ':' + e.colno + '\n' + (e.error ? e.error.stack : '');
+    }
+  });
+  window.addEventListener('unhandledrejection', function(e) {
+    const overlay = document.getElementById('error-overlay');
+    const msg = document.getElementById('error-msg');
+    if (overlay && msg) {
+      overlay.style.display = 'block';
+      msg.innerText += '\nUnhandled Promise Rejection: ' + e.reason + (e.reason && e.reason.stack ? '\n' + e.reason.stack : '');
+    }
+  });
+</script>
 
 <div id="ui">
     <h3>Bovine Telemetry Barn</h3>
@@ -945,7 +967,11 @@
     function adjustCowsCount(targetCount) {
         while (cowsList.length < targetCount) {
             const cow = createCow();
-            if (cow) cowsList.push(cow);
+            if (cow) {
+                cowsList.push(cow);
+            } else {
+                break; // Break the infinite loop if createCow fails/returns null!
+            }
         }
         while (cowsList.length > targetCount) {
             const cow = cowsList.pop();
