@@ -612,6 +612,7 @@
     let walkClip = null;
     let eatingClip = null;
     let idleClip = null;
+    let runClip = null;
     let modelScaleFactor = 1.0;
     let modelYOffset = 0.0;
 
@@ -664,7 +665,7 @@
                 
                 // Load idle animation
                 fbxLoader.load('RSG_Shepherd_Pack_FBX/Cow/Animations/A_Cow_Idle_01.fbx', function (animIdle) {
-                    if (animIdle.animations && animIdle.animations.length > 0) {
+                    if (animIdle && animIdle.animations && animIdle.animations.length > 0) {
                         idleClip = animIdle.animations[0];
                         idleClip.tracks = idleClip.tracks.filter(track => {
                             const name = track.name.toLowerCase();
@@ -674,12 +675,30 @@
                         });
                     }
                     
-                    clearInterval(loaderTimer);
-                    if (loadingEl) {
-                        loadingEl.innerText = loadingLogs.join("\n") + "\n[SYS] MESH & SKELETON SYNCED.\n[SYS] BOVINE ENGINE ONLINE.";
-                        setTimeout(() => { loadingEl.style.display = 'none'; }, 800);
-                    }
-                    initCows();
+                    // Load running animation
+                    fbxLoader.load('RSG_Shepherd_Pack_FBX/Cow/Animations/A_Cow_Run_01.fbx', function (animRun) {
+                        if (animRun && animRun.animations && animRun.animations.length > 0) {
+                            runClip = animRun.animations[0];
+                            runClip.tracks = runClip.tracks.filter(track => {
+                                const name = track.name.toLowerCase();
+                                if (name.includes('position')) return false;
+                                if (name.includes('quaternion') && (name.includes('rig') || name.includes('root') || name.includes('original') || name.includes('mesh') || name.includes('cow'))) return false;
+                                return true;
+                            });
+                        }
+                        
+                        clearInterval(loaderTimer);
+                        if (loadingEl) {
+                            loadingEl.innerText = loadingLogs.join("\n") + "\n[SYS] MESH & SKELETON SYNCED.\n[SYS] BOVINE ENGINE ONLINE.";
+                            setTimeout(() => { loadingEl.style.display = 'none'; }, 800);
+                        }
+                        initCows();
+                    }, undefined, function (err) {
+                        console.error("Error loading run animation:", err);
+                        clearInterval(loaderTimer);
+                        if (loadingEl) loadingEl.style.display = 'none';
+                        initCows();
+                    });
                 }, undefined, function (err) {
                     console.error("Error loading idle animation:", err);
                     clearInterval(loaderTimer);
@@ -1035,8 +1054,6 @@
                 } else if (cow.state === "lying") {
                     if (cow.stateTimer <= 0) {
                         // Stand up!
-                        cow.state = "walking";
-                        cow.stateTimer = 30 + Math.random() * 60;
                         
                         // Spawn outside cubicles in a safe walking alley
                         let rx, ry;
@@ -1049,7 +1066,35 @@
                         
                         cow.group.position.set(rx, ry, -5);
                         
-                        // Play walk animation
+                        // Decide if the cow starts running (at most 1 running cow in total)
+                        const runningCount = cowsList.filter(c => c.state === "running").length;
+                        if (runningCount === 0 && Math.random() < 0.3) {
+                            cow.state = "running";
+                            cow.stateTimer = 5 + Math.random() * 10; // Run for 5 to 15 seconds
+                            if (cow.mixer) {
+                                cow.mixer.stopAllAction();
+                                if (runClip) {
+                                    const action = cow.mixer.clipAction(runClip);
+                                    action.play();
+                                }
+                            }
+                        } else {
+                            cow.state = "walking";
+                            cow.stateTimer = 30 + Math.random() * 60;
+                            if (cow.mixer) {
+                                cow.mixer.stopAllAction();
+                                if (walkClip) {
+                                    const action = cow.mixer.clipAction(walkClip);
+                                    action.play();
+                                }
+                            }
+                        }
+                    }
+                } else if (cow.state === "running") {
+                    if (cow.stateTimer <= 0) {
+                        // Done running, start walking!
+                        cow.state = "walking";
+                        cow.stateTimer = 20 + Math.random() * 40;
                         if (cow.mixer) {
                             cow.mixer.stopAllAction();
                             if (walkClip) {
@@ -1062,12 +1107,12 @@
                     // No random lying down transition; they only lie down when colliding with a cubicle!
                 }
 
-                // If not lying and not eating, perform walking movements
+                // If not lying and not eating, perform walking/running movement
                 if (cow.state !== "lying" && cow.state !== "eating") {
-                    // Standard walking movement:
+                    // Standard walking/running movement:
                     // Avoid collision with other cows (radius ~1500mm to prevent clipping)
                     cowsList.forEach((otherCow, otherIdx) => {
-                        if (idx !== otherIdx && otherCow.state === "walking") {
+                        if (idx !== otherIdx && (otherCow.state === "walking" || otherCow.state === "running")) {
                             const dist = cow.group.position.distanceTo(otherCow.group.position);
                             if (dist < 1500) {
                                 const pushDir = new THREE.Vector3().subVectors(cow.group.position, otherCow.group.position);
@@ -1087,8 +1132,9 @@
                         cow.direction.set(Math.cos(cow.wanderAngle), Math.sin(cow.wanderAngle), 0).normalize();
                     }
                     
-                    // Calculate next step
-                    const step = speedMultiplier * 10;
+                    // Calculate next step (faster multiplier if running)
+                    const multiplier = cow.state === "running" ? 25 : 10;
+                    const step = speedMultiplier * multiplier;
                     const nextX = cow.group.position.x + cow.direction.x * step;
                     const nextY = cow.group.position.y + cow.direction.y * step;
 
