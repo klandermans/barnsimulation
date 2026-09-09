@@ -23,6 +23,7 @@
       width: 100%;
       height: 100%;
       display: block;
+      background-color: #7ec0ee;
     }
 
     /* Classic Roblox Top Bar */
@@ -1077,6 +1078,9 @@
           osc.stop(now + 0.5);
         });
       }
+      playCow() {
+        this.playMoo();
+      }
     }
     const sounds = new SoundEngine();
 
@@ -1090,11 +1094,12 @@
       renderer = new THREE.WebGLRenderer({
         canvas,
         antialias: !isMobileDevice,
+        alpha: false,
         powerPreference: 'default'
       });
     } catch (e) {
       console.warn("Fallback WebGLRenderer:", e);
-      renderer = new THREE.WebGLRenderer({ canvas });
+      renderer = new THREE.WebGLRenderer({ canvas, alpha: false });
     }
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.5 : 2));
@@ -1168,7 +1173,7 @@
       anna: {
         id: 'anna',
         name: 'Anna',
-        title: '👩‍🌾 Boerin Anna',
+        title: '👩‍🌾 Anna',
         gender: 'vrouw',
         colorPlaid: '#ec4899', // Pink plaid flannel
         colorDarkPlaid: '#be185d',
@@ -1240,7 +1245,7 @@
       tiny: {
         id: 'tiny',
         name: 'Tiny',
-        title: '👩‍🌾 Boerin Tiny',
+        title: '👩‍🌾 Tiny',
         gender: 'vrouw',
         hairColor: 0xb45309, // Warm auburn hair
         colorPlaid: '#0d9488', // Teal plaid flannel
@@ -1253,7 +1258,7 @@
       toos: {
         id: 'toos',
         name: 'Toos',
-        title: '👩‍🌾 Boerin Toos',
+        title: '👩‍🌾 Toos',
         gender: 'vrouw',
         hairColor: 0x64748b, // Silver-slate hair
         colorPlaid: '#ea580c', // Warm rust plaid flannel
@@ -1390,27 +1395,69 @@
       return tex;
     }
 
+    function createNameTagTexture(text) {
+      const c = document.createElement('canvas');
+      c.width = 256;
+      c.height = 64;
+      const ctx = c.getContext('2d');
+
+      // Strip "Boerin " if present above character
+      const cleanText = text.replace(/Boerin\s+/gi, '').trim();
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+      if (ctx.roundRect) {
+        ctx.roundRect(10, 10, 236, 44, 12);
+      } else {
+        ctx.rect(10, 10, 236, 44);
+      }
+      ctx.fill();
+      ctx.strokeStyle = '#22c55e';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 22px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(cleanText, 24, 32);
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    // Pre-cache all character textures & nametags once to prevent mobile WebGL disposal stalls
+    const FACE_TEXTURES = {
+      female: createRobloxFaceTexture(true),
+      male: createRobloxFaceTexture(false)
+    };
+    const SHIRT_TEXTURES = {};
+    const NAMETAG_TEXTURES = {};
+    Object.keys(FARMER_CHARACTERS).forEach(key => {
+      const char = FARMER_CHARACTERS[key];
+      SHIRT_TEXTURES[key] = createRobloxShirtTexture(char.colorPlaid, char.colorDarkPlaid, char.colorOveralls);
+      NAMETAG_TEXTURES[key] = createNameTagTexture(char.title);
+    });
+
     class RobloxCharacter {
       constructor() {
         this.group = new THREE.Group();
         this.group.name = "RobloxPlayer";
         this.currentCharacter = FARMER_CHARACTERS.bert;
 
-        // Materials
+        // Materials (using pre-cached textures)
         this.yellowSkinMat = new THREE.MeshStandardMaterial({
           color: 0xFED700,
           roughness: 0.35,
           metalness: 0.05
         });
-        const faceTex = createRobloxFaceTexture(false);
         this.faceMat = new THREE.MeshStandardMaterial({
-          map: faceTex,
+          map: FACE_TEXTURES.male,
           roughness: 0.35,
           metalness: 0.05
         });
-        const shirtTex = createRobloxShirtTexture();
         this.torsoMat = new THREE.MeshStandardMaterial({
-          map: shirtTex,
+          map: SHIRT_TEXTURES.bert,
           roughness: 0.5,
           metalness: 0.05
         });
@@ -1495,8 +1542,14 @@
         this.hairGroup.visible = false;
         this.head.add(this.hairGroup);
 
-        // Name tag sprite
-        this.nameTag = this.createNameTagSprite("🤠 Boer Bert");
+        // Name tag sprite (using pre-cached texture)
+        const nameTagMat = new THREE.SpriteMaterial({
+          map: NAMETAG_TEXTURES.bert,
+          transparent: true,
+          depthTest: false
+        });
+        this.nameTag = new THREE.Sprite(nameTagMat);
+        this.nameTag.scale.set(2.4, 0.6, 1);
         this.nameTag.position.set(0, 1.4, 0);
         this.torso.add(this.nameTag);
 
@@ -1543,31 +1596,6 @@
         // Animation state
         this.walkCycle = 0;
         this.stepTimer = 0;
-      }
-
-      createNameTagSprite(text) {
-        const c = document.createElement('canvas');
-        c.width = 256;
-        c.height = 64;
-        const ctx = c.getContext('2d');
-
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
-        ctx.roundRect(10, 10, 236, 44, 12);
-        ctx.fill();
-        ctx.strokeStyle = '#22c55e';
-        ctx.lineWidth = 3;
-        ctx.stroke();
-
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 22px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(text, 128, 40);
-
-        const tex = new THREE.CanvasTexture(c);
-        const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
-        const sprite = new THREE.Sprite(mat);
-        sprite.scale.set(2.4, 0.6, 1);
-        return sprite;
       }
 
       updateAnimation(delta, isMoving, isRunning, isJumping) {
@@ -1617,37 +1645,20 @@
         }
       }
 
-      updateNameTag(text) {
-        if (this.nameTag) {
-          this.torso.remove(this.nameTag);
-          if (this.nameTag.material && this.nameTag.material.map) {
-            this.nameTag.material.map.dispose();
-          }
-          if (this.nameTag.material) {
-            this.nameTag.material.dispose();
-          }
-        }
-        this.nameTag = this.createNameTagSprite(text);
-        this.nameTag.position.set(0, 1.4, 0);
-        this.torso.add(this.nameTag);
-      }
-
       setCharacter(charKey) {
         const data = FARMER_CHARACTERS[charKey] || FARMER_CHARACTERS.bert;
         this.currentCharacter = data;
-
-        // 1. Update Head face texture
         const isFemale = (data.gender === 'vrouw');
-        const newFaceTex = createRobloxFaceTexture(isFemale);
-        if (this.faceMat.map) this.faceMat.map.dispose();
-        this.faceMat.map = newFaceTex;
+
+        // 1. Update Head face texture (pointer swap, zero disposal)
+        this.faceMat.map = isFemale ? FACE_TEXTURES.female : FACE_TEXTURES.male;
         this.faceMat.needsUpdate = true;
 
-        // 2. Update Torso shirt texture
-        const newShirtTex = createRobloxShirtTexture(data.colorPlaid, data.colorDarkPlaid, data.colorOveralls);
-        if (this.torsoMat.map) this.torsoMat.map.dispose();
-        this.torsoMat.map = newShirtTex;
-        this.torsoMat.needsUpdate = true;
+        // 2. Update Torso shirt texture (pointer swap, zero disposal)
+        if (SHIRT_TEXTURES[charKey]) {
+          this.torsoMat.map = SHIRT_TEXTURES[charKey];
+          this.torsoMat.needsUpdate = true;
+        }
 
         // 3. Update Hat band color
         if (this.hatBand && this.hatBand.material) {
@@ -1662,8 +1673,11 @@
           }
         }
 
-        // 5. Update Floating Name Tag above head
-        this.updateNameTag(data.title);
+        // 5. Update Floating Name Tag above head (pointer swap, zero disposal)
+        if (this.nameTag && this.nameTag.material && NAMETAG_TEXTURES[charKey]) {
+          this.nameTag.material.map = NAMETAG_TEXTURES[charKey];
+          this.nameTag.material.needsUpdate = true;
+        }
 
         // 6. Update TopBar badge
         const badgeText = document.getElementById('player-name-text');
@@ -2331,9 +2345,15 @@
         player.setCharacter(charKey);
         try {
           localStorage.setItem('roblox_farmer_choice', charKey);
-        } catch(e) {}
+        } catch(err) {}
         showBanner("Je speelt nu als " + player.currentCharacter.title + "!", player.currentCharacter.icon);
-        sounds.playCow();
+        try {
+          sounds.playCow();
+        } catch(err) {}
+        // Close modal smoothly after brief feedback so player can walk right away
+        setTimeout(() => {
+          closeCharModal();
+        }, 320);
       }
       card.addEventListener('click', chooseCard);
       card.addEventListener('touchend', chooseCard);
