@@ -1857,7 +1857,7 @@
     // HOTSPOTS & TELEPORT TARGETS (Dairy Campus Real Coordinates)
     // -------------------------------------------------------------
     const HOTSPOTS = {
-      hoofdgebouw: { pos: new THREE.Vector3(0.0, 0.0, 32.0), rot: 0.0, name: "Hoofdgebouw & Entree" },
+      hoofdgebouw: { pos: new THREE.Vector3(25.0, 0.0, 36.0), rot: 0.0, name: "Hoofdgebouw & Entree" },
       evabarn: { pos: new THREE.Vector3(68.5, 0.0, -5.0), rot: -Math.PI / 2, name: "evaBarn (Innovatie & Kalveren)" },
       voedingsstal: { pos: new THREE.Vector3(-71.0, 0.0, -90.0), rot: 0.0, name: "Voedingsstal (RIC Voeropname)" },
       melkstal: { pos: new THREE.Vector3(-125.0, 0.0, -40.0), rot: 0.0, name: "Melkstal (40-stands Carrousel)" },
@@ -1888,46 +1888,6 @@
         triggerGamepadRumble(80, 0.3);
       }
     }
-
-    // -------------------------------------------------------------
-    // FLOATING 3D WAYPOINT SIGNS
-    // -------------------------------------------------------------
-    function create3DWaypoint(text, icon, pos) {
-      const c = document.createElement('canvas');
-      c.width = 384;
-      c.height = 96;
-      const ctx = c.getContext('2d');
-
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-      ctx.roundRect(10, 10, 364, 76, 20);
-      ctx.fill();
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 4;
-      ctx.stroke();
-
-      ctx.fillStyle = '#f8fafc';
-      ctx.font = 'bold 30px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(`${icon} ${text}`, 192, 58);
-
-      const tex = new THREE.CanvasTexture(c);
-      const spriteMat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
-      const sprite = new THREE.Sprite(spriteMat);
-      sprite.position.copy(pos);
-      sprite.scale.set(16, 4, 1);
-      scene.add(sprite);
-      return sprite;
-    }
-
-    create3DWaypoint("Hoofdgebouw Entree", "🏛️", new THREE.Vector3(0, 7, 32));
-    create3DWaypoint("evaBarn Innovatie", "🧪", new THREE.Vector3(20, 7, 5));
-    create3DWaypoint("Voedingsstal (RIC)", "🥣", new THREE.Vector3(-71, 8, -90));
-    create3DWaypoint("Melkstal (Carrousel)", "🥛", new THREE.Vector3(-125, 8, -40));
-    create3DWaypoint("Milieustallen", "🌱", new THREE.Vector3(22, 9, -90));
-    create3DWaypoint("Lely Melkrobots", "🤖", new THREE.Vector3(22, 6, -55));
-    create3DWaypoint("Skybox Kantoor", "🔭", new THREE.Vector3(22, 7.5, -60.5));
-    create3DWaypoint("Luchtwassers & Lab", "🔬", new THREE.Vector3(14, 8, -150));
-    create3DWaypoint("Dairy Campus Logo", "🏢", new THREE.Vector3(25, 5, 26));
 
     // -------------------------------------------------------------
     // FARM BUILDINGS & TERRAIN (barn.glb with Roblox PBR styling)
@@ -2050,34 +2010,24 @@
             walkableMeshes.push(child);
           }
 
-          // If the model is an optimized Campus mesh from Blender, preserve all its custom PBR materials & textures!
-          if (n.startsWith('campus_')) {
+          // If the model is an optimized Campus mesh from Blender with custom PBR materials/textures, preserve it!
+          if (child.material) {
             const mats = Array.isArray(child.material) ? child.material : [child.material];
-            mats.forEach(m => {
-              m.side = THREE.DoubleSide;
-              if (m.name.includes('Glass') || n.includes('glass')) {
-                m.transparent = true;
-                m.opacity = 0.55;
-              } else if (m.name.includes('Water') || n.includes('water')) {
-                m.transparent = true;
-                m.opacity = 0.85;
-                child.castShadow = false;
-              }
-            });
-            return;
-          }
-
-          // If the model already has an embedded PBR texture, preserve it!
-          if (child.material && (child.material.map || (Array.isArray(child.material) && child.material[0].map))) {
-            const mats = Array.isArray(child.material) ? child.material : [child.material];
-            mats.forEach(m => {
-              m.side = THREE.DoubleSide;
-              if (m.name.includes('Glass')) {
-                m.transparent = true;
-                m.opacity = 0.55;
-              }
-            });
-            return;
+            const isModularCustom = mats.some(m => m && m.name && (m.name.startsWith('Mat_') || m.name.includes('Campus') || m.map));
+            if (isModularCustom || n.startsWith('campus_') || (child.material && child.material.map)) {
+              mats.forEach(m => {
+                m.side = THREE.DoubleSide;
+                if (m.name.includes('Glass') || n.includes('glas')) {
+                  m.transparent = true;
+                  m.opacity = 0.55;
+                } else if (m.name.includes('Water') || n.includes('water')) {
+                  m.transparent = true;
+                  m.opacity = 0.85;
+                  child.castShadow = false;
+                }
+              });
+              return;
+            }
           }
 
           // Intelligent Material Assignment (procedural fallback)
