@@ -956,6 +956,7 @@
   <script type="module">
     import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
     import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
+    window.THREE = THREE;
 
     // Polyfill roundRect for iOS < 16.1 & mobile browsers
     if (typeof CanvasRenderingContext2D !== 'undefined' && !CanvasRenderingContext2D.prototype.roundRect) {
@@ -1175,7 +1176,7 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.5 : 2));
     renderer.setClearColor(0x7ec0ee, 1);
-    renderer.shadowMap.enabled = false;
+    renderer.shadowMap.enabled = !isMobileDevice;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = isMobileDevice ? THREE.LinearToneMapping : THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.0;
@@ -1201,7 +1202,8 @@
     sunLight.shadow.camera.right = d;
     sunLight.shadow.camera.top = d;
     sunLight.shadow.camera.bottom = -d;
-    sunLight.shadow.bias = -0.0005;
+    sunLight.shadow.bias = -0.00008;
+    sunLight.shadow.normalBias = 0.02;
     scene.add(sunLight);
 
     const hemiLight = new THREE.HemisphereLight(0xffffff, 0x4a5568, 0.85);
@@ -1872,12 +1874,12 @@
     // HOTSPOTS & TELEPORT TARGETS (Dairy Campus Real Coordinates)
     // -------------------------------------------------------------
     const HOTSPOTS = {
-      hoofdgebouw: { pos: new THREE.Vector3(-4.0, 0.0, 10.0), rot: 0.0, name: "Hoofdgebouw & Entree" },
+      hoofdgebouw: { pos: new THREE.Vector3(-4.0, 0.0, 0.0), rot: Math.PI, name: "Hoofdgebouw & Entree" },
       evabarn: { pos: new THREE.Vector3(68.5, 0.0, -5.0), rot: -Math.PI / 2, name: "evaBarn (Innovatie & Kalveren)" },
       voedingsstal: { pos: new THREE.Vector3(-71.0, 0.0, -90.0), rot: 0.0, name: "Voedingsstal (RIC Voeropname)" },
       melkstal: { pos: new THREE.Vector3(-125.0, 0.0, -40.0), rot: 0.0, name: "Melkstal (40-stands Carrousel)" },
       milieustallen: { pos: new THREE.Vector3(22.0, 0.0, -90.0), rot: 0.0, name: "Milieustallen (Emissie & Lely Sphere)" },
-      melkrobots: { pos: new THREE.Vector3(22.0, 0.0, -58.5), rot: 0.0, name: "4x Lely Astronaut Melkrobots" },
+      melkrobots: { pos: new THREE.Vector3(22.0, 0.0, -58.5), rot: Math.PI / 2, name: "4x Lely Astronaut Melkrobots" },
       skybox: { pos: new THREE.Vector3(22.0, 4.35, -58.5), rot: 0.0, name: "Skybox & Herdmanager Kantoor" },
       emissielab: { pos: new THREE.Vector3(34.0, 0.0, -150.0), rot: Math.PI, name: "Milieustallen (Kopgevel Luchtwassers & Bunkers)" },
       logo: { pos: new THREE.Vector3(-4.0, 0.0, 52.0), rot: Math.PI, name: "Dairy Campus Logo & Terrein" }
@@ -2231,7 +2233,7 @@
       }
 
       // 4. ANIMATED WALKING COWS IN ALLEYS & PASTURES
-      const walkTemplate = gltfWalk ? gltfWalk.scene : null;
+      const walkTemplate = null; // Disabled: cow_walk.glb has corrupted skinned mesh / icosphere causing giant stretched polygon cocoon!
       const walkAnims = gltfWalk ? gltfWalk.animations : [];
       if (walkTemplate) {
         const walkSpots = [
