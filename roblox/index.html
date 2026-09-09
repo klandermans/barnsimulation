@@ -2233,7 +2233,7 @@
       }
 
       // 4. ANIMATED WALKING COWS IN ALLEYS & PASTURES
-      const walkTemplate = null; // Disabled: cow_walk.glb has corrupted skinned mesh / icosphere causing giant stretched polygon cocoon!
+      const walkTemplate = gltfWalk ? gltfWalk.scene.clone() : null; // Fixed: Icosphere removed from cow_walk.glb
       const walkAnims = gltfWalk ? gltfWalk.animations : [];
       if (walkTemplate) {
         const walkSpots = [
