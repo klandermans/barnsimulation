@@ -840,9 +840,9 @@
           <span class="char-card-gender gender-vrouw">Vrouw</span>
         </div>
         <div class="char-card selected" data-char="bert">
-          <div class="char-card-avatar">🤠</div>
+          <div class="char-card-avatar">🤓</div>
           <div class="char-card-name">Bert</div>
-          <span class="char-card-gender gender-man">Man</span>
+          <span class="char-card-gender gender-man">Kaal & Bril</span>
         </div>
       </div>
       <button class="char-modal-close" id="btn-char-close">Bevestigen & Spelen 👍</button>
@@ -1292,14 +1292,14 @@
       bert: {
         id: 'bert',
         name: 'Bert',
-        title: '🤠 Boer Bert',
+        title: '🤓 Boer Bert (Kaal & Bril)',
         gender: 'man',
         colorPlaid: '#b91c1c', // Classic red plaid flannel
         colorDarkPlaid: '#7f1d1d',
         colorOveralls: '#1d4ed8',
         hatBandColor: 0x451a03,
         hatBrimColor: 0xd97706,
-        icon: '🤠'
+        icon: '🤓'
       },
       martin: {
         id: 'martin',
@@ -1341,7 +1341,7 @@
       }
     };
 
-    function createRobloxFaceTexture(isFemale = false) {
+    function createRobloxFaceTexture(type = 'male') {
       const c = document.createElement('canvas');
       c.width = 256;
       c.height = 256;
@@ -1351,7 +1351,76 @@
       ctx.fillStyle = '#FED700';
       ctx.fillRect(0, 0, 256, 256);
 
-      if (isFemale) {
+      if (type === 'bert') {
+        // Bert: The iconic bald smiley with stylish glasses!
+        // Glasses frames (smart modern dark frames)
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 6.5;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.20)'; // subtle glass lens tint
+
+        // Left lens
+        ctx.beginPath();
+        if (ctx.roundRect) {
+          ctx.roundRect(46, 76, 68, 56, 16);
+        } else {
+          ctx.arc(80, 104, 28, 0, Math.PI * 2);
+        }
+        ctx.fill();
+        ctx.stroke();
+
+        // Right lens
+        ctx.beginPath();
+        if (ctx.roundRect) {
+          ctx.roundRect(142, 76, 68, 56, 16);
+        } else {
+          ctx.arc(176, 104, 28, 0, Math.PI * 2);
+        }
+        ctx.fill();
+        ctx.stroke();
+
+        // Glasses nose bridge
+        ctx.beginPath();
+        ctx.moveTo(114, 102);
+        ctx.lineTo(142, 102);
+        ctx.stroke();
+
+        // Glasses temple arms extending to head edges
+        ctx.beginPath();
+        ctx.moveTo(46, 100); ctx.lineTo(6, 96);
+        ctx.moveTo(210, 100); ctx.lineTo(250, 96);
+        ctx.stroke();
+
+        // Friendly eyes behind lenses
+        ctx.fillStyle = '#0f172a';
+        ctx.beginPath();
+        ctx.ellipse(80, 104, 11, 17, 0, 0, Math.PI * 2);
+        ctx.ellipse(176, 104, 11, 17, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Eye catchlights
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(77, 98, 4.5, 0, Math.PI * 2);
+        ctx.arc(173, 98, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Lens diagonal reflection gleam
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(56, 88); ctx.lineTo(72, 88);
+        ctx.moveTo(152, 88); ctx.lineTo(168, 88);
+        ctx.stroke();
+
+        // Iconic big Roblox Smiley mouth
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 9;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.arc(128, 142, 44, 0.16 * Math.PI, 0.84 * Math.PI, false);
+        ctx.stroke();
+      } else if (type === 'female' || type === true) {
         // Female (Anna): Eyes with cute eyelashes & blush
         ctx.fillStyle = '#111827';
         ctx.beginPath();
@@ -1396,7 +1465,7 @@
         ctx.arc(128, 136, 36, 0.2 * Math.PI, 0.8 * Math.PI, false);
         ctx.stroke();
       } else {
-        // Male (Paul, Edwin, Aebe, Bert): Classic Roblox Oval Eyes
+        // Male (Paul, Edwin, Aebe): Classic Roblox Oval Eyes
         ctx.fillStyle = '#111827';
         ctx.beginPath();
         ctx.ellipse(75, 105, 14, 22, 0, 0, Math.PI * 2);
@@ -1499,8 +1568,9 @@
 
     // Pre-cache all character textures & nametags once to prevent mobile WebGL disposal stalls
     const FACE_TEXTURES = {
-      female: createRobloxFaceTexture(true),
-      male: createRobloxFaceTexture(false)
+      female: createRobloxFaceTexture('female'),
+      male: createRobloxFaceTexture('male'),
+      bert: createRobloxFaceTexture('bert')
     };
     const SHIRT_TEXTURES = {};
     const NAMETAG_TEXTURES = {};
@@ -1514,6 +1584,8 @@
       constructor() {
         this.group = new THREE.Group();
         this.group.name = "RobloxPlayer";
+        // Scale player down to natural human proportions (~1.65m height relative to cows and barn)
+        this.group.scale.set(0.72, 0.72, 0.72);
         this.currentCharacter = FARMER_CHARACTERS.bert;
 
         // Materials (using pre-cached textures)
@@ -1523,7 +1595,7 @@
           metalness: 0.05
         });
         this.faceMat = new THREE.MeshStandardMaterial({
-          map: FACE_TEXTURES.male,
+          map: FACE_TEXTURES.bert,
           roughness: 0.35,
           metalness: 0.05
         });
@@ -1566,7 +1638,7 @@
         const hatMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.8 });
         const hatBandMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.8 });
 
-        const hatGroup = new THREE.Group();
+        this.hatGroup = new THREE.Group();
         this.hatBrim = new THREE.Mesh(hatBrimGeo, hatMat);
         this.hatBrim.position.y = 0.28;
         this.hatBrim.castShadow = true;
@@ -1576,11 +1648,12 @@
         this.hatBand = new THREE.Mesh(new THREE.CylinderGeometry(0.425, 0.425, 0.08, 18), hatBandMat);
         this.hatBand.position.y = 0.33;
 
-        hatGroup.add(this.hatBrim);
-        hatGroup.add(this.hatCrown);
-        hatGroup.add(this.hatBand);
-        hatGroup.rotation.x = -0.05;
-        this.head.add(hatGroup);
+        this.hatGroup.add(this.hatBrim);
+        this.hatGroup.add(this.hatCrown);
+        this.hatGroup.add(this.hatBand);
+        this.hatGroup.rotation.x = -0.05;
+        this.hatGroup.visible = false; // Bert is bald by default!
+        this.head.add(this.hatGroup);
 
         // Female Hair Group (for Anna, Tiny, Toos)
         this.hairGroup = new THREE.Group();
@@ -1720,9 +1793,14 @@
         const data = FARMER_CHARACTERS[charKey] || FARMER_CHARACTERS.bert;
         this.currentCharacter = data;
         const isFemale = (data.gender === 'vrouw');
+        const isBert = (charKey === 'bert');
 
         // 1. Update Head face texture (pointer swap, zero disposal)
-        this.faceMat.map = isFemale ? FACE_TEXTURES.female : FACE_TEXTURES.male;
+        if (isBert) {
+          this.faceMat.map = FACE_TEXTURES.bert;
+        } else {
+          this.faceMat.map = isFemale ? FACE_TEXTURES.female : FACE_TEXTURES.male;
+        }
         this.faceMat.needsUpdate = true;
 
         // 2. Update Torso shirt texture (pointer swap, zero disposal)
@@ -1731,9 +1809,13 @@
           this.torsoMat.needsUpdate = true;
         }
 
-        // 3. Update Hat band color
-        if (this.hatBand && this.hatBand.material) {
-          this.hatBand.material.color.setHex(data.hatBandColor);
+        // 3. Update Hat & Hair:
+        // Bert is the iconic bald smiley with glasses! (no hat, shiny bald yellow head)
+        if (this.hatGroup) {
+          this.hatGroup.visible = !isFemale && !isBert;
+          if (this.hatBand && this.hatBand.material) {
+            this.hatBand.material.color.setHex(data.hatBandColor);
+          }
         }
 
         // 4. Update Hair (for female characters: Anna, Tiny, Toos)
@@ -1775,19 +1857,19 @@
     // HOTSPOTS & TELEPORT TARGETS (Dairy Campus Real Coordinates)
     // -------------------------------------------------------------
     const HOTSPOTS = {
-      hoofdgebouw: { pos: new THREE.Vector3(0.0, 0.0, 58.0), rot: Math.PI, name: "Hoofdgebouw Entree" },
+      hoofdgebouw: { pos: new THREE.Vector3(25.0, 0.0, 32.0), rot: 0.0, name: "Hoofdgebouw & Dairy Campus Logo" },
       koeienstal: { pos: new THREE.Vector3(22.0, 0.0, -105.0), rot: 0, name: "Centrale Voergang Stal" },
-      melkrobots: { pos: new THREE.Vector3(22.0, 0.0, -60.5), rot: 0, name: "4x Lely Astronaut Melkrobots" },
-      skybox: { pos: new THREE.Vector3(22.0, 4.35, -60.5), rot: 0, name: "Skybox & Herdmanager Kantoor" },
-      kalverstal: { pos: new THREE.Vector3(68.5, 0.0, -5.0), rot: Math.PI / 2, name: "Kalverloods & Milktaxi" },
+      melkrobots: { pos: new THREE.Vector3(22.0, 0.0, -56.0), rot: Math.PI, name: "4x Lely Astronaut Melkrobots" },
+      skybox: { pos: new THREE.Vector3(22.0, 4.35, -59.0), rot: 0, name: "Skybox & Herdmanager Kantoor" },
+      kalverstal: { pos: new THREE.Vector3(68.5, 0.0, -5.0), rot: -Math.PI / 2, name: "Kalverloods & Milktaxi" },
       tractor: { pos: new THREE.Vector3(58.0, 0.0, 18.0), rot: Math.PI / 2, name: "Machinepark & Tractor" },
       woning: { pos: new THREE.Vector3(68.0, 0.0, 62.0), rot: Math.PI, name: "Boerderij Woning" },
       silos: { pos: new THREE.Vector3(105.0, 0.0, -110.0), rot: Math.PI * 0.75, name: "Voersilo's & Opslag" }
     };
 
-    // Initial player spawn position
+    // Initial player spawn position - Always start at Hoofdgebouw with Dairy Campus Logo
     const targetParam = new URLSearchParams(window.location.search).get('teleport');
-    const startSpot = (targetParam && HOTSPOTS[targetParam]) ? HOTSPOTS[targetParam] : { pos: new THREE.Vector3(70.0, 0.0, 78.0), rot: Math.PI - 0.2 };
+    const startSpot = (targetParam && HOTSPOTS[targetParam]) ? HOTSPOTS[targetParam] : HOTSPOTS.hoofdgebouw;
     const SPAWN_POS = startSpot.pos.clone();
     player.group.position.copy(startSpot.pos);
     player.group.rotation.y = startSpot.rot;
@@ -1799,7 +1881,8 @@
         player.group.rotation.y = spot.rot;
         velocityY = 0;
         cameraYaw = (spot.rot !== undefined) ? spot.rot : 0;
-        cameraPitch = 0.22;
+        cameraPitch = (targetKey === 'skybox') ? 0.12 : 0.20;
+        cameraDistance = (targetKey === 'skybox') ? 3.0 : 5.2;
         showBanner("📍 Welkom bij " + spot.name + "!", "🧭");
         triggerGamepadRumble(80, 0.3);
       }
@@ -1835,7 +1918,7 @@
       return sprite;
     }
 
-    create3DWaypoint("Hoofdgebouw", "🏛️", new THREE.Vector3(0, 12, 30));
+    create3DWaypoint("Hoofdgebouw & Logo", "🏛️", new THREE.Vector3(25, 8, 24));
     create3DWaypoint("Voergang Stal", "🐄", new THREE.Vector3(22, 14, -105));
     create3DWaypoint("Lely Melkrobots", "🤖", new THREE.Vector3(22, 12, -60.5));
     create3DWaypoint("Skybox", "🔭", new THREE.Vector3(22, 16, -60.5));
@@ -2281,15 +2364,15 @@
     // Mouse Look / Orbit
     let isMouseDown = false;
     let mousePrevX = 0, mousePrevY = 0;
-    let cameraYaw = 0.2;
-    let cameraPitch = 0.22; // slight top-down angle
-    let cameraDistance = 6.5; // Roblox 3rd person distance
+    let cameraYaw = startSpot.rot !== undefined ? startSpot.rot : 0.0;
+    let cameraPitch = 0.20; // slight top-down angle
+    let cameraDistance = 5.2; // Roblox 3rd person distance for proportional character
     let cameraMode = 0; // 0: 3rd person follow, 1: 1st person, 2: Far Drone
 
     // Initialize camera directly behind player looking forward
     camera.position.set(
       SPAWN_POS.x + Math.sin(cameraYaw) * Math.cos(cameraPitch) * cameraDistance,
-      SPAWN_POS.y + 1.6 + Math.sin(cameraPitch) * cameraDistance,
+      SPAWN_POS.y + 1.25 + Math.sin(cameraPitch) * cameraDistance,
       SPAWN_POS.z + Math.cos(cameraYaw) * Math.cos(cameraPitch) * cameraDistance
     );
     camera.lookAt(SPAWN_POS.x, SPAWN_POS.y + 1.6, SPAWN_POS.z);
@@ -2928,7 +3011,7 @@
       // --- CAMERA FOLLOW (ROBLOX 3RD PERSON ORBIT) ---
       const targetFocus = new THREE.Vector3(
         player.group.position.x,
-        player.group.position.y + 1.6,
+        player.group.position.y + 1.25,
         player.group.position.z
       );
 
@@ -2936,7 +3019,7 @@
         // First person mode
         camera.position.set(
           player.group.position.x,
-          player.group.position.y + 1.85,
+          player.group.position.y + 1.50,
           player.group.position.z
         );
         const lookTarget = new THREE.Vector3(
