@@ -895,16 +895,25 @@
       🏛️ Hoofdgebouw <span class="travel-key">1</span>
     </button>
     <button class="travel-btn" data-target="koeienstal">
-      🐄 Koeienstal <span class="travel-key">2</span>
+      🐄 Voergang <span class="travel-key">2</span>
     </button>
-    <button class="travel-btn" data-target="silos">
-      🌾 Silo's <span class="travel-key">3</span>
+    <button class="travel-btn" data-target="melkrobots">
+      🤖 Melkrobots <span class="travel-key">3</span>
     </button>
-    <button class="travel-btn" data-target="woning">
-      🏡 Boerderij Woning <span class="travel-key">4</span>
+    <button class="travel-btn" data-target="skybox">
+      🔭 Skybox <span class="travel-key">4</span>
+    </button>
+    <button class="travel-btn" data-target="kalverstal">
+      🍼 Kalverstal <span class="travel-key">5</span>
     </button>
     <button class="travel-btn" data-target="tractor">
-      🚜 Machinepark <span class="travel-key">5</span>
+      🚜 Tractor <span class="travel-key">6</span>
+    </button>
+    <button class="travel-btn" data-target="woning">
+      🏡 Woning <span class="travel-key">7</span>
+    </button>
+    <button class="travel-btn" data-target="silos">
+      🌾 Silo's <span class="travel-key">8</span>
     </button>
   </div>
 
@@ -1762,21 +1771,26 @@
     })();
     player.setCharacter(savedChar);
 
-    // Initial player spawn position (Directly in front of the Farm / Boerderij Woning entrance)
-    const SPAWN_POS = new THREE.Vector3(70.0, 0.0, 78.0);
-    player.group.position.copy(SPAWN_POS);
-    player.group.rotation.y = Math.PI - 0.2; // Facing the front of the farm!
-
     // -------------------------------------------------------------
     // HOTSPOTS & TELEPORT TARGETS (Dairy Campus Real Coordinates)
     // -------------------------------------------------------------
     const HOTSPOTS = {
       hoofdgebouw: { pos: new THREE.Vector3(0.0, 0.0, 58.0), rot: Math.PI, name: "Hoofdgebouw Entree" },
-      koeienstal: { pos: new THREE.Vector3(-70.0, 0.0, -60.0), rot: 0, name: "Melkveestal (Schuur 3)" },
-      silos: { pos: new THREE.Vector3(105.0, 0.0, -110.0), rot: Math.PI * 0.75, name: "Voersilo's & Opslag" },
+      koeienstal: { pos: new THREE.Vector3(22.0, 0.0, -105.0), rot: 0, name: "Centrale Voergang Stal" },
+      melkrobots: { pos: new THREE.Vector3(22.0, 0.0, -60.5), rot: 0, name: "4x Lely Astronaut Melkrobots" },
+      skybox: { pos: new THREE.Vector3(22.0, 4.35, -60.5), rot: 0, name: "Skybox & Herdmanager Kantoor" },
+      kalverstal: { pos: new THREE.Vector3(68.5, 0.0, -5.0), rot: Math.PI / 2, name: "Kalverloods & Milktaxi" },
+      tractor: { pos: new THREE.Vector3(58.0, 0.0, 18.0), rot: Math.PI / 2, name: "Machinepark & Tractor" },
       woning: { pos: new THREE.Vector3(68.0, 0.0, 62.0), rot: Math.PI, name: "Boerderij Woning" },
-      tractor: { pos: new THREE.Vector3(58.0, 0.0, 18.0), rot: Math.PI / 2, name: "Machinepark & Tractor" }
+      silos: { pos: new THREE.Vector3(105.0, 0.0, -110.0), rot: Math.PI * 0.75, name: "Voersilo's & Opslag" }
     };
+
+    // Initial player spawn position
+    const targetParam = new URLSearchParams(window.location.search).get('teleport');
+    const startSpot = (targetParam && HOTSPOTS[targetParam]) ? HOTSPOTS[targetParam] : { pos: new THREE.Vector3(70.0, 0.0, 78.0), rot: Math.PI - 0.2 };
+    const SPAWN_POS = startSpot.pos.clone();
+    player.group.position.copy(startSpot.pos);
+    player.group.rotation.y = startSpot.rot;
 
     function teleportPlayer(targetKey) {
       const spot = HOTSPOTS[targetKey];
@@ -1784,7 +1798,7 @@
         player.group.position.copy(spot.pos);
         player.group.rotation.y = spot.rot;
         velocityY = 0;
-        cameraYaw = (spot.rot === Math.PI) ? 0 : (spot.rot + Math.PI);
+        cameraYaw = (spot.rot !== undefined) ? spot.rot : 0;
         cameraPitch = 0.22;
         showBanner("📍 Welkom bij " + spot.name + "!", "🧭");
         triggerGamepadRumble(80, 0.3);
@@ -1822,10 +1836,13 @@
     }
 
     create3DWaypoint("Hoofdgebouw", "🏛️", new THREE.Vector3(0, 12, 30));
-    create3DWaypoint("Melkveestal", "🐄", new THREE.Vector3(-70, 10, -90));
-    create3DWaypoint("Voersilo's", "🌾", new THREE.Vector3(115, 12, -115));
+    create3DWaypoint("Voergang Stal", "🐄", new THREE.Vector3(22, 14, -105));
+    create3DWaypoint("Lely Melkrobots", "🤖", new THREE.Vector3(22, 12, -60.5));
+    create3DWaypoint("Skybox", "🔭", new THREE.Vector3(22, 16, -60.5));
+    create3DWaypoint("Kalverstal", "🍼", new THREE.Vector3(68.5, 10, -5));
+    create3DWaypoint("Machinepark & Tractor", "🚜", new THREE.Vector3(58, 8, 18));
     create3DWaypoint("Boerderij Woning", "🏡", new THREE.Vector3(72, 9, 45));
-    create3DWaypoint("Machinepark & Tractor", "🚜", new THREE.Vector3(65, 8, 8));
+    create3DWaypoint("Voersilo's", "🌾", new THREE.Vector3(105, 12, -110));
 
     // -------------------------------------------------------------
     // FARM BUILDINGS & TERRAIN (barn.glb with Roblox PBR styling)
@@ -2028,18 +2045,22 @@
       const cowTemplate = gltf.scene;
       const anims = gltf.animations;
       const cowSpots = [
+        // INSIDE NEW LIGBOXENSTAL - Along the feed fence
+        { x: 20.8, z: -85.0 }, { x: 23.2, z: -98.0 }, { x: 20.8, z: -115.0 },
+        { x: 23.2, z: -130.0 }, { x: 20.8, z: -145.0 },
+        // INSIDE NEW LIGBOXENSTAL - In cubicle beds (ligboxen)
+        { x: 15.5, z: -90.0 }, { x: 7.0, z: -105.0 }, { x: 28.5, z: -85.0 },
+        { x: 37.0, z: -120.0 }, { x: 15.5, z: -135.0 },
+        // AT 4X LELY ASTRONAUT MELKROBOTS (Milking & waiting area)
+        { x: 18.5, z: -57.5 }, { x: 25.5, z: -63.5 }, { x: 22.0, z: -59.0 },
+        // CALVING & STRAW PENS (Noordelijke stal)
+        { x: 12.0, z: -30.0 }, { x: 15.0, z: -25.0 },
         // In front of Farmhouse / Boerderij Woning
         { x: 62, z: 65 }, { x: 84, z: 62 }, { x: 78, z: 72 },
         // Courtyard near barns
-        { x: 20, z: -23 }, { x: 30, z: -25 }, { x: 17, z: -10 }, { x: 33, z: -11 },
-        // Pasture West
-        { x: -90, z: -40 }, { x: -85, z: -55 }, { x: -75, z: -70 }, { x: -65, z: -35 },
-        { x: -110, z: -50 }, { x: -120, z: -80 },
-        // Near Barn 3
-        { x: -55, z: -95 }, { x: -60, z: -110 }, { x: -70, z: -105 },
-        // Farmyard North
-        { x: 30, z: -60 }, { x: 45, z: -75 }, { x: 50, z: -90 },
-        // Meadow East
+        { x: 20, z: -23 }, { x: 30, z: -25 }, { x: 17, z: -10 },
+        // Pastures
+        { x: -90, z: -40 }, { x: -85, z: -55 }, { x: -75, z: -70 },
         { x: 90, z: 20 }, { x: 105, z: 10 }, { x: 80, z: -10 }
       ];
 
@@ -2245,9 +2266,12 @@
       if (e.code === 'KeyE') handleInteract();
       if (e.code === 'Digit1') teleportPlayer('hoofdgebouw');
       if (e.code === 'Digit2') teleportPlayer('koeienstal');
-      if (e.code === 'Digit3') teleportPlayer('silos');
-      if (e.code === 'Digit4') teleportPlayer('woning');
-      if (e.code === 'Digit5') teleportPlayer('tractor');
+      if (e.code === 'Digit3') teleportPlayer('melkrobots');
+      if (e.code === 'Digit4') teleportPlayer('skybox');
+      if (e.code === 'Digit5') teleportPlayer('kalverstal');
+      if (e.code === 'Digit6') teleportPlayer('tractor');
+      if (e.code === 'Digit7') teleportPlayer('woning');
+      if (e.code === 'Digit8') teleportPlayer('silos');
       if (e.code === 'KeyH') toggleHelp();
     });
     window.addEventListener('keyup', (e) => {
@@ -3090,6 +3114,12 @@
           openCharModal();
           showBanner("Welkom op de Dairy Campus! Kies je personage en ontdek de boerderij!", "🌾");
           animate();
+
+          // Optional URL teleport param for direct location jumps
+          const targetParam = new URLSearchParams(window.location.search).get('teleport');
+          if (targetParam && HOTSPOTS[targetParam]) {
+            setTimeout(() => teleportPlayer(targetParam), 400);
+          }
         },
         undefined,
         (err) => {

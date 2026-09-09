@@ -116,6 +116,40 @@ for y in range(0, 512, slab_s):
         conc_draw.rectangle([x + 1, y + 1, x + slab_s - 1, y + slab_s - 1], fill=(c, c, c + 2))
         conc_draw.line([(x, y), (x + slab_s, y)], fill=(120, 122, 126), width=1)
         conc_draw.line([(x, y), (x, y + slab_s)], fill=(120, 122, 126), width=1)
-conc_img.save(f'{tex_dir}/concrete_diffuse.png')
+# 10. Golden Straw Bedding
+straw_img = Image.new('RGB', (512, 512), '#d4b359')
+straw_draw = ImageDraw.Draw(straw_img)
+for i in range(1200):
+    sx = (i * 79 + (i % 17) * 31) % 512
+    sy = (i * 131 + (i % 23) * 41) % 512
+    angle = (i * 37) % 180
+    length = 15 + (i % 20)
+    rad = math.radians(angle)
+    ex = sx + int(math.cos(rad) * length)
+    ey = sy + int(math.sin(rad) * length)
+    col = (235 - (i % 30), 195 - (i % 40), 90 - (i % 30))
+    straw_draw.line([(sx, sy), (ex, ey)], fill=col, width=2)
+straw_img.save(f'{tex_dir}/straw_diffuse.png')
+
+# 11. Fresh Silage / TMR Feed
+sil_img = Image.new('RGB', (512, 512), '#4a5927')
+sil_draw = ImageDraw.Draw(sil_img)
+for i in range(1500):
+    sx = (i * 97) % 512
+    sy = (i * 113) % 512
+    length = 8 + (i % 12)
+    angle = (i * 53) % 180
+    rad = math.radians(angle)
+    ex = sx + int(math.cos(rad) * length)
+    ey = sy + int(math.sin(rad) * length)
+    # Mix of green grass silage, maize silage (golden-yellow), and beet pulp
+    if i % 3 == 0:
+        col = (180 + (i % 40), 160 + (i % 30), 50) # Corn silage
+    elif i % 3 == 1:
+        col = (60 + (i % 25), 90 + (i % 30), 30) # Grass silage
+    else:
+        col = (90 + (i % 30), 110 + (i % 20), 45)
+    sil_draw.line([(sx, sy), (ex, ey)], fill=col, width=2)
+sil_img.save(f'{tex_dir}/silage_diffuse.png')
 
 print("All textures created in", tex_dir)
