@@ -1936,19 +1936,51 @@
 
           const n = child.name.toLowerCase();
 
-          // Intelligent Material Assignment
+          // Collect walkable surfaces for physics collision (exclude water)
+          if (!n.includes('water') && (n.includes('grond') || n.includes('ground') || n.includes('straatwerk') || n.includes('paving') || n.includes('beton') || n.includes('floor') || n.includes('concrete'))) {
+            walkableMeshes.push(child);
+          }
+
+          // If the model is an optimized Campus mesh from Blender, preserve all its custom PBR materials & textures!
+          if (n.startsWith('campus_')) {
+            const mats = Array.isArray(child.material) ? child.material : [child.material];
+            mats.forEach(m => {
+              m.side = THREE.DoubleSide;
+              if (m.name.includes('Glass') || n.includes('glass')) {
+                m.transparent = true;
+                m.opacity = 0.55;
+              } else if (m.name.includes('Water') || n.includes('water')) {
+                m.transparent = true;
+                m.opacity = 0.85;
+                child.castShadow = false;
+              }
+            });
+            return;
+          }
+
+          // If the model already has an embedded PBR texture, preserve it!
+          if (child.material && (child.material.map || (Array.isArray(child.material) && child.material[0].map))) {
+            const mats = Array.isArray(child.material) ? child.material : [child.material];
+            mats.forEach(m => {
+              m.side = THREE.DoubleSide;
+              if (m.name.includes('Glass')) {
+                m.transparent = true;
+                m.opacity = 0.55;
+              }
+            });
+            return;
+          }
+
+          // Intelligent Material Assignment (procedural fallback)
           if (n.includes('grond')) {
             child.material = matGrass;
-            walkableMeshes.push(child);
           } else if (n.includes('straatwerk')) {
             child.material = matRoad;
-            walkableMeshes.push(child);
           } else if (n.includes('water')) {
             child.material = matWater;
             child.castShadow = false;
           } else if (n.includes('beton') || n.includes('floor')) {
             child.material = matConcrete;
-            walkableMeshes.push(child);
           } else if (n.includes('hoofdgebouw')) {
             child.material = matCampusBuilding;
           } else if (n.includes('houten gevel')) {
@@ -2346,6 +2378,7 @@
 
     function openCharModal() {
       if (!charModal) return;
+      if (new URLSearchParams(window.location.search).get('autostart')) return;
       charModal.style.display = 'flex';
       const currentKey = player && player.currentCharacter ? player.currentCharacter.id : 'bert';
       charCards.forEach(c => {
@@ -3003,51 +3036,64 @@
     loadingBar.style.width = "30%";
     loadingText.textContent = "Dairy Campus 3D Boerderij inladen...";
 
-    gltfLoader.load(
-      'barn.glb',
-      (gltf) => {
-        setupBarnMaterials(gltf);
-        loadingBar.style.width = "75%";
-        loadingText.textContent = "Koeien en animaties inladen...";
-
-        // Load cows
-        gltfLoader.load(
-          'cow4.glb',
-          (cowGltf) => {
-            spawnCows(cowGltf);
-            loadingBar.style.width = "100%";
-            loadingText.textContent = "Klaar om te spelen!";
-
-            loadingScreen.style.display = 'none';
-            openCharModal();
-            showBanner("Welkom op de Dairy Campus! Kies je personage en ontdek de boerderij!", "🌾");
-            animate();
-          },
-          undefined,
-          (err) => {
-            console.warn("Cow model load error, proceeding without cows:", err);
-            loadingBar.style.width = "100%";
-            loadingScreen.style.display = 'none';
-            openCharModal();
-            animate();
+    function loadBarn(onSuccess) {
+      gltfLoader.load(
+        'barn_textured.glb',
+        (gltf) => {
+          setupBarnMaterials(gltf);
+          onSuccess();
+        },
+        (xhr) => {
+          if (xhr.total) {
+            const p = Math.round((xhr.loaded / xhr.total) * 60);
+            loadingBar.style.width = (15 + p) + "%";
           }
-        );
-      },
-      (xhr) => {
-        if (xhr.total) {
-          const p = Math.round((xhr.loaded / xhr.total) * 60);
-          loadingBar.style.width = (15 + p) + "%";
+        },
+        (err) => {
+          console.warn("barn_textured.glb load failed, trying fallback barn.glb:", err);
+          gltfLoader.load(
+            'barn.glb',
+            (gltf) => {
+              setupBarnMaterials(gltf);
+              onSuccess();
+            },
+            undefined,
+            (fallbackErr) => {
+              console.error("All barn models failed:", fallbackErr);
+              onSuccess();
+            }
+          );
         }
-      },
-      (err) => {
-        console.error("Barn model load error:", err);
-        loadingText.textContent = "Fout bij inladen van het boerderij model.";
-        // Still start game on base pasture
-        loadingScreen.style.display = 'none';
-        openCharModal();
-        animate();
-      }
-    );
+      );
+    }
+
+    loadBarn(() => {
+      loadingBar.style.width = "75%";
+      loadingText.textContent = "Koeien en animaties inladen...";
+
+      // Load cows
+      gltfLoader.load(
+        'cow4.glb',
+        (cowGltf) => {
+          spawnCows(cowGltf);
+          loadingBar.style.width = "100%";
+          loadingText.textContent = "Klaar om te spelen!";
+
+          loadingScreen.style.display = 'none';
+          openCharModal();
+          showBanner("Welkom op de Dairy Campus! Kies je personage en ontdek de boerderij!", "🌾");
+          animate();
+        },
+        undefined,
+        (err) => {
+          console.warn("Cow model load error, proceeding without cows:", err);
+          loadingBar.style.width = "100%";
+          loadingScreen.style.display = 'none';
+          openCharModal();
+          animate();
+        }
+      );
+    });
 
     // Resize handling
     window.addEventListener('resize', () => {
