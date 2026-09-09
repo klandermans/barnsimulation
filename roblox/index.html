@@ -1089,22 +1089,69 @@
     // -------------------------------------------------------------
     const canvas = document.getElementById('game-canvas');
     const isMobileDevice = (window.innerWidth <= 800) || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-    let renderer;
-    try {
-      renderer = new THREE.WebGLRenderer({
-        canvas,
-        antialias: !isMobileDevice,
-        alpha: false,
-        powerPreference: 'default'
-      });
-    } catch (e) {
-      console.warn("Fallback WebGLRenderer:", e);
-      renderer = new THREE.WebGLRenderer({ canvas, alpha: false });
+    // Bulletproof WebGL Initialization with Multi-Tier Mobile Fallback
+    function initWebGLRenderer() {
+      const configs = [
+        // 1. Standard config
+        { canvas, antialias: !isMobileDevice, alpha: false, powerPreference: 'default', precision: isMobileDevice ? 'mediump' : 'highp' },
+        // 2. Mobile low-power config
+        { canvas, antialias: false, alpha: false, powerPreference: 'low-power', precision: 'mediump', depth: true, stencil: false },
+        // 3. Ultra-minimal fallback
+        { canvas, antialias: false, alpha: false, powerPreference: 'low-power' }
+      ];
+
+      for (let i = 0; i < configs.length; i++) {
+        try {
+          const r = new THREE.WebGLRenderer(configs[i]);
+          if (r && r.getContext()) {
+            if (i > 0) console.log(`[WebGL] Initialized using fallback tier ${i}`);
+            return r;
+          }
+        } catch (err) {
+          console.warn(`[WebGL] Init tier ${i} failed:`, err);
+        }
+      }
+      return null;
     }
+
+    let renderer = initWebGLRenderer();
+
+    if (!renderer) {
+      // User friendly fallback banner if GPU is exhausted
+      const errBanner = document.createElement('div');
+      errBanner.style.cssText = 'position:fixed;top:0;left:0;width:100%;background:#ef4444;color:white;padding:16px;text-align:center;font-weight:bold;z-index:999999;font-family:sans-serif;';
+      errBanner.innerHTML = '⚠️ De 3D-videokaart van je telefoon is even bezet door eerdere tabbladen. <br><a href="javascript:location.reload()" style="color:#fef08a;text-decoration:underline;display:inline-block;margin-top:8px;">Tik hier om opnieuw te proberen</a> of sluit andere open tabbladen.';
+      document.body.appendChild(errBanner);
+      throw new Error("Could not initialize WebGL context on this device.");
+    }
+
+    // Context loss & recovery handling (prevents crash when phone locks or switches apps)
+    canvas.addEventListener('webglcontextlost', (e) => {
+      e.preventDefault();
+      console.warn("[WebGL] Context lost. Waiting for GPU recovery...");
+    }, false);
+
+    canvas.addEventListener('webglcontextrestored', () => {
+      console.log("[WebGL] Context restored! Reloading scene...");
+      window.location.reload();
+    }, false);
+
+    // Explicitly release GPU context when navigating or refreshing (prevents "too many WebGL contexts" after deploy)
+    const cleanupGPU = () => {
+      if (renderer) {
+        try {
+          renderer.dispose();
+          if (renderer.forceContextLoss) renderer.forceContextLoss();
+        } catch (e) {}
+      }
+    };
+    window.addEventListener('beforeunload', cleanupGPU);
+    window.addEventListener('pagehide', cleanupGPU);
+
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.5 : 2));
     renderer.setClearColor(0x7ec0ee, 1);
-    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.enabled = !isMobileDevice || (window.innerWidth >= 600);
     renderer.shadowMap.type = isMobileDevice ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.05;
