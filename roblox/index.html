@@ -2118,65 +2118,165 @@
     }
 
     // -------------------------------------------------------------
-    // COWS SIMULATION (Animated cow4.glb models)
+    // COWS SIMULATION (Using Authentic 3D Cow Models from iter8/finallly/realtime)
     // -------------------------------------------------------------
     const cows = [];
     const cowMixers = [];
     let nearestCow = null;
 
-    function spawnCows(gltf) {
-      const cowTemplate = gltf.scene;
-      const anims = gltf.animations;
-      const cowSpots = [
-        // INSIDE NEW LIGBOXENSTAL - Along the feed fence
-        { x: 20.8, z: -85.0 }, { x: 23.2, z: -98.0 }, { x: 20.8, z: -115.0 },
-        { x: 23.2, z: -130.0 }, { x: 20.8, z: -145.0 },
-        // INSIDE NEW LIGBOXENSTAL - In cubicle beds (ligboxen)
-        { x: 15.5, z: -90.0 }, { x: 7.0, z: -105.0 }, { x: 28.5, z: -85.0 },
-        { x: 37.0, z: -120.0 }, { x: 15.5, z: -135.0 },
-        // AT 4X LELY ASTRONAUT MELKROBOTS (Milking & waiting area)
-        { x: 18.5, z: -57.5 }, { x: 25.5, z: -63.5 }, { x: 22.0, z: -59.0 },
-        // CALVING & STRAW PENS (Noordelijke stal)
-        { x: 12.0, z: -30.0 }, { x: 15.0, z: -25.0 },
-        // In front of Farmhouse / Boerderij Woning
-        { x: 62, z: 65 }, { x: 84, z: 62 }, { x: 78, z: 72 },
-        // Courtyard near barns
-        { x: 20, z: -23 }, { x: 30, z: -25 }, { x: 17, z: -10 },
-        // Pastures
-        { x: -90, z: -40 }, { x: -85, z: -55 }, { x: -75, z: -70 },
-        { x: 90, z: 20 }, { x: 105, z: 10 }, { x: 80, z: -10 }
+    function spawnAuthenticCows({ gltfEating, gltfLying, gltfWalk, gltfStand }) {
+      const defaultScale = 1.0; // The models from iter8 are already exact 1.5m Holstein scale in meters!
+
+      // 1. EATING COWS ALONG THE CENTRAL FEED FENCE (eating silage through headlocks)
+      const eatingSpots = [
+        // West side (fence is at x = 19.75, head facing East towards feed)
+        { x: 18.6, z: -72.0, rot: -Math.PI / 2 },
+        { x: 18.6, z: -82.0, rot: -Math.PI / 2 },
+        { x: 18.6, z: -94.0, rot: -Math.PI / 2 },
+        { x: 18.6, z: -106.0, rot: -Math.PI / 2 },
+        { x: 18.6, z: -118.0, rot: -Math.PI / 2 },
+        { x: 18.6, z: -130.0, rot: -Math.PI / 2 },
+        { x: 18.6, z: -142.0, rot: -Math.PI / 2 },
+        { x: 18.6, z: -154.0, rot: -Math.PI / 2 },
+        // East side (fence is at x = 24.25, head facing West towards feed)
+        { x: 25.4, z: -75.0, rot: Math.PI / 2 },
+        { x: 25.4, z: -86.0, rot: Math.PI / 2 },
+        { x: 25.4, z: -98.0, rot: Math.PI / 2 },
+        { x: 25.4, z: -110.0, rot: Math.PI / 2 },
+        { x: 25.4, z: -122.0, rot: Math.PI / 2 },
+        { x: 25.4, z: -134.0, rot: Math.PI / 2 },
+        { x: 25.4, z: -146.0, rot: Math.PI / 2 },
+        { x: 25.4, z: -158.0, rot: Math.PI / 2 }
       ];
 
-      cowSpots.forEach((spot, idx) => {
-        const cow = cowTemplate.clone();
-        cow.scale.set(1.5, 1.5, 1.5);
-        cow.position.set(spot.x + (Math.random() - 0.5) * 8, 0, spot.z + (Math.random() - 0.5) * 8);
-        cow.rotation.y = Math.random() * Math.PI * 2;
-        cow.traverse(m => {
-          if (m.isMesh) {
-            m.castShadow = true;
-            m.receiveShadow = true;
+      const eatingTemplate = gltfEating ? gltfEating.scene : (gltfStand ? gltfStand.scene : null);
+      if (eatingTemplate) {
+        eatingSpots.forEach((spot, idx) => {
+          const cow = eatingTemplate.clone();
+          cow.scale.set(defaultScale, defaultScale, defaultScale);
+          cow.position.set(spot.x, 0.0, spot.z);
+          cow.rotation.y = spot.rot;
+          cow.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+          scene.add(cow);
+          cows.push({ mesh: cow, name: "Eetkoe #" + (idx + 1) });
+        });
+      }
+
+      // 2. LYING COWS RESTING IN CUBICLES (LIGBOXEN) & STRAW PENS
+      const lyingSpots = [
+        // West wall row (x = 2.4)
+        { x: 2.4, z: -76.0, rot: -Math.PI / 2 },
+        { x: 2.4, z: -92.0, rot: -Math.PI / 2 },
+        { x: 2.4, z: -112.0, rot: -Math.PI / 2 },
+        { x: 2.4, z: -132.0, rot: -Math.PI / 2 },
+        // Double row center West (x = 9.8 and 12.0)
+        { x: 9.8, z: -80.0, rot: Math.PI / 2 },
+        { x: 9.8, z: -96.0, rot: Math.PI / 2 },
+        { x: 9.8, z: -116.0, rot: Math.PI / 2 },
+        { x: 9.8, z: -136.0, rot: Math.PI / 2 },
+        { x: 12.0, z: -84.0, rot: -Math.PI / 2 },
+        { x: 12.0, z: -100.0, rot: -Math.PI / 2 },
+        { x: 12.0, z: -120.0, rot: -Math.PI / 2 },
+        { x: 12.0, z: -140.0, rot: -Math.PI / 2 },
+        // Double row center East (x = 32.0 and 34.2)
+        { x: 32.0, z: -80.0, rot: Math.PI / 2 },
+        { x: 32.0, z: -98.0, rot: Math.PI / 2 },
+        { x: 32.0, z: -118.0, rot: Math.PI / 2 },
+        { x: 32.0, z: -138.0, rot: Math.PI / 2 },
+        { x: 34.2, z: -84.0, rot: -Math.PI / 2 },
+        { x: 34.2, z: -102.0, rot: -Math.PI / 2 },
+        { x: 34.2, z: -122.0, rot: -Math.PI / 2 },
+        { x: 34.2, z: -142.0, rot: -Math.PI / 2 },
+        // East wall row (x = 41.6)
+        { x: 41.6, z: -78.0, rot: Math.PI / 2 },
+        { x: 41.6, z: -96.0, rot: Math.PI / 2 },
+        { x: 41.6, z: -116.0, rot: Math.PI / 2 },
+        { x: 41.6, z: -134.0, rot: Math.PI / 2 },
+        // Maternity straw bedding pens (Bestaande stal x = 3.5)
+        { x: 3.5, z: -18.0, rot: 0.8 },
+        { x: 3.5, z: -32.0, rot: -0.6 },
+        { x: 3.5, z: -44.0, rot: 0.2 }
+      ];
+
+      const lyingTemplate = gltfLying ? gltfLying.scene : (gltfStand ? gltfStand.scene : null);
+      if (lyingTemplate) {
+        lyingSpots.forEach((spot, idx) => {
+          const cow = lyingTemplate.clone();
+          cow.scale.set(defaultScale, defaultScale, defaultScale);
+          cow.position.set(spot.x, 0.12, spot.z);
+          cow.rotation.y = spot.rot;
+          cow.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+          scene.add(cow);
+          cows.push({ mesh: cow, name: "Ligboxkoe #" + (idx + 1) });
+        });
+      }
+
+      // 3. STANDING / MILKING COWS (Lely Astronaut robots & Courtyard)
+      const standTemplate = gltfStand ? gltfStand.scene : (gltfEating ? gltfEating.scene : null);
+      if (standTemplate) {
+        const standSpots = [
+          { x: 18.2, z: -58.0, rot: 0.0, name: "Melkkoe Robot 1" },
+          { x: 25.8, z: -63.5, rot: Math.PI, name: "Melkkoe Robot 4" },
+          { x: 22.0, z: -54.0, rot: 0.0, name: "Behandelbox Koe" },
+          { x: 3.5, z: -25.0, rot: 0.0, name: "Kraamkoe Strohok" },
+          // Outdoor courtyard & Farmhouse
+          { x: 62.0, z: 65.0, rot: 1.2, name: "Huiskavel Koe 1" },
+          { x: 80.0, z: 68.0, rot: -0.8, name: "Huiskavel Koe 2" },
+          { x: 20.0, z: -23.0, rot: 0.5, name: "Erfkoe 1" },
+          { x: 30.0, z: -25.0, rot: -1.0, name: "Erfkoe 2" }
+        ];
+        standSpots.forEach((spot) => {
+          const cow = standTemplate.clone();
+          cow.scale.set(defaultScale, defaultScale, defaultScale);
+          cow.position.set(spot.x, 0.0, spot.z);
+          cow.rotation.y = spot.rot;
+          cow.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+          scene.add(cow);
+          cows.push({ mesh: cow, name: spot.name });
+        });
+      }
+
+      // 4. ANIMATED WALKING COWS IN ALLEYS & PASTURES
+      const walkTemplate = gltfWalk ? gltfWalk.scene : null;
+      const walkAnims = gltfWalk ? gltfWalk.animations : [];
+      if (walkTemplate) {
+        const walkSpots = [
+          // Barn slatted alleys (walking between cubicles and feed fence)
+          { x: 16.0, z: -95.0 },
+          { x: 16.0, z: -125.0 },
+          { x: 28.0, z: -90.0 },
+          { x: 28.0, z: -120.0 },
+          // Pastures
+          { x: -90.0, z: -40.0 },
+          { x: -85.0, z: -55.0 },
+          { x: -75.0, z: -70.0 },
+          { x: 90.0, z: 20.0 },
+          { x: 105.0, z: 10.0 }
+        ];
+        walkSpots.forEach((spot) => {
+          const cow = walkTemplate.clone();
+          cow.scale.set(defaultScale, defaultScale, defaultScale);
+          cow.position.set(spot.x, 0.0, spot.z);
+          cow.rotation.y = Math.random() * Math.PI * 2;
+          cow.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+          scene.add(cow);
+
+          const mixer = new THREE.AnimationMixer(cow);
+          if (walkAnims.length > 0) {
+            const action = mixer.clipAction(walkAnims[0]);
+            action.time = Math.random() * 2;
+            action.play();
           }
+          cowMixers.push(mixer);
+          cows.push({
+            mesh: cow,
+            mixer: mixer,
+            direction: new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize(),
+            speed: 0.35 + Math.random() * 0.35,
+            changeDirTime: 3 + Math.random() * 4
+          });
         });
-        scene.add(cow);
-
-        // Animation mixer
-        const mixer = new THREE.AnimationMixer(cow);
-        if (anims && anims.length > 0) {
-          const action = mixer.clipAction(anims[0]);
-          action.time = Math.random() * 2; // de-sync
-          action.play();
-        }
-        cowMixers.push(mixer);
-
-        cows.push({
-          mesh: cow,
-          mixer: mixer,
-          direction: new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize(),
-          speed: 0.3 + Math.random() * 0.4,
-          changeDirTime: 2 + Math.random() * 4
-        });
-      });
+      }
     }
 
     // -------------------------------------------------------------
@@ -3067,21 +3167,25 @@
       let minCowDist = 999;
 
       cows.forEach(cow => {
-        // Wander AI
-        cow.changeDirTime -= delta;
-        if (cow.changeDirTime <= 0) {
-          cow.changeDirTime = 3 + Math.random() * 5;
-          cow.direction.set(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
-          cow.mesh.rotation.y = Math.atan2(cow.direction.x, cow.direction.z);
+        // Wander AI only for walking cows
+        if (cow.direction && cow.speed) {
+          cow.changeDirTime -= delta;
+          if (cow.changeDirTime <= 0) {
+            cow.changeDirTime = 3 + Math.random() * 5;
+            cow.direction.set(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+            cow.mesh.rotation.y = Math.atan2(cow.direction.x, cow.direction.z);
+          }
+          cow.mesh.position.addScaledVector(cow.direction, cow.speed * delta);
         }
-        cow.mesh.position.addScaledVector(cow.direction, cow.speed * delta);
 
         // Check distance to player
-        const dist = player.group.position.distanceTo(cow.mesh.position);
-        if (dist < minCowDist) {
-          minCowDist = dist;
-          if (dist < 4.0) {
-            nearestCow = cow;
+        if (cow.mesh) {
+          const dist = player.group.position.distanceTo(cow.mesh.position);
+          if (dist < minCowDist) {
+            minCowDist = dist;
+            if (dist < 4.0) {
+              nearestCow = cow;
+            }
           }
         }
       });
@@ -3183,36 +3287,38 @@
 
     loadBarn(() => {
       loadingBar.style.width = "75%";
-      loadingText.textContent = "Koeien en animaties inladen...";
+      loadingText.textContent = "Authentieke koeien en animaties inladen...";
 
-      // Load cows
-      gltfLoader.load(
-        'cow4.glb',
-        (cowGltf) => {
-          spawnCows(cowGltf);
-          loadingBar.style.width = "100%";
-          loadingText.textContent = "Klaar om te spelen!";
+      // Load authentic cow models from iter8 (eating, lying, walking, standing)
+      Promise.all([
+        gltfLoader.loadAsync('models/cow_eating.glb').catch(e => { console.warn("eating cow load failed", e); return null; }),
+        gltfLoader.loadAsync('models/cow_lying.glb').catch(e => { console.warn("lying cow load failed", e); return null; }),
+        gltfLoader.loadAsync('models/cow_walk.glb').catch(e => { console.warn("walk cow load failed", e); return null; }),
+        gltfLoader.loadAsync('models/cow.glb').catch(e => { console.warn("stand cow load failed", e); return null; })
+      ]).then(([gltfEating, gltfLying, gltfWalk, gltfStand]) => {
+        spawnAuthenticCows({ gltfEating, gltfLying, gltfWalk, gltfStand });
+        loadingBar.style.width = "100%";
+        loadingText.textContent = "Klaar om te spelen!";
 
-          loadingScreen.style.display = 'none';
+        loadingScreen.style.display = 'none';
+        const hasChosenChar = !!localStorage.getItem('roblox_farmer_choice');
+        if (!hasChosenChar) {
           openCharModal();
-          showBanner("Welkom op de Dairy Campus! Kies je personage en ontdek de boerderij!", "🌾");
-          animate();
-
-          // Optional URL teleport param for direct location jumps
-          const targetParam = new URLSearchParams(window.location.search).get('teleport');
-          if (targetParam && HOTSPOTS[targetParam]) {
-            setTimeout(() => teleportPlayer(targetParam), 400);
-          }
-        },
-        undefined,
-        (err) => {
-          console.warn("Cow model load error, proceeding without cows:", err);
-          loadingBar.style.width = "100%";
-          loadingScreen.style.display = 'none';
-          openCharModal();
-          animate();
         }
-      );
+        showBanner("Welkom op de Dairy Campus! Ontdek de boerderij!", "🌾");
+        animate();
+
+        // Optional URL teleport param for direct location jumps
+        const targetParam = new URLSearchParams(window.location.search).get('teleport');
+        if (targetParam && HOTSPOTS[targetParam]) {
+          setTimeout(() => teleportPlayer(targetParam), 400);
+        }
+      }).catch(err => {
+        console.warn("Cow model load error, proceeding without cows:", err);
+        loadingBar.style.width = "100%";
+        loadingScreen.style.display = 'none';
+        animate();
+      });
     });
 
     // Resize handling
