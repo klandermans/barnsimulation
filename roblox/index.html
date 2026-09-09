@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>Roblox Dairy Campus - Boerderij Game</title>
   <style>
     * {
@@ -1087,34 +1090,37 @@
     // -------------------------------------------------------------
     // THREE.JS SETUP
     // -------------------------------------------------------------
-    const canvas = document.getElementById('game-canvas');
-    const isMobileDevice = (window.innerWidth <= 800) || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-    // Bulletproof WebGL Initialization with Multi-Tier Mobile Fallback
+    const isMobileDevice = (typeof window !== 'undefined') && ((window.innerWidth <= 800) || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0));
+
+    // Bulletproof WebGL Initialization with Canvas Cloning Fallback
     function initWebGLRenderer() {
+      let targetCanvas = document.getElementById('game-canvas');
       const configs = [
-        // 1. Standard config
-        { canvas, antialias: !isMobileDevice, alpha: false, powerPreference: 'default', precision: isMobileDevice ? 'mediump' : 'highp' },
-        // 2. Mobile low-power config
-        { canvas, antialias: false, alpha: false, powerPreference: 'low-power', precision: 'mediump', depth: true, stencil: false },
-        // 3. Ultra-minimal fallback
-        { canvas, antialias: false, alpha: false, powerPreference: 'low-power' }
+        // 1. Mobile-friendly standard config
+        { antialias: !isMobileDevice, alpha: false, powerPreference: isMobileDevice ? 'low-power' : 'default', precision: isMobileDevice ? 'mediump' : 'highp', depth: true, stencil: false },
+        // 2. Ultra-safe low power config with fresh canvas
+        { antialias: false, alpha: false, powerPreference: 'low-power', precision: 'mediump', depth: true, stencil: false }
       ];
 
       for (let i = 0; i < configs.length; i++) {
         try {
-          const r = new THREE.WebGLRenderer(configs[i]);
+          if (i > 0 && targetCanvas.parentNode) {
+            const fresh = targetCanvas.cloneNode(false);
+            targetCanvas.parentNode.replaceChild(fresh, targetCanvas);
+            targetCanvas = fresh;
+          }
+          const r = new THREE.WebGLRenderer({ canvas: targetCanvas, ...configs[i] });
           if (r && r.getContext()) {
-            if (i > 0) console.log(`[WebGL] Initialized using fallback tier ${i}`);
-            return r;
+            return { renderer: r, canvas: targetCanvas };
           }
         } catch (err) {
-          console.warn(`[WebGL] Init tier ${i} failed:`, err);
+          console.warn(`[WebGL] Attempt ${i} failed:`, err);
         }
       }
-      return null;
+      return { renderer: null, canvas: targetCanvas };
     }
 
-    let renderer = initWebGLRenderer();
+    const { renderer, canvas } = initWebGLRenderer();
 
     if (!renderer) {
       // User friendly fallback banner if GPU is exhausted
@@ -1148,13 +1154,22 @@
     window.addEventListener('beforeunload', cleanupGPU);
     window.addEventListener('pagehide', cleanupGPU);
 
+    // Global error watcher to show any unexpected runtime error visibly on screen
+    window.addEventListener('error', (e) => {
+      console.error("[Global Error]", e);
+      const msg = e.message || (e.error ? e.error.message : String(e));
+      if (typeof showBanner === 'function') {
+        showBanner("Fout: " + msg, "⚠️");
+      }
+    });
+
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.5 : 2));
     renderer.setClearColor(0x7ec0ee, 1);
-    renderer.shadowMap.enabled = !isMobileDevice || (window.innerWidth >= 600);
-    renderer.shadowMap.type = isMobileDevice ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.05;
+    renderer.shadowMap.enabled = !isMobileDevice; // Disable shadow maps on mobile to save VRAM and prevent blank canvas
+    renderer.shadowMap.type = THREE.BasicShadowMap;
+    renderer.toneMapping = isMobileDevice ? THREE.LinearToneMapping : THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.0;
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x7ec0ee); // Crisp sunny sky blue
@@ -1890,12 +1905,12 @@
         metalness: 0.1,
         side: THREE.DoubleSide
       });
-      const matGlass = new THREE.MeshPhysicalMaterial({
-        color: 0xbae6fd,
+      const matGlass = new THREE.MeshStandardMaterial({
+        color: 0x93c5fd,
         roughness: 0.1,
-        transmission: 0.85,
+        metalness: 0.1,
         transparent: true,
-        opacity: 0.75,
+        opacity: 0.55,
         side: THREE.DoubleSide
       });
       const matDoorIndustrial = new THREE.MeshStandardMaterial({
@@ -1916,7 +1931,7 @@
           if (!child.geometry.attributes.normal) {
             child.geometry.computeVertexNormals();
           }
-          child.castShadow = true;
+          child.castShadow = !isMobileDevice; // Disable shadow casting for 1200 static meshes on mobile
           child.receiveShadow = true;
 
           const n = child.name.toLowerCase();
@@ -2971,7 +2986,11 @@
       // Update minimap
       updateMinimap();
 
-      renderer.render(scene, camera);
+      try {
+        renderer.render(scene, camera);
+      } catch (err) {
+        console.error("Render loop error:", err);
+      }
     }
 
     // -------------------------------------------------------------
