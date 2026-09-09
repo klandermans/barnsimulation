@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Roblox Dairy Campus - Boerderij Game</title>
+  <title>Roblox Dairy Campus Game</title>
   <style>
     * {
       box-sizing: border-box;
@@ -757,11 +757,11 @@
       <div class="roblox-logo-hole" style="width: 16px; height: 16px;"></div>
     </div>
     <div class="loading-title">ROBLOX DAIRY CAMPUS</div>
-    <div class="loading-sub">WUR Boerderij Simulatie</div>
+    <div class="loading-sub">WUR Dairy Campus Simulatie</div>
     <div class="loading-progress-box">
       <div class="loading-progress-bar" id="loading-bar"></div>
     </div>
-    <div class="loading-status" id="loading-text">Boerderij 3D model inladen...</div>
+    <div class="loading-status" id="loading-text">Dairy Campus 3D model inladen...</div>
   </div>
 
   <!-- Roblox TopBar -->
@@ -770,13 +770,13 @@
       <div class="roblox-logo" title="Roblox Menu">
         <div class="roblox-logo-hole"></div>
       </div>
-      <div class="player-badge" id="player-badge-btn" style="cursor:pointer;" title="Klik om Boer of Boerin te kiezen">
-        <span id="player-name-text">🤠 Boer Bert</span>
+      <div class="player-badge" id="player-badge-btn" style="cursor:pointer;" title="Klik om Medewerker te kiezen">
+        <span id="player-name-text">Bert</span>
         <div class="health-container" title="Gezondheid: 100/100">
           <div class="health-bar" id="health-bar"></div>
         </div>
       </div>
-      <button class="icon-btn btn-farmer-pick" id="btn-char-select" title="Kies Boer of Boerin">👤 Boer / Boerin</button>
+      <button class="icon-btn btn-farmer-pick" id="btn-char-select" title="Kies Medewerker">👤 Medewerker</button>
     </div>
 
     <div class="topbar-center">
@@ -801,48 +801,48 @@
   <div id="char-modal">
     <div class="char-modal-box">
       <button class="char-modal-x" id="btn-char-x" title="Sluiten">✕</button>
-      <h2>👤 Kies je Boer of Boerin</h2>
-      <p>Kies met welk personage je over de Dairy Campus wilt lopen:</p>
+      <h2>👤 Kies je Medewerker</h2>
+      <p>Kies met welk teamlid je over de Dairy Campus wilt lopen:</p>
       <div class="char-cards-grid">
         <div class="char-card" data-char="anna">
-          <div class="char-card-avatar">👩‍🌾</div>
+          <div class="char-card-avatar">👩‍💼</div>
           <div class="char-card-name">Anna</div>
           <span class="char-card-gender gender-vrouw">Vrouw</span>
         </div>
         <div class="char-card" data-char="paul">
-          <div class="char-card-avatar">👨‍🌾</div>
+          <div class="char-card-avatar">👨‍💼</div>
           <div class="char-card-name">Paul</div>
           <span class="char-card-gender gender-man">Man</span>
         </div>
         <div class="char-card" data-char="edwin">
-          <div class="char-card-avatar">👨‍🌾</div>
+          <div class="char-card-avatar">👨‍💼</div>
           <div class="char-card-name">Edwin</div>
           <span class="char-card-gender gender-man">Man</span>
         </div>
         <div class="char-card" data-char="aebe">
-          <div class="char-card-avatar">👨‍🌾</div>
+          <div class="char-card-avatar">👨‍💼</div>
           <div class="char-card-name">Aebe</div>
           <span class="char-card-gender gender-man">Man</span>
         </div>
         <div class="char-card" data-char="martin">
-          <div class="char-card-avatar">👨‍🌾</div>
+          <div class="char-card-avatar">👨‍💼</div>
           <div class="char-card-name">Martin</div>
           <span class="char-card-gender gender-man">Man</span>
         </div>
         <div class="char-card" data-char="tiny">
-          <div class="char-card-avatar">👩‍🌾</div>
+          <div class="char-card-avatar">👩‍💼</div>
           <div class="char-card-name">Tiny</div>
           <span class="char-card-gender gender-vrouw">Vrouw</span>
         </div>
         <div class="char-card" data-char="toos">
-          <div class="char-card-avatar">👩‍🌾</div>
+          <div class="char-card-avatar">👩‍💼</div>
           <div class="char-card-name">Toos</div>
           <span class="char-card-gender gender-vrouw">Vrouw</span>
         </div>
         <div class="char-card selected" data-char="bert">
           <div class="char-card-avatar">🤓</div>
           <div class="char-card-name">Bert</div>
-          <span class="char-card-gender gender-man">Kaal & Bril</span>
+          <span class="char-card-gender gender-man">Man</span>
         </div>
       </div>
       <button class="char-modal-close" id="btn-char-close">Bevestigen & Spelen 👍</button>
@@ -1244,55 +1244,55 @@
       anna: {
         id: 'anna',
         name: 'Anna',
-        title: '👩‍🌾 Anna',
+        title: 'Anna',
         gender: 'vrouw',
         colorPlaid: '#ec4899', // Pink plaid flannel
         colorDarkPlaid: '#be185d',
         colorOveralls: '#2563eb', // Denim blue overalls
         hatBandColor: 0xdb2777,
         hatBrimColor: 0xeab308,
-        icon: '👩‍🌾'
+        icon: '👩‍💼'
       },
       paul: {
         id: 'paul',
         name: 'Paul',
-        title: '👨‍🌾 Boer Paul',
+        title: 'Paul',
         gender: 'man',
         colorPlaid: '#15803d', // Green plaid flannel
         colorDarkPlaid: '#14532d',
         colorOveralls: '#1e3a8a',
         hatBandColor: 0x166534,
         hatBrimColor: 0xd97706,
-        icon: '👨‍🌾'
+        icon: '👨‍💼'
       },
       edwin: {
         id: 'edwin',
         name: 'Edwin',
-        title: '👨‍🌾 Boer Edwin',
+        title: 'Edwin',
         gender: 'man',
         colorPlaid: '#2563eb', // Royal blue plaid flannel
         colorDarkPlaid: '#1e40af',
         colorOveralls: '#1e293b',
         hatBandColor: 0x1e3a8a,
         hatBrimColor: 0xd97706,
-        icon: '👨‍🌾'
+        icon: '👨‍💼'
       },
       aebe: {
         id: 'aebe',
         name: 'Aebe',
-        title: '👨‍🌾 Boer Aebe',
+        title: 'Aebe',
         gender: 'man',
         colorPlaid: '#ea580c', // Orange plaid flannel
         colorDarkPlaid: '#9a3412',
         colorOveralls: '#1e3a8a',
         hatBandColor: 0x78350f,
         hatBrimColor: 0xd97706,
-        icon: '👨‍🌾'
+        icon: '👨‍💼'
       },
       bert: {
         id: 'bert',
         name: 'Bert',
-        title: '🤓 Boer Bert (Kaal & Bril)',
+        title: 'Bert',
         gender: 'man',
         colorPlaid: '#b91c1c', // Classic red plaid flannel
         colorDarkPlaid: '#7f1d1d',
@@ -1304,19 +1304,19 @@
       martin: {
         id: 'martin',
         name: 'Martin',
-        title: '👨‍🌾 Boer Martin',
+        title: 'Martin',
         gender: 'man',
         colorPlaid: '#7c3aed', // Purple plaid flannel
         colorDarkPlaid: '#5b21b6',
         colorOveralls: '#1e3a8a',
         hatBandColor: 0x6d28d9,
         hatBrimColor: 0xd97706,
-        icon: '👨‍🌾'
+        icon: '👨‍💼'
       },
       tiny: {
         id: 'tiny',
         name: 'Tiny',
-        title: '👩‍🌾 Tiny',
+        title: 'Tiny',
         gender: 'vrouw',
         hairColor: 0xb45309, // Warm auburn hair
         colorPlaid: '#0d9488', // Teal plaid flannel
@@ -1324,12 +1324,12 @@
         colorOveralls: '#1e3a8a',
         hatBandColor: 0x0f766e,
         hatBrimColor: 0xeab308,
-        icon: '👩‍🌾'
+        icon: '👩‍💼'
       },
       toos: {
         id: 'toos',
         name: 'Toos',
-        title: '👩‍🌾 Toos',
+        title: 'Toos',
         gender: 'vrouw',
         hairColor: 0x64748b, // Silver-slate hair
         colorPlaid: '#ea580c', // Warm rust plaid flannel
@@ -1337,7 +1337,7 @@
         colorOveralls: '#334155',
         hatBandColor: 0xe11d48,
         hatBrimColor: 0xeab308,
-        icon: '👩‍🌾'
+        icon: '👩‍💼'
       }
     };
 
@@ -1541,8 +1541,8 @@
       c.height = 64;
       const ctx = c.getContext('2d');
 
-      // Strip "Boerin " if present above character
-      const cleanText = text.replace(/Boerin\s+/gi, '').trim();
+      // Strip "Boerin " or "Boer " if present above character
+      const cleanText = text.replace(/Boer(in)?\s+/gi, '').replace(/\(.*\)/g, '').trim();
 
       ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
       if (ctx.roundRect) {
@@ -1858,12 +1858,13 @@
     // -------------------------------------------------------------
     const HOTSPOTS = {
       hoofdgebouw: { pos: new THREE.Vector3(25.0, 0.0, 32.0), rot: 0.0, name: "Hoofdgebouw & Dairy Campus Logo" },
-      koeienstal: { pos: new THREE.Vector3(22.0, 0.0, -105.0), rot: 0, name: "Centrale Voergang Stal" },
-      melkrobots: { pos: new THREE.Vector3(22.0, 0.0, -56.0), rot: Math.PI, name: "4x Lely Astronaut Melkrobots" },
-      skybox: { pos: new THREE.Vector3(22.0, 4.35, -59.0), rot: 0, name: "Skybox & Herdmanager Kantoor" },
+      koeienstal: { pos: new THREE.Vector3(22.0, 0.0, -85.0), rot: 0.0, name: "EVA Stal (Nieuwbouw)" },
+      melkrobots: { pos: new THREE.Vector3(22.0, 0.0, -50.0), rot: 0.0, name: "5x Lely Astronaut Melkrobots" },
+      skybox: { pos: new THREE.Vector3(22.0, 4.35, -60.5), rot: 0.0, name: "Skybox & Herdmanager Kantoor" },
+      onderzoek: { pos: new THREE.Vector3(14.0, 0.0, -150.0), rot: Math.PI, name: "Stallucht & Onderzoekersruimte (EVA)" },
       kalverstal: { pos: new THREE.Vector3(68.5, 0.0, -5.0), rot: -Math.PI / 2, name: "Kalverloods & Milktaxi" },
       tractor: { pos: new THREE.Vector3(58.0, 0.0, 18.0), rot: Math.PI / 2, name: "Machinepark & Tractor" },
-      woning: { pos: new THREE.Vector3(68.0, 0.0, 62.0), rot: Math.PI, name: "Boerderij Woning" },
+      woning: { pos: new THREE.Vector3(68.0, 0.0, 62.0), rot: Math.PI, name: "Campus Woning" },
       silos: { pos: new THREE.Vector3(105.0, 0.0, -110.0), rot: Math.PI * 0.75, name: "Voersilo's & Opslag" }
     };
 
@@ -1910,22 +1911,23 @@
       ctx.fillText(`${icon} ${text}`, 192, 58);
 
       const tex = new THREE.CanvasTexture(c);
-      const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
-      const sprite = new THREE.Sprite(mat);
+      const spriteMat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+      const sprite = new THREE.Sprite(spriteMat);
       sprite.position.copy(pos);
-      sprite.scale.set(10, 2.5, 1);
+      sprite.scale.set(16, 4, 1);
       scene.add(sprite);
       return sprite;
     }
 
-    create3DWaypoint("Hoofdgebouw & Logo", "🏛️", new THREE.Vector3(25, 8, 24));
-    create3DWaypoint("Voergang Stal", "🐄", new THREE.Vector3(22, 14, -105));
-    create3DWaypoint("Lely Melkrobots", "🤖", new THREE.Vector3(22, 12, -60.5));
-    create3DWaypoint("Skybox", "🔭", new THREE.Vector3(22, 16, -60.5));
-    create3DWaypoint("Kalverstal", "🍼", new THREE.Vector3(68.5, 10, -5));
-    create3DWaypoint("Machinepark & Tractor", "🚜", new THREE.Vector3(58, 8, 18));
-    create3DWaypoint("Boerderij Woning", "🏡", new THREE.Vector3(72, 9, 45));
-    create3DWaypoint("Voersilo's", "🌾", new THREE.Vector3(105, 12, -110));
+    create3DWaypoint("Hoofdgebouw & Logo", "🏢", new THREE.Vector3(25, 6, 25));
+    create3DWaypoint("EVA Stal (Nieuwbouw)", "🐄", new THREE.Vector3(22, 9, -105));
+    create3DWaypoint("5x Lely Melkrobots", "🤖", new THREE.Vector3(22, 6, -56));
+    create3DWaypoint("Skybox Kantoor", "🔭", new THREE.Vector3(22, 8, -59));
+    create3DWaypoint("Onderzoek & Stallucht", "🔬", new THREE.Vector3(14, 7, -155));
+    create3DWaypoint("Kalverloods", "🍼", new THREE.Vector3(68.5, 6, -5));
+    create3DWaypoint("Tractor & Machines", "🚜", new THREE.Vector3(58, 5, 18));
+    create3DWaypoint("Campus Woning", "🏡", new THREE.Vector3(72, 9, 45));
+    create3DWaypoint("Voersilo's", "🌾", new THREE.Vector3(105, 9, -110));
 
     // -------------------------------------------------------------
     // FARM BUILDINGS & TERRAIN (barn.glb with Roblox PBR styling)
@@ -2127,26 +2129,24 @@
     function spawnAuthenticCows({ gltfEating, gltfLying, gltfWalk, gltfStand }) {
       const defaultScale = 1.0; // The models from iter8 are already exact 1.5m Holstein scale in meters!
 
-      // 1. EATING COWS ALONG THE CENTRAL FEED FENCE (eating silage through headlocks)
+      // 1. EATING COWS ALONG DUAL VOERSTOEPEN (B10 North & South Feed Stoepen)
       const eatingSpots = [
-        // West side (fence is at x = 19.75, head facing East towards feed)
-        { x: 18.6, z: -72.0, rot: -Math.PI / 2 },
-        { x: 18.6, z: -82.0, rot: -Math.PI / 2 },
-        { x: 18.6, z: -94.0, rot: -Math.PI / 2 },
-        { x: 18.6, z: -106.0, rot: -Math.PI / 2 },
-        { x: 18.6, z: -118.0, rot: -Math.PI / 2 },
-        { x: 18.6, z: -130.0, rot: -Math.PI / 2 },
-        { x: 18.6, z: -142.0, rot: -Math.PI / 2 },
-        { x: 18.6, z: -154.0, rot: -Math.PI / 2 },
-        // East side (fence is at x = 24.25, head facing West towards feed)
-        { x: 25.4, z: -75.0, rot: Math.PI / 2 },
-        { x: 25.4, z: -86.0, rot: Math.PI / 2 },
-        { x: 25.4, z: -98.0, rot: Math.PI / 2 },
-        { x: 25.4, z: -110.0, rot: Math.PI / 2 },
-        { x: 25.4, z: -122.0, rot: Math.PI / 2 },
-        { x: 25.4, z: -134.0, rot: Math.PI / 2 },
-        { x: 25.4, z: -146.0, rot: Math.PI / 2 },
-        { x: 25.4, z: -158.0, rot: Math.PI / 2 }
+        // North feed stoep (fence at x = 4.4, head facing West towards stoep)
+        { x: 5.4, z: -72.0, rot: Math.PI / 2 },
+        { x: 5.4, z: -84.0, rot: Math.PI / 2 },
+        { x: 5.4, z: -96.0, rot: Math.PI / 2 },
+        { x: 5.4, z: -108.0, rot: Math.PI / 2 },
+        { x: 5.4, z: -120.0, rot: Math.PI / 2 },
+        { x: 5.4, z: -132.0, rot: Math.PI / 2 },
+        { x: 5.4, z: -142.0, rot: Math.PI / 2 },
+        // South feed stoep (fence at x = 39.4, head facing East towards stoep)
+        { x: 38.4, z: -75.0, rot: -Math.PI / 2 },
+        { x: 38.4, z: -88.0, rot: -Math.PI / 2 },
+        { x: 38.4, z: -100.0, rot: -Math.PI / 2 },
+        { x: 38.4, z: -112.0, rot: -Math.PI / 2 },
+        { x: 38.4, z: -124.0, rot: -Math.PI / 2 },
+        { x: 38.4, z: -136.0, rot: -Math.PI / 2 },
+        { x: 38.4, z: -144.0, rot: -Math.PI / 2 }
       ];
 
       const eatingTemplate = gltfEating ? gltfEating.scene : (gltfStand ? gltfStand.scene : null);
@@ -2162,40 +2162,41 @@
         });
       }
 
-      // 2. LYING COWS RESTING IN CUBICLES (LIGBOXEN) & STRAW PENS
+      // 2. LYING COWS IN DIEPSTROOISEL CUBICLES & STRAW PENS (B10)
       const lyingSpots = [
-        // West wall row (x = 2.4)
-        { x: 2.4, z: -76.0, rot: -Math.PI / 2 },
-        { x: 2.4, z: -92.0, rot: -Math.PI / 2 },
-        { x: 2.4, z: -112.0, rot: -Math.PI / 2 },
-        { x: 2.4, z: -132.0, rot: -Math.PI / 2 },
-        // Double row center West (x = 9.8 and 12.0)
-        { x: 9.8, z: -80.0, rot: Math.PI / 2 },
-        { x: 9.8, z: -96.0, rot: Math.PI / 2 },
-        { x: 9.8, z: -116.0, rot: Math.PI / 2 },
-        { x: 9.8, z: -136.0, rot: Math.PI / 2 },
-        { x: 12.0, z: -84.0, rot: -Math.PI / 2 },
-        { x: 12.0, z: -100.0, rot: -Math.PI / 2 },
-        { x: 12.0, z: -120.0, rot: -Math.PI / 2 },
-        { x: 12.0, z: -140.0, rot: -Math.PI / 2 },
-        // Double row center East (x = 32.0 and 34.2)
-        { x: 32.0, z: -80.0, rot: Math.PI / 2 },
-        { x: 32.0, z: -98.0, rot: Math.PI / 2 },
-        { x: 32.0, z: -118.0, rot: Math.PI / 2 },
-        { x: 32.0, z: -138.0, rot: Math.PI / 2 },
-        { x: 34.2, z: -84.0, rot: -Math.PI / 2 },
-        { x: 34.2, z: -102.0, rot: -Math.PI / 2 },
-        { x: 34.2, z: -122.0, rot: -Math.PI / 2 },
-        { x: 34.2, z: -142.0, rot: -Math.PI / 2 },
-        // East wall row (x = 41.6)
-        { x: 41.6, z: -78.0, rot: Math.PI / 2 },
-        { x: 41.6, z: -96.0, rot: Math.PI / 2 },
-        { x: 41.6, z: -116.0, rot: Math.PI / 2 },
-        { x: 41.6, z: -134.0, rot: Math.PI / 2 },
-        // Maternity straw bedding pens (Bestaande stal x = 3.5)
-        { x: 3.5, z: -18.0, rot: 0.8 },
-        { x: 3.5, z: -32.0, rot: -0.6 },
-        { x: 3.5, z: -44.0, rot: 0.2 }
+        // Groep 1 (North double rows at x = 9.2, 11.6 and 15.8, 18.2)
+        { x: 9.2, z: -78.0, rot: Math.PI / 2 },
+        { x: 9.2, z: -98.0, rot: Math.PI / 2 },
+        { x: 9.2, z: -118.0, rot: Math.PI / 2 },
+        { x: 11.6, z: -84.0, rot: -Math.PI / 2 },
+        { x: 11.6, z: -104.0, rot: -Math.PI / 2 },
+        { x: 11.6, z: -124.0, rot: -Math.PI / 2 },
+        { x: 15.8, z: -80.0, rot: Math.PI / 2 },
+        { x: 15.8, z: -100.0, rot: Math.PI / 2 },
+        { x: 15.8, z: -120.0, rot: Math.PI / 2 },
+        { x: 18.2, z: -86.0, rot: -Math.PI / 2 },
+        { x: 18.2, z: -106.0, rot: -Math.PI / 2 },
+        { x: 18.2, z: -126.0, rot: -Math.PI / 2 },
+        // Groep 2 (South double rows at x = 25.6, 28.0 and 32.2, 34.6)
+        { x: 25.6, z: -78.0, rot: Math.PI / 2 },
+        { x: 25.6, z: -98.0, rot: Math.PI / 2 },
+        { x: 25.6, z: -118.0, rot: Math.PI / 2 },
+        { x: 28.0, z: -84.0, rot: -Math.PI / 2 },
+        { x: 28.0, z: -104.0, rot: -Math.PI / 2 },
+        { x: 28.0, z: -124.0, rot: -Math.PI / 2 },
+        { x: 32.2, z: -80.0, rot: Math.PI / 2 },
+        { x: 32.2, z: -100.0, rot: Math.PI / 2 },
+        { x: 32.2, z: -120.0, rot: Math.PI / 2 },
+        { x: 34.6, z: -86.0, rot: -Math.PI / 2 },
+        { x: 34.6, z: -106.0, rot: -Math.PI / 2 },
+        { x: 34.6, z: -126.0, rot: -Math.PI / 2 },
+        // Bestaande stal maternity & Dutch Mountain mattresses (B10)
+        { x: 3.75, z: -18.0, rot: 0.8 },
+        { x: 3.75, z: -32.0, rot: -0.6 },
+        { x: 3.75, z: -44.0, rot: 0.2 },
+        { x: 9.5, z: -22.0, rot: Math.PI / 2 },
+        { x: 11.9, z: -28.0, rot: -Math.PI / 2 },
+        { x: 32.5, z: -32.0, rot: Math.PI / 2 }
       ];
 
       const lyingTemplate = gltfLying ? gltfLying.scene : (gltfStand ? gltfStand.scene : null);
@@ -2211,14 +2212,18 @@
         });
       }
 
-      // 3. STANDING / MILKING COWS (Lely Astronaut robots & Courtyard)
+      // 3. STANDING / MILKING COWS (5x Lely Melkrobots & Research room B10)
       const standTemplate = gltfStand ? gltfStand.scene : (gltfEating ? gltfEating.scene : null);
       if (standTemplate) {
         const standSpots = [
-          { x: 18.2, z: -58.0, rot: 0.0, name: "Melkkoe Robot 1" },
-          { x: 25.8, z: -63.5, rot: Math.PI, name: "Melkkoe Robot 4" },
-          { x: 22.0, z: -54.0, rot: 0.0, name: "Behandelbox Koe" },
-          { x: 3.5, z: -25.0, rot: 0.0, name: "Kraamkoe Strohok" },
+          { x: 18.2, z: -38.0, rot: 0.0, name: "Melkkoe Robot 1 (Bestaand)" },
+          { x: 26.2, z: -58.0, rot: Math.PI, name: "Melkkoe Robot 2 (Zuid)" },
+          { x: 26.2, z: -63.5, rot: Math.PI, name: "Melkkoe Robot 3 (Zuid)" },
+          { x: 17.8, z: -58.0, rot: 0.0, name: "Melkkoe Robot 4 (Noord)" },
+          { x: 17.8, z: -63.5, rot: 0.0, name: "Melkkoe Robot 5 (Noord)" },
+          { x: 22.0, z: -53.5, rot: 0.0, name: "Behandelbox Koe" },
+          { x: 13.8, z: -155.0, rot: 0.0, name: "Onderzoek Koe (Stallucht)" },
+          { x: 3.75, z: -25.0, rot: 0.0, name: "Kraamkoe Strohok" },
           // Outdoor courtyard & Farmhouse
           { x: 62.0, z: 65.0, rot: 1.2, name: "Huiskavel Koe 1" },
           { x: 80.0, z: 68.0, rot: -0.8, name: "Huiskavel Koe 2" },
@@ -3227,7 +3232,7 @@
 
             if (milkCollected === 10) {
               setTimeout(() => {
-                showBanner("🏆 Gefeliciteerd! Je hebt alle 10 melkflessen gevonden! Echte Dairy Campus Boer!", "🌟");
+                showBanner("🏆 Gefeliciteerd! Je hebt alle 10 melkflessen gevonden! Top prestatie op de Dairy Campus!", "🌟");
               }, 1200);
             }
           }
@@ -3302,10 +3307,10 @@
 
         loadingScreen.style.display = 'none';
         const hasChosenChar = !!localStorage.getItem('roblox_farmer_choice');
-        if (!hasChosenChar) {
+        if (!hasChosenChar && !targetParam) {
           openCharModal();
         }
-        showBanner("Welkom op de Dairy Campus! Ontdek de boerderij!", "🌾");
+        showBanner("Welkom op de Dairy Campus! Ontdek de stallen en campus!", "🏢");
         animate();
 
         // Optional URL teleport param for direct location jumps
