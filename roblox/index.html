@@ -1175,8 +1175,8 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.5 : 2));
     renderer.setClearColor(0x7ec0ee, 1);
-    renderer.shadowMap.enabled = !isMobileDevice; // Disable shadow maps on mobile to save VRAM and prevent blank canvas
-    renderer.shadowMap.type = THREE.BasicShadowMap;
+    renderer.shadowMap.enabled = false;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = isMobileDevice ? THREE.LinearToneMapping : THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.0;
 
@@ -1202,11 +1202,24 @@
     sunLight.shadow.bias = -0.0005;
     scene.add(sunLight);
 
-    const hemiLight = new THREE.HemisphereLight(0xbfdbfe, 0x3f6212, 0.7);
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x4a5568, 0.85);
     scene.add(hemiLight);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
     scene.add(ambientLight);
+
+    // Warm, bright interior lighting for the long research barn
+    const barnLight1 = new THREE.PointLight(0xfffaed, 2.5, 90);
+    barnLight1.position.set(22.0, 7.5, -90.0);
+    scene.add(barnLight1);
+
+    const barnLight2 = new THREE.PointLight(0xfffaed, 2.5, 70);
+    barnLight2.position.set(22.0, 7.5, -58.5);
+    scene.add(barnLight2);
+
+    const barnLight3 = new THREE.PointLight(0xfffaed, 2.0, 70);
+    barnLight3.position.set(22.0, 7.5, -135.0);
+    scene.add(barnLight3);
 
     // Stylized Roblox Clouds
     const cloudGeo = new THREE.BoxGeometry(40, 10, 25);
@@ -1857,15 +1870,15 @@
     // HOTSPOTS & TELEPORT TARGETS (Dairy Campus Real Coordinates)
     // -------------------------------------------------------------
     const HOTSPOTS = {
-      hoofdgebouw: { pos: new THREE.Vector3(25.0, 0.0, 36.0), rot: 0.0, name: "Hoofdgebouw & Entree" },
+      hoofdgebouw: { pos: new THREE.Vector3(-4.0, 0.0, 10.0), rot: 0.0, name: "Hoofdgebouw & Entree" },
       evabarn: { pos: new THREE.Vector3(68.5, 0.0, -5.0), rot: -Math.PI / 2, name: "evaBarn (Innovatie & Kalveren)" },
       voedingsstal: { pos: new THREE.Vector3(-71.0, 0.0, -90.0), rot: 0.0, name: "Voedingsstal (RIC Voeropname)" },
       melkstal: { pos: new THREE.Vector3(-125.0, 0.0, -40.0), rot: 0.0, name: "Melkstal (40-stands Carrousel)" },
       milieustallen: { pos: new THREE.Vector3(22.0, 0.0, -90.0), rot: 0.0, name: "Milieustallen (Emissie & Lely Sphere)" },
-      melkrobots: { pos: new THREE.Vector3(22.0, 0.0, -55.0), rot: 0.0, name: "5x Lely Astronaut Melkrobots" },
-      skybox: { pos: new THREE.Vector3(22.0, 4.35, -60.5), rot: 0.0, name: "Skybox & Herdmanager Kantoor" },
-      onderzoek: { pos: new THREE.Vector3(14.0, 0.0, -150.0), rot: Math.PI, name: "Milieustallen (Kopgevel Luchtwassers & Lab)" },
-      logo: { pos: new THREE.Vector3(25.0, 0.0, 28.0), rot: 0.0, name: "Dairy Campus Logo & Terrein" }
+      melkrobots: { pos: new THREE.Vector3(22.0, 0.0, -58.5), rot: 0.0, name: "4x Lely Astronaut Melkrobots" },
+      skybox: { pos: new THREE.Vector3(22.0, 4.35, -58.5), rot: 0.0, name: "Skybox & Herdmanager Kantoor" },
+      emissielab: { pos: new THREE.Vector3(34.0, 0.0, -150.0), rot: Math.PI, name: "Milieustallen (Kopgevel Luchtwassers & Bunkers)" },
+      logo: { pos: new THREE.Vector3(-4.0, 0.0, 52.0), rot: Math.PI, name: "Dairy Campus Logo & Terrein" }
     };
 
     // Initial player spawn position - Always start at Hoofdgebouw with Dairy Campus Logo
