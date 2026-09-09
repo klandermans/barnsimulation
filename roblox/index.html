@@ -1233,7 +1233,7 @@
     });
     const baseGround = new THREE.Mesh(baseGroundGeo, baseGroundMat);
     baseGround.rotation.x = -Math.PI / 2;
-    baseGround.position.y = -0.05;
+    baseGround.position.y = -1.50; // Set beneath Revit ground so actual Revit straatwerk & terrain are fully visible
     baseGround.receiveShadow = true;
     scene.add(baseGround);
 
