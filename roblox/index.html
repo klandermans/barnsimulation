@@ -537,8 +537,114 @@
       .touch-btn-sprint, .touch-btn-interact {
         width: 48px;
         height: 48px;
-        font-size: 18px;
       }
+    }
+
+    /* Character Selection Modal */
+    #char-modal {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(10, 15, 29, 0.85);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+    .char-modal-box {
+      background: #1e293b;
+      border: 2px solid #38bdf8;
+      border-radius: 20px;
+      padding: 24px;
+      width: 90%;
+      max-width: 620px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.7);
+      color: white;
+      text-align: center;
+    }
+    .char-modal-box h2 {
+      margin: 0 0 6px 0;
+      font-size: 24px;
+      color: #38bdf8;
+    }
+    .char-modal-box p {
+      margin: 0 0 18px 0;
+      color: #94a3b8;
+      font-size: 14px;
+    }
+    .char-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    @media (max-width: 600px) {
+      .char-cards-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+    .char-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      border-radius: 14px;
+      padding: 12px 6px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+    .char-card:hover {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: #38bdf8;
+      transform: translateY(-3px);
+    }
+    .char-card.selected {
+      background: rgba(34, 197, 94, 0.2);
+      border-color: #22c55e;
+      box-shadow: 0 0 14px rgba(34, 197, 94, 0.5);
+    }
+    .char-card-avatar {
+      font-size: 34px;
+    }
+    .char-card-name {
+      font-weight: 700;
+      font-size: 15px;
+    }
+    .char-card-gender {
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .gender-vrouw {
+      background: rgba(236, 72, 153, 0.25);
+      color: #f472b6;
+      border: 1px solid #ec4899;
+    }
+    .gender-man {
+      background: rgba(59, 130, 246, 0.25);
+      color: #93c5fd;
+      border: 1px solid #3b82f6;
+    }
+    .char-modal-close {
+      background: #22c55e;
+      color: white;
+      border: none;
+      padding: 10px 28px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 15px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .char-modal-close:hover {
+      background: #16a34a;
     }
   </style>
 
@@ -573,8 +679,8 @@
       <div class="roblox-logo" title="Roblox Menu">
         <div class="roblox-logo-hole"></div>
       </div>
-      <div class="player-badge">
-        <span>🤠 Boer Bert</span>
+      <div class="player-badge" id="player-badge-btn" style="cursor:pointer;" title="Klik om Boer of Boerin te kiezen">
+        <span id="player-name-text">🤠 Boer Bert</span>
         <div class="health-container" title="Gezondheid: 100/100">
           <div class="health-bar" id="health-bar"></div>
         </div>
@@ -592,10 +698,47 @@
       <div class="gamepad-indicator" id="gamepad-badge">
         <span>🎮 Geen Controller</span>
       </div>
+      <button class="icon-btn" id="btn-char-select" title="Kies Boer of Boerin">👤 Kies Boer</button>
       <button class="icon-btn" id="btn-touch" title="Toon/Verberg Touch Besturing">📱 Touch</button>
       <button class="icon-btn" id="btn-camera" title="Wissel Camera (Toets C / Gamepad Y)">📷 Camera</button>
       <button class="icon-btn" id="btn-sound" title="Geluid Aan/Uit">🔊 Geluid</button>
       <button class="icon-btn" id="btn-help" title="Toon/Verberg Besturing (H)">❓ Help</button>
+    </div>
+  </div>
+
+  <!-- Character Picker Modal -->
+  <div id="char-modal">
+    <div class="char-modal-box">
+      <h2>👤 Kies je Boer of Boerin</h2>
+      <p>Kies met welk personage je over de Dairy Campus wilt lopen:</p>
+      <div class="char-cards-grid">
+        <div class="char-card" data-char="anna">
+          <div class="char-card-avatar">👩‍🌾</div>
+          <div class="char-card-name">Anna</div>
+          <span class="char-card-gender gender-vrouw">Vrouw</span>
+        </div>
+        <div class="char-card" data-char="paul">
+          <div class="char-card-avatar">👨‍🌾</div>
+          <div class="char-card-name">Paul</div>
+          <span class="char-card-gender gender-man">Man</span>
+        </div>
+        <div class="char-card" data-char="edwin">
+          <div class="char-card-avatar">👨‍🌾</div>
+          <div class="char-card-name">Edwin</div>
+          <span class="char-card-gender gender-man">Man</span>
+        </div>
+        <div class="char-card" data-char="aebe">
+          <div class="char-card-avatar">👨‍🌾</div>
+          <div class="char-card-name">Aebe</div>
+          <span class="char-card-gender gender-man">Man</span>
+        </div>
+        <div class="char-card selected" data-char="bert">
+          <div class="char-card-avatar">🤠</div>
+          <div class="char-card-name">Bert</div>
+          <span class="char-card-gender gender-man">Man</span>
+        </div>
+      </div>
+      <button class="char-modal-close" id="btn-char-close">Bevestigen & Spelen 👍</button>
     </div>
   </div>
 
@@ -883,9 +1026,72 @@
     scene.add(baseGround);
 
     // -------------------------------------------------------------
-    // ROBLOX CHARACTER GENERATOR (Classic R6 Proportions)
+    // FARMER CHARACTERS DEFINITION (Anna, Paul, Edwin, Aebe, Bert)
     // -------------------------------------------------------------
-    function createRobloxFaceTexture() {
+    const FARMER_CHARACTERS = {
+      anna: {
+        id: 'anna',
+        name: 'Anna',
+        title: '👩‍🌾 Boerin Anna',
+        gender: 'vrouw',
+        colorPlaid: '#ec4899', // Pink plaid flannel
+        colorDarkPlaid: '#be185d',
+        colorOveralls: '#2563eb', // Denim blue overalls
+        hatBandColor: 0xdb2777,
+        hatBrimColor: 0xeab308,
+        icon: '👩‍🌾'
+      },
+      paul: {
+        id: 'paul',
+        name: 'Paul',
+        title: '👨‍🌾 Boer Paul',
+        gender: 'man',
+        colorPlaid: '#15803d', // Green plaid flannel
+        colorDarkPlaid: '#14532d',
+        colorOveralls: '#1e3a8a',
+        hatBandColor: 0x166534,
+        hatBrimColor: 0xd97706,
+        icon: '👨‍🌾'
+      },
+      edwin: {
+        id: 'edwin',
+        name: 'Edwin',
+        title: '👨‍🌾 Boer Edwin',
+        gender: 'man',
+        colorPlaid: '#2563eb', // Royal blue plaid flannel
+        colorDarkPlaid: '#1e40af',
+        colorOveralls: '#1e293b',
+        hatBandColor: 0x1e3a8a,
+        hatBrimColor: 0xd97706,
+        icon: '👨‍🌾'
+      },
+      aebe: {
+        id: 'aebe',
+        name: 'Aebe',
+        title: '👨‍🌾 Boer Aebe',
+        gender: 'man',
+        colorPlaid: '#ea580c', // Orange plaid flannel
+        colorDarkPlaid: '#9a3412',
+        colorOveralls: '#1e3a8a',
+        hatBandColor: 0x78350f,
+        hatBrimColor: 0xd97706,
+        icon: '👨‍🌾'
+      },
+      bert: {
+        id: 'bert',
+        name: 'Bert',
+        title: '🤠 Boer Bert',
+        gender: 'man',
+        colorPlaid: '#b91c1c', // Classic red plaid flannel
+        colorDarkPlaid: '#7f1d1d',
+        colorOveralls: '#1d4ed8',
+        hatBandColor: 0x451a03,
+        hatBrimColor: 0xd97706,
+        icon: '🤠'
+      }
+    };
+
+    function createRobloxFaceTexture(isFemale = false) {
       const c = document.createElement('canvas');
       c.width = 256;
       c.height = 256;
@@ -895,52 +1101,98 @@
       ctx.fillStyle = '#FED700';
       ctx.fillRect(0, 0, 256, 256);
 
-      // Classic Roblox Oval Eyes
-      ctx.fillStyle = '#111827';
-      ctx.beginPath();
-      ctx.ellipse(75, 105, 14, 22, 0, 0, Math.PI * 2);
-      ctx.ellipse(181, 105, 14, 22, 0, 0, Math.PI * 2);
-      ctx.fill();
+      if (isFemale) {
+        // Female (Anna): Eyes with cute eyelashes & blush
+        ctx.fillStyle = '#111827';
+        ctx.beginPath();
+        ctx.ellipse(78, 105, 13, 20, 0, 0, Math.PI * 2);
+        ctx.ellipse(178, 105, 13, 20, 0, 0, Math.PI * 2);
+        ctx.fill();
 
-      // Eye white catchlight
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(71, 97, 6, 0, Math.PI * 2);
-      ctx.arc(177, 97, 6, 0, Math.PI * 2);
-      ctx.fill();
+        // Eyelashes
+        ctx.strokeStyle = '#111827';
+        ctx.lineWidth = 4.5;
+        ctx.lineCap = 'round';
+        // Left lashes
+        ctx.beginPath();
+        ctx.moveTo(68, 92); ctx.lineTo(58, 80);
+        ctx.moveTo(76, 88); ctx.lineTo(72, 74);
+        ctx.moveTo(86, 90); ctx.lineTo(92, 78);
+        // Right lashes
+        ctx.moveTo(170, 90); ctx.lineTo(164, 78);
+        ctx.moveTo(180, 88); ctx.lineTo(184, 74);
+        ctx.moveTo(188, 92); ctx.lineTo(198, 80);
+        ctx.stroke();
 
-      // Big Roblox Smile
-      ctx.strokeStyle = '#111827';
-      ctx.lineWidth = 10;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.arc(128, 135, 45, 0.18 * Math.PI, 0.82 * Math.PI, false);
-      ctx.stroke();
+        // Eye white catchlight
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(74, 98, 5.5, 0, Math.PI * 2);
+        ctx.arc(174, 98, 5.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Rosy Pink Cheeks
+        ctx.fillStyle = 'rgba(244, 114, 182, 0.45)';
+        ctx.beginPath();
+        ctx.arc(58, 132, 14, 0, Math.PI * 2);
+        ctx.arc(198, 132, 14, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Sweet curved smile
+        ctx.strokeStyle = '#111827';
+        ctx.lineWidth = 8;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.arc(128, 136, 36, 0.2 * Math.PI, 0.8 * Math.PI, false);
+        ctx.stroke();
+      } else {
+        // Male (Paul, Edwin, Aebe, Bert): Classic Roblox Oval Eyes
+        ctx.fillStyle = '#111827';
+        ctx.beginPath();
+        ctx.ellipse(75, 105, 14, 22, 0, 0, Math.PI * 2);
+        ctx.ellipse(181, 105, 14, 22, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Eye white catchlight
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(71, 97, 6, 0, Math.PI * 2);
+        ctx.arc(177, 97, 6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Big Roblox Smile
+        ctx.strokeStyle = '#111827';
+        ctx.lineWidth = 10;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.arc(128, 135, 45, 0.18 * Math.PI, 0.82 * Math.PI, false);
+        ctx.stroke();
+      }
 
       const tex = new THREE.CanvasTexture(c);
       tex.colorSpace = THREE.SRGBColorSpace;
       return tex;
     }
 
-    function createRobloxShirtTexture() {
+    function createRobloxShirtTexture(plaidColor = '#b91c1c', darkPlaid = '#7f1d1d', overallsColor = '#1d4ed8') {
       const c = document.createElement('canvas');
       c.width = 256;
       c.height = 256;
       const ctx = c.getContext('2d');
 
-      // Farmer red flannel plaid pattern
-      ctx.fillStyle = '#b91c1c';
+      // Flannel plaid pattern
+      ctx.fillStyle = plaidColor;
       ctx.fillRect(0, 0, 256, 256);
 
       // Plaid stripes
-      ctx.fillStyle = '#7f1d1d';
+      ctx.fillStyle = darkPlaid;
       for (let i = 0; i < 256; i += 32) {
         ctx.fillRect(i, 0, 16, 256);
         ctx.fillRect(0, i, 256, 16);
       }
 
       // Overalls denim front
-      ctx.fillStyle = '#1d4ed8';
+      ctx.fillStyle = overallsColor;
       ctx.fillRect(48, 120, 160, 136);
 
       // Overalls suspenders
@@ -955,7 +1207,7 @@
       ctx.fill();
 
       // Overalls center pocket
-      ctx.strokeStyle = '#60a5fa';
+      ctx.strokeStyle = '#93c5fd';
       ctx.lineWidth = 3;
       ctx.strokeRect(80, 145, 96, 75);
 
@@ -968,6 +1220,7 @@
       constructor() {
         this.group = new THREE.Group();
         this.group.name = "RobloxPlayer";
+        this.currentCharacter = FARMER_CHARACTERS.bert;
 
         // Materials
         this.yellowSkinMat = new THREE.MeshStandardMaterial({
@@ -975,7 +1228,7 @@
           roughness: 0.35,
           metalness: 0.05
         });
-        const faceTex = createRobloxFaceTexture();
+        const faceTex = createRobloxFaceTexture(false);
         this.faceMat = new THREE.MeshStandardMaterial({
           map: faceTex,
           roughness: 0.35,
@@ -994,7 +1247,6 @@
         });
 
         // Proportions (Roblox scaled to ~1.9m total height)
-        // Torso: 0.9m wide x 0.9m tall x 0.45m deep
         const torsoGeo = new THREE.BoxGeometry(0.9, 0.9, 0.45);
         this.torso = new THREE.Mesh(torsoGeo, this.torsoMat);
         this.torso.position.y = 1.25;
@@ -1023,20 +1275,47 @@
         const hatBandMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.8 });
 
         const hatGroup = new THREE.Group();
-        const hatBrim = new THREE.Mesh(hatBrimGeo, hatMat);
-        hatBrim.position.y = 0.28;
-        hatBrim.castShadow = true;
-        const hatCrown = new THREE.Mesh(hatCrownGeo, hatMat);
-        hatCrown.position.y = 0.45;
-        hatCrown.castShadow = true;
-        const hatBand = new THREE.Mesh(new THREE.CylinderGeometry(0.425, 0.425, 0.08, 18), hatBandMat);
-        hatBand.position.y = 0.33;
+        this.hatBrim = new THREE.Mesh(hatBrimGeo, hatMat);
+        this.hatBrim.position.y = 0.28;
+        this.hatBrim.castShadow = true;
+        this.hatCrown = new THREE.Mesh(hatCrownGeo, hatMat);
+        this.hatCrown.position.y = 0.45;
+        this.hatCrown.castShadow = true;
+        this.hatBand = new THREE.Mesh(new THREE.CylinderGeometry(0.425, 0.425, 0.08, 18), hatBandMat);
+        this.hatBand.position.y = 0.33;
 
-        hatGroup.add(hatBrim);
-        hatGroup.add(hatCrown);
-        hatGroup.add(hatBand);
+        hatGroup.add(this.hatBrim);
+        hatGroup.add(this.hatCrown);
+        hatGroup.add(this.hatBand);
         hatGroup.rotation.x = -0.05;
         this.head.add(hatGroup);
+
+        // Female Hair Group (for Anna)
+        this.hairGroup = new THREE.Group();
+        const hairMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.8 });
+        const ponytailGeo = new THREE.CylinderGeometry(0.12, 0.18, 0.65, 10);
+        const ponytail = new THREE.Mesh(ponytailGeo, hairMat);
+        ponytail.position.set(0, -0.16, -0.36);
+        ponytail.rotation.x = 0.28;
+        this.hairGroup.add(ponytail);
+
+        const scrunchie = new THREE.Mesh(
+          new THREE.TorusGeometry(0.13, 0.05, 8, 16),
+          new THREE.MeshStandardMaterial({ color: 0xec4899, roughness: 0.5 })
+        );
+        scrunchie.position.set(0, 0.16, -0.3);
+        scrunchie.rotation.x = Math.PI / 2;
+        this.hairGroup.add(scrunchie);
+
+        const sideHairGeo = new THREE.BoxGeometry(0.08, 0.35, 0.26);
+        const leftHair = new THREE.Mesh(sideHairGeo, hairMat);
+        leftHair.position.set(-0.29, 0.04, 0.08);
+        const rightHair = new THREE.Mesh(sideHairGeo, hairMat);
+        rightHair.position.set(0.29, 0.04, 0.08);
+        this.hairGroup.add(leftHair);
+        this.hairGroup.add(rightHair);
+        this.hairGroup.visible = false;
+        this.head.add(this.hairGroup);
 
         // Name tag sprite
         this.nameTag = this.createNameTagSprite("🤠 Boer Bert");
@@ -1159,10 +1438,72 @@
           this.head.rotation.y = 0;
         }
       }
+
+      updateNameTag(text) {
+        if (this.nameTag) {
+          this.torso.remove(this.nameTag);
+          if (this.nameTag.material && this.nameTag.material.map) {
+            this.nameTag.material.map.dispose();
+          }
+          if (this.nameTag.material) {
+            this.nameTag.material.dispose();
+          }
+        }
+        this.nameTag = this.createNameTagSprite(text);
+        this.nameTag.position.set(0, 1.4, 0);
+        this.torso.add(this.nameTag);
+      }
+
+      setCharacter(charKey) {
+        const data = FARMER_CHARACTERS[charKey] || FARMER_CHARACTERS.bert;
+        this.currentCharacter = data;
+
+        // 1. Update Head face texture
+        const isFemale = (data.gender === 'vrouw');
+        const newFaceTex = createRobloxFaceTexture(isFemale);
+        if (this.faceMat.map) this.faceMat.map.dispose();
+        this.faceMat.map = newFaceTex;
+        this.faceMat.needsUpdate = true;
+
+        // 2. Update Torso shirt texture
+        const newShirtTex = createRobloxShirtTexture(data.colorPlaid, data.colorDarkPlaid, data.colorOveralls);
+        if (this.torsoMat.map) this.torsoMat.map.dispose();
+        this.torsoMat.map = newShirtTex;
+        this.torsoMat.needsUpdate = true;
+
+        // 3. Update Hat band color
+        if (this.hatBand && this.hatBand.material) {
+          this.hatBand.material.color.setHex(data.hatBandColor);
+        }
+
+        // 4. Update Hair (Ponytail for Anna)
+        if (this.hairGroup) {
+          this.hairGroup.visible = isFemale;
+        }
+
+        // 5. Update Floating Name Tag above head
+        this.updateNameTag(data.title);
+
+        // 6. Update TopBar badge
+        const badgeText = document.getElementById('player-name-text');
+        if (badgeText) {
+          badgeText.textContent = data.title;
+        }
+      }
     }
 
     const player = new RobloxCharacter();
     scene.add(player.group);
+
+    // Restore saved character preference
+    const savedChar = (function() {
+      try {
+        return localStorage.getItem('roblox_farmer_choice') || 'bert';
+      } catch(e) {
+        return 'bert';
+      }
+    })();
+    player.setCharacter(savedChar);
 
     // Initial player spawn position (Directly in front of the Farm / Boerderij Woning entrance)
     const SPAWN_POS = new THREE.Vector3(70.0, 0.0, 78.0);
@@ -1735,6 +2076,55 @@
     document.querySelectorAll('.travel-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         teleportPlayer(btn.dataset.target);
+      });
+    });
+
+    // Character Selection Modal logic
+    const charModal = document.getElementById('char-modal');
+    const btnCharSelect = document.getElementById('btn-char-select');
+    const playerBadgeBtn = document.getElementById('player-badge-btn');
+    const btnCharClose = document.getElementById('btn-char-close');
+    const charCards = document.querySelectorAll('.char-card');
+
+    function openCharModal() {
+      if (!charModal) return;
+      charModal.style.display = 'flex';
+      const currentKey = player.currentCharacter ? player.currentCharacter.id : 'bert';
+      charCards.forEach(c => {
+        if (c.dataset.char === currentKey) {
+          c.classList.add('selected');
+        } else {
+          c.classList.remove('selected');
+        }
+      });
+    }
+
+    function closeCharModal() {
+      if (charModal) charModal.style.display = 'none';
+    }
+
+    if (btnCharSelect) btnCharSelect.addEventListener('click', openCharModal);
+    if (playerBadgeBtn) playerBadgeBtn.addEventListener('click', openCharModal);
+    if (btnCharClose) btnCharClose.addEventListener('click', closeCharModal);
+
+    // Close on click outside modal box
+    if (charModal) {
+      charModal.addEventListener('click', (e) => {
+        if (e.target === charModal) closeCharModal();
+      });
+    }
+
+    charCards.forEach(card => {
+      card.addEventListener('click', () => {
+        const charKey = card.dataset.char;
+        charCards.forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        player.setCharacter(charKey);
+        try {
+          localStorage.setItem('roblox_farmer_choice', charKey);
+        } catch(e) {}
+        showBanner("Je speelt nu als " + player.currentCharacter.title + "!", player.currentCharacter.icon);
+        sounds.playCow();
       });
     });
 
