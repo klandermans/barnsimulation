@@ -1,0 +1,2370 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Roblox Dairy Campus - Boerderij Game</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #70b5ff;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    #game-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Classic Roblox Top Bar */
+    #roblox-topbar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 50px;
+      background: rgba(26, 26, 26, 0.85);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      color: white;
+      z-index: 100;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    }
+    .topbar-left, .topbar-center, .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .roblox-logo {
+      width: 30px;
+      height: 30px;
+      background: #e11d48;
+      transform: rotate(15deg);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .roblox-logo:hover {
+      transform: rotate(20deg) scale(1.08);
+    }
+    .roblox-logo-hole {
+      width: 10px;
+      height: 10px;
+      background: rgba(26, 26, 26, 0.9);
+      border-radius: 2px;
+      transform: rotate(-10deg);
+    }
+    .player-badge {
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .health-container {
+      background: rgba(0, 0, 0, 0.6);
+      width: 130px;
+      height: 14px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+    .health-bar {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #22c55e, #16a34a);
+      transition: width 0.3s;
+    }
+    .milk-counter {
+      background: rgba(255, 255, 255, 0.15);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+    }
+    .gamepad-indicator {
+      background: rgba(239, 68, 68, 0.25);
+      border: 1px solid #ef4444;
+      color: #fca5a5;
+      padding: 5px 12px;
+      border-radius: 16px;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.3s;
+    }
+    .gamepad-indicator.connected {
+      background: rgba(34, 197, 94, 0.25);
+      border-color: #22c55e;
+      color: #86efac;
+    }
+    .icon-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: white;
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+    .icon-btn:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    /* Fast Travel Bar at bottom */
+    #travel-bar {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(20, 20, 20, 0.85);
+      backdrop-filter: blur(10px);
+      padding: 8px 16px;
+      border-radius: 30px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 100;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .travel-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: white;
+      padding: 7px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .travel-btn:hover {
+      background: #3b82f6;
+      border-color: #60a5fa;
+      transform: translateY(-2px);
+    }
+    .travel-key {
+      background: rgba(0, 0, 0, 0.4);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      color: #93c5fd;
+    }
+
+    /* Controller / Keypad overlay */
+    #controller-hint {
+      position: absolute;
+      bottom: 80px;
+      left: 20px;
+      background: rgba(20, 20, 20, 0.82);
+      backdrop-filter: blur(8px);
+      color: #e2e8f0;
+      padding: 14px 18px;
+      border-radius: 14px;
+      font-size: 13px;
+      line-height: 1.5;
+      z-index: 100;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      pointer-events: none;
+      max-width: 320px;
+      transition: opacity 0.3s;
+    }
+    #controller-hint h4 {
+      margin: 0 0 8px 0;
+      color: #38bdf8;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .hint-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+      gap: 12px;
+    }
+    .key-badge {
+      background: #334155;
+      color: #f1f5f9;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+      font-family: monospace;
+      font-size: 11px;
+      border: 1px solid #475569;
+    }
+
+    /* Interaction Prompt */
+    #interact-prompt {
+      position: absolute;
+      top: 60%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(15, 23, 42, 0.92);
+      border: 2px solid #38bdf8;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 24px;
+      font-size: 16px;
+      font-weight: 700;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      z-index: 120;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); }
+      50% { transform: translate(-50%, -50%) scale(1.05); }
+    }
+
+    /* Notification banner */
+    #banner {
+      position: absolute;
+      top: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(30, 41, 59, 0.95);
+      border: 2px solid #22c55e;
+      color: white;
+      padding: 14px 28px;
+      border-radius: 16px;
+      font-size: 16px;
+      font-weight: 700;
+      display: none;
+      align-items: center;
+      gap: 12px;
+      z-index: 150;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+    }
+
+    /* Minimap */
+    #minimap-container {
+      position: absolute;
+      top: 65px;
+      right: 20px;
+      width: 170px;
+      height: 170px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      border-radius: 50%;
+      overflow: hidden;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+      z-index: 100;
+    }
+    #minimap-canvas {
+      width: 100%;
+      height: 100%;
+    }
+    .minimap-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 10px;
+      height: 10px;
+      background: #ef4444;
+      border: 2px solid white;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 6px rgba(239, 68, 68, 0.8);
+    }
+    .minimap-label {
+      position: absolute;
+      bottom: 4px;
+      width: 100%;
+      text-align: center;
+      font-size: 10px;
+      font-weight: 700;
+      color: #94a3b8;
+      letter-spacing: 0.5px;
+    }
+
+    /* Crosshair for 1st person */
+    #crosshair {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 8px;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px solid rgba(0, 0, 0, 0.5);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      display: none;
+      z-index: 90;
+    }
+
+    /* Loading Screen */
+    #loading-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      z-index: 200;
+      transition: opacity 0.5s ease;
+    }
+    .loading-title {
+      font-size: 32px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      letter-spacing: 1px;
+      text-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+    .loading-sub {
+      font-size: 16px;
+      color: #93c5fd;
+      margin-bottom: 24px;
+    }
+    .loading-progress-box {
+      width: 320px;
+      height: 14px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      margin-bottom: 12px;
+    }
+    .loading-progress-bar {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #38bdf8, #22c55e);
+      border-radius: 10px;
+      transition: width 0.2s;
+    }
+    .loading-status {
+      font-size: 13px;
+      color: #cbd5e1;
+    }
+
+    /* Mobile Touch Controls */
+    #touch-controls {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 110;
+    }
+    .touch-joystick-zone {
+      position: absolute;
+      bottom: 28px;
+      left: 22px;
+      width: 136px;
+      height: 136px;
+      background: rgba(15, 23, 42, 0.5);
+      backdrop-filter: blur(8px);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      pointer-events: auto;
+      touch-action: none;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
+    .touch-knob {
+      position: absolute;
+      top: 40px;
+      left: 40px;
+      width: 56px;
+      height: 56px;
+      background: radial-gradient(circle at 35% 35%, #60a5fa, #2563eb);
+      border: 2.5px solid rgba(255, 255, 255, 0.9);
+      border-radius: 50%;
+      pointer-events: none;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+      will-change: transform;
+    }
+    .touch-buttons-zone {
+      position: absolute;
+      bottom: 28px;
+      right: 22px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 12px;
+      pointer-events: auto;
+      touch-action: none;
+    }
+    .touch-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .touch-btn {
+      border: 2px solid rgba(255, 255, 255, 0.85);
+      border-radius: 50%;
+      color: white;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+      transition: transform 0.08s, filter 0.08s;
+    }
+    .touch-btn:active {
+      transform: scale(0.9);
+      filter: brightness(1.25);
+    }
+    .touch-btn-jump {
+      width: 72px;
+      height: 72px;
+      background: linear-gradient(135deg, #22c55e, #15803d);
+      font-size: 28px;
+    }
+    .touch-btn-sprint {
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+      font-size: 22px;
+    }
+    .touch-btn-sprint.active {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      border-color: #fef08a;
+      box-shadow: 0 0 14px #f59e0b;
+    }
+    .touch-btn-interact {
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, #f59e0b, #b45309);
+      font-size: 22px;
+    }
+
+    /* Mobile Responsive Layout (Phones in landscape or portrait, and tablets) */
+    @media (max-width: 950px), (max-height: 550px) {
+      #roblox-topbar {
+        height: 42px;
+        padding: 0 8px;
+      }
+      .player-badge span {
+        font-size: 13px;
+      }
+      .health-container {
+        width: 75px;
+      }
+      .milk-counter {
+        padding: 4px 8px;
+        font-size: 12px;
+      }
+      #minimap-container {
+        width: 95px;
+        height: 95px;
+        top: 48px;
+        right: 8px;
+      }
+      .travel-btn {
+        padding: 4px 8px;
+        font-size: 11px;
+      }
+      .travel-key {
+        display: none;
+      }
+      #travel-bar {
+        bottom: 8px;
+        padding: 4px 8px;
+        gap: 4px;
+        max-width: 58vw;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+      #controller-hint {
+        display: none !important;
+      }
+      .touch-joystick-zone {
+        bottom: 16px;
+        left: 16px;
+        width: 120px;
+        height: 120px;
+      }
+      .touch-knob {
+        top: 36px;
+        left: 36px;
+        width: 48px;
+        height: 48px;
+      }
+      .touch-buttons-zone {
+        bottom: 16px;
+        right: 16px;
+        gap: 10px;
+      }
+      .touch-btn-jump {
+        width: 64px;
+        height: 64px;
+        font-size: 24px;
+      }
+      .touch-btn-sprint, .touch-btn-interact {
+        width: 48px;
+        height: 48px;
+        font-size: 18px;
+      }
+    }
+  </style>
+
+  <!-- Import Maps for Three.js -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+
+  <!-- Loading Screen -->
+  <div id="loading-screen">
+    <div class="roblox-logo" style="width: 50px; height: 50px; margin-bottom: 20px;">
+      <div class="roblox-logo-hole" style="width: 16px; height: 16px;"></div>
+    </div>
+    <div class="loading-title">ROBLOX DAIRY CAMPUS</div>
+    <div class="loading-sub">WUR Boerderij Simulatie</div>
+    <div class="loading-progress-box">
+      <div class="loading-progress-bar" id="loading-bar"></div>
+    </div>
+    <div class="loading-status" id="loading-text">Boerderij 3D model inladen...</div>
+  </div>
+
+  <!-- Roblox TopBar -->
+  <div id="roblox-topbar">
+    <div class="topbar-left">
+      <div class="roblox-logo" title="Roblox Menu">
+        <div class="roblox-logo-hole"></div>
+      </div>
+      <div class="player-badge">
+        <span>🤠 Boer Bert</span>
+        <div class="health-container" title="Gezondheid: 100/100">
+          <div class="health-bar" id="health-bar"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="topbar-center">
+      <div class="milk-counter" id="milk-counter">
+        <span>🥛 Melkflessen:</span>
+        <span id="milk-val" style="color: #fde047;">0</span> / 10
+      </div>
+    </div>
+
+    <div class="topbar-right">
+      <div class="gamepad-indicator" id="gamepad-badge">
+        <span>🎮 Geen Controller</span>
+      </div>
+      <button class="icon-btn" id="btn-touch" title="Toon/Verberg Touch Besturing">📱 Touch</button>
+      <button class="icon-btn" id="btn-camera" title="Wissel Camera (Toets C / Gamepad Y)">📷 Camera</button>
+      <button class="icon-btn" id="btn-sound" title="Geluid Aan/Uit">🔊 Geluid</button>
+      <button class="icon-btn" id="btn-help" title="Toon/Verberg Besturing (H)">❓ Help</button>
+    </div>
+  </div>
+
+  <!-- Minimap -->
+  <div id="minimap-container">
+    <canvas id="minimap-canvas" width="170" height="170"></canvas>
+    <div class="minimap-center"></div>
+    <div class="minimap-label">DAIRY CAMPUS</div>
+  </div>
+
+  <!-- Controller & Keyboard Guide -->
+  <div id="controller-hint">
+    <h4>🎮 Besturing</h4>
+    <div class="hint-row">
+      <span>Bewegen</span>
+      <span><span class="key-badge">L-Stick</span> / <span class="key-badge">W A S D</span></span>
+    </div>
+    <div class="hint-row">
+      <span>Rondkijken</span>
+      <span><span class="key-badge">R-Stick</span> / <span class="key-badge">Muis</span></span>
+    </div>
+    <div class="hint-row">
+      <span>Springen</span>
+      <span><span class="key-badge">A</span> / <span class="key-badge">Spatie</span></span>
+    </div>
+    <div class="hint-row">
+      <span>Sprinten</span>
+      <span><span class="key-badge">X</span> / <span class="key-badge">Shift</span></span>
+    </div>
+    <div class="hint-row">
+      <span>Interactie / Koe</span>
+      <span><span class="key-badge">B</span> / <span class="key-badge">E</span></span>
+    </div>
+    <div class="hint-row">
+      <span>Camera Zoom / Wissel</span>
+      <span><span class="key-badge">Y</span> / <span class="key-badge">C / Scroll</span></span>
+    </div>
+    <div class="hint-row">
+      <span>Snelle Teleport</span>
+      <span><span class="key-badge">D-Pad</span> / <span class="key-badge">1 - 5</span></span>
+    </div>
+  </div>
+
+  <!-- Fast Travel Bar -->
+  <div id="travel-bar">
+    <button class="travel-btn" data-target="hoofdgebouw">
+      🏛️ Hoofdgebouw <span class="travel-key">1</span>
+    </button>
+    <button class="travel-btn" data-target="koeienstal">
+      🐄 Koeienstal <span class="travel-key">2</span>
+    </button>
+    <button class="travel-btn" data-target="silos">
+      🌾 Silo's <span class="travel-key">3</span>
+    </button>
+    <button class="travel-btn" data-target="woning">
+      🏡 Boerderij Woning <span class="travel-key">4</span>
+    </button>
+    <button class="travel-btn" data-target="tractor">
+      🚜 Machinepark <span class="travel-key">5</span>
+    </button>
+  </div>
+
+  <!-- Interact Prompt -->
+  <div id="interact-prompt">
+    <span id="interact-key" style="background:#0284c7; padding:4px 10px; border-radius:8px;">[B / E]</span>
+    <span id="interact-text">Koe aaien! 🐄</span>
+  </div>
+
+  <!-- Notification Banner -->
+  <div id="banner">
+    <span id="banner-icon" style="font-size:24px;">🎉</span>
+    <span id="banner-msg">Melkfles gevonden!</span>
+  </div>
+
+  <!-- Crosshair for 1st person -->
+  <div id="crosshair"></div>
+
+  <!-- Mobile Touch Controls Overlay -->
+  <div id="touch-controls">
+    <!-- Left Virtual Joystick -->
+    <div class="touch-joystick-zone" id="touch-joystick-zone">
+      <div class="touch-knob" id="touch-knob"></div>
+    </div>
+
+    <!-- Right Action Buttons -->
+    <div class="touch-buttons-zone">
+      <div class="touch-row">
+        <button class="touch-btn touch-btn-sprint" id="touch-btn-sprint" title="Sprint Aan/Uit">⚡</button>
+        <button class="touch-btn touch-btn-interact" id="touch-btn-interact" title="Koe aaien of toeteren">🐮</button>
+      </div>
+      <button class="touch-btn touch-btn-jump" id="touch-btn-jump" title="Springen">🦘</button>
+    </div>
+  </div>
+
+  <!-- Three.js Canvas Container -->
+  <canvas id="game-canvas"></canvas>
+
+  <!-- Game Logic Module -->
+  <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+    // -------------------------------------------------------------
+    // AUDIO ENGINE (Web Audio API Synthesizer - Zero missing files)
+    // -------------------------------------------------------------
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      playJump() {
+        if (!this.enabled) return;
+        this.init();
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        const now = this.ctx.currentTime;
+        osc.frequency.setValueAtTime(160, now);
+        osc.frequency.exponentialRampToValueAtTime(420, now + 0.15);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.22);
+      }
+      playStep() {
+        if (!this.enabled) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(90 + Math.random() * 30, now);
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.09);
+      }
+      playDing() {
+        if (!this.enabled) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const notes = [523.25, 659.25, 783.99, 1046.50]; // C, E, G, High C
+        notes.forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.06);
+          gain.gain.setValueAtTime(0.2, now + idx * 0.06);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.06 + 0.35);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + idx * 0.06);
+          osc.stop(now + idx * 0.06 + 0.4);
+        });
+      }
+      playMoo() {
+        if (!this.enabled) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const filter = this.ctx.createBiquadFilter();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(140, now);
+        osc.frequency.linearRampToValueAtTime(115, now + 0.3);
+        osc.frequency.linearRampToValueAtTime(80, now + 0.85);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(450, now);
+        filter.frequency.linearRampToValueAtTime(750, now + 0.25);
+        filter.frequency.linearRampToValueAtTime(350, now + 0.85);
+
+        gain.gain.setValueAtTime(0.01, now);
+        gain.gain.linearRampToValueAtTime(0.25, now + 0.1);
+        gain.gain.linearRampToValueAtTime(0.2, now + 0.65);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.9);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.95);
+      }
+      playHorn() {
+        if (!this.enabled) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        [220, 277].forEach(f => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(f, now);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.setValueAtTime(0.2, now + 0.3);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.5);
+        });
+      }
+    }
+    const sounds = new SoundEngine();
+
+    // -------------------------------------------------------------
+    // THREE.JS SETUP
+    // -------------------------------------------------------------
+    const canvas = document.getElementById('game-canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.05;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x7ec0ee); // Crisp sunny sky blue
+    scene.fog = new THREE.FogExp2(0x89c7f4, 0.0028);
+
+    const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 800);
+
+    // Sunlight & Ambience
+    const sunLight = new THREE.DirectionalLight(0xfffaed, 2.2);
+    sunLight.position.set(120, 180, 90);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.width = 2048;
+    sunLight.shadow.mapSize.height = 2048;
+    sunLight.shadow.camera.near = 10;
+    sunLight.shadow.camera.far = 400;
+    const d = 160;
+    sunLight.shadow.camera.left = -d;
+    sunLight.shadow.camera.right = d;
+    sunLight.shadow.camera.top = d;
+    sunLight.shadow.camera.bottom = -d;
+    sunLight.shadow.bias = -0.0005;
+    scene.add(sunLight);
+
+    const hemiLight = new THREE.HemisphereLight(0xbfdbfe, 0x3f6212, 0.7);
+    scene.add(hemiLight);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    scene.add(ambientLight);
+
+    // Stylized Roblox Clouds
+    const cloudGeo = new THREE.BoxGeometry(40, 10, 25);
+    const cloudMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 });
+    const cloudGroup = new THREE.Group();
+    for (let i = 0; i < 20; i++) {
+      const cloud = new THREE.Mesh(cloudGeo, cloudMat);
+      cloud.position.set(
+        (Math.random() - 0.5) * 800,
+        90 + Math.random() * 40,
+        (Math.random() - 0.5) * 800
+      );
+      cloud.scale.set(0.8 + Math.random() * 1.5, 0.5 + Math.random() * 0.8, 0.8 + Math.random() * 1.5);
+      cloudGroup.add(cloud);
+    }
+    scene.add(cloudGroup);
+
+    // Large base ground plane (Dutch pasture surrounding the farm)
+    const baseGroundGeo = new THREE.PlaneGeometry(1200, 1200);
+    const baseGroundMat = new THREE.MeshStandardMaterial({
+      color: 0x4d8a30,
+      roughness: 0.85,
+      metalness: 0.05
+    });
+    const baseGround = new THREE.Mesh(baseGroundGeo, baseGroundMat);
+    baseGround.rotation.x = -Math.PI / 2;
+    baseGround.position.y = -0.05;
+    baseGround.receiveShadow = true;
+    scene.add(baseGround);
+
+    // -------------------------------------------------------------
+    // ROBLOX CHARACTER GENERATOR (Classic R6 Proportions)
+    // -------------------------------------------------------------
+    function createRobloxFaceTexture() {
+      const c = document.createElement('canvas');
+      c.width = 256;
+      c.height = 256;
+      const ctx = c.getContext('2d');
+
+      // Yellow head base
+      ctx.fillStyle = '#FED700';
+      ctx.fillRect(0, 0, 256, 256);
+
+      // Classic Roblox Oval Eyes
+      ctx.fillStyle = '#111827';
+      ctx.beginPath();
+      ctx.ellipse(75, 105, 14, 22, 0, 0, Math.PI * 2);
+      ctx.ellipse(181, 105, 14, 22, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Eye white catchlight
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(71, 97, 6, 0, Math.PI * 2);
+      ctx.arc(177, 97, 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Big Roblox Smile
+      ctx.strokeStyle = '#111827';
+      ctx.lineWidth = 10;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.arc(128, 135, 45, 0.18 * Math.PI, 0.82 * Math.PI, false);
+      ctx.stroke();
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function createRobloxShirtTexture() {
+      const c = document.createElement('canvas');
+      c.width = 256;
+      c.height = 256;
+      const ctx = c.getContext('2d');
+
+      // Farmer red flannel plaid pattern
+      ctx.fillStyle = '#b91c1c';
+      ctx.fillRect(0, 0, 256, 256);
+
+      // Plaid stripes
+      ctx.fillStyle = '#7f1d1d';
+      for (let i = 0; i < 256; i += 32) {
+        ctx.fillRect(i, 0, 16, 256);
+        ctx.fillRect(0, i, 256, 16);
+      }
+
+      // Overalls denim front
+      ctx.fillStyle = '#1d4ed8';
+      ctx.fillRect(48, 120, 160, 136);
+
+      // Overalls suspenders
+      ctx.fillRect(48, 0, 28, 130);
+      ctx.fillRect(180, 0, 28, 130);
+
+      // Brass buttons
+      ctx.fillStyle = '#facc15';
+      ctx.beginPath();
+      ctx.arc(62, 125, 7, 0, Math.PI * 2);
+      ctx.arc(194, 125, 7, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Overalls center pocket
+      ctx.strokeStyle = '#60a5fa';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(80, 145, 96, 75);
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    class RobloxCharacter {
+      constructor() {
+        this.group = new THREE.Group();
+        this.group.name = "RobloxPlayer";
+
+        // Materials
+        this.yellowSkinMat = new THREE.MeshStandardMaterial({
+          color: 0xFED700,
+          roughness: 0.35,
+          metalness: 0.05
+        });
+        const faceTex = createRobloxFaceTexture();
+        this.faceMat = new THREE.MeshStandardMaterial({
+          map: faceTex,
+          roughness: 0.35,
+          metalness: 0.05
+        });
+        const shirtTex = createRobloxShirtTexture();
+        this.torsoMat = new THREE.MeshStandardMaterial({
+          map: shirtTex,
+          roughness: 0.5,
+          metalness: 0.05
+        });
+        this.jeansMat = new THREE.MeshStandardMaterial({
+          color: 0x1e3a8a,
+          roughness: 0.6,
+          metalness: 0.05
+        });
+
+        // Proportions (Roblox scaled to ~1.9m total height)
+        // Torso: 0.9m wide x 0.9m tall x 0.45m deep
+        const torsoGeo = new THREE.BoxGeometry(0.9, 0.9, 0.45);
+        this.torso = new THREE.Mesh(torsoGeo, this.torsoMat);
+        this.torso.position.y = 1.25;
+        this.torso.castShadow = true;
+        this.group.add(this.torso);
+
+        // Head: 0.55m cube
+        const headGeo = new THREE.BoxGeometry(0.55, 0.55, 0.55);
+        const headMaterials = [
+          this.yellowSkinMat, // right
+          this.yellowSkinMat, // left
+          this.yellowSkinMat, // top
+          this.yellowSkinMat, // bottom
+          this.faceMat,       // front
+          this.yellowSkinMat  // back
+        ];
+        this.head = new THREE.Mesh(headGeo, headMaterials);
+        this.head.position.set(0, 0.75, 0);
+        this.head.castShadow = true;
+        this.torso.add(this.head);
+
+        // Farmer Straw Hat
+        const hatBrimGeo = new THREE.CylinderGeometry(0.65, 0.65, 0.06, 18);
+        const hatCrownGeo = new THREE.CylinderGeometry(0.38, 0.42, 0.32, 18);
+        const hatMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.8 });
+        const hatBandMat = new THREE.MeshStandardMaterial({ color: 0x451a03, roughness: 0.8 });
+
+        const hatGroup = new THREE.Group();
+        const hatBrim = new THREE.Mesh(hatBrimGeo, hatMat);
+        hatBrim.position.y = 0.28;
+        hatBrim.castShadow = true;
+        const hatCrown = new THREE.Mesh(hatCrownGeo, hatMat);
+        hatCrown.position.y = 0.45;
+        hatCrown.castShadow = true;
+        const hatBand = new THREE.Mesh(new THREE.CylinderGeometry(0.425, 0.425, 0.08, 18), hatBandMat);
+        hatBand.position.y = 0.33;
+
+        hatGroup.add(hatBrim);
+        hatGroup.add(hatCrown);
+        hatGroup.add(hatBand);
+        hatGroup.rotation.x = -0.05;
+        this.head.add(hatGroup);
+
+        // Name tag sprite
+        this.nameTag = this.createNameTagSprite("🤠 Boer Bert");
+        this.nameTag.position.set(0, 1.4, 0);
+        this.torso.add(this.nameTag);
+
+        // Arms: 0.4m wide x 0.85m tall x 0.4m deep
+        const armGeo = new THREE.BoxGeometry(0.4, 0.85, 0.4);
+        armGeo.translate(0, -0.38, 0); // pivot at shoulder!
+
+        // Left Arm Pivot & Mesh
+        this.leftArmPivot = new THREE.Group();
+        this.leftArmPivot.position.set(-0.66, 0.4, 0);
+        this.leftArm = new THREE.Mesh(armGeo, this.yellowSkinMat);
+        this.leftArm.castShadow = true;
+        this.leftArmPivot.add(this.leftArm);
+        this.torso.add(this.leftArmPivot);
+
+        // Right Arm Pivot & Mesh
+        this.rightArmPivot = new THREE.Group();
+        this.rightArmPivot.position.set(0.66, 0.4, 0);
+        this.rightArm = new THREE.Mesh(armGeo, this.yellowSkinMat);
+        this.rightArm.castShadow = true;
+        this.rightArmPivot.add(this.rightArm);
+        this.torso.add(this.rightArmPivot);
+
+        // Legs: 0.42m wide x 0.85m tall x 0.42m deep
+        const legGeo = new THREE.BoxGeometry(0.42, 0.85, 0.42);
+        legGeo.translate(0, -0.42, 0); // pivot at hip!
+
+        // Left Leg
+        this.leftLegPivot = new THREE.Group();
+        this.leftLegPivot.position.set(-0.23, -0.45, 0);
+        this.leftLeg = new THREE.Mesh(legGeo, this.jeansMat);
+        this.leftLeg.castShadow = true;
+        this.leftLegPivot.add(this.leftLeg);
+        this.torso.add(this.leftLegPivot);
+
+        // Right Leg
+        this.rightLegPivot = new THREE.Group();
+        this.rightLegPivot.position.set(0.23, -0.45, 0);
+        this.rightLeg = new THREE.Mesh(legGeo, this.jeansMat);
+        this.rightLeg.castShadow = true;
+        this.rightLegPivot.add(this.rightLeg);
+        this.torso.add(this.rightLegPivot);
+
+        // Animation state
+        this.walkCycle = 0;
+        this.stepTimer = 0;
+      }
+
+      createNameTagSprite(text) {
+        const c = document.createElement('canvas');
+        c.width = 256;
+        c.height = 64;
+        const ctx = c.getContext('2d');
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+        ctx.roundRect(10, 10, 236, 44, 12);
+        ctx.fill();
+        ctx.strokeStyle = '#22c55e';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 22px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(text, 128, 40);
+
+        const tex = new THREE.CanvasTexture(c);
+        const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+        const sprite = new THREE.Sprite(mat);
+        sprite.scale.set(2.4, 0.6, 1);
+        return sprite;
+      }
+
+      updateAnimation(delta, isMoving, isRunning, isJumping) {
+        const swingSpeed = isRunning ? 18 : 12;
+        const maxAngle = isRunning ? 0.9 : 0.6;
+
+        if (isJumping) {
+          // Classic Roblox Jump pose: arms up, legs split
+          this.leftArmPivot.rotation.x = -Math.PI * 0.7;
+          this.rightArmPivot.rotation.x = -Math.PI * 0.7;
+          this.leftArmPivot.rotation.z = -0.3;
+          this.rightArmPivot.rotation.z = 0.3;
+          this.leftLegPivot.rotation.x = -0.4;
+          this.rightLegPivot.rotation.x = 0.2;
+          this.torso.position.y = 1.35;
+        } else if (isMoving) {
+          this.walkCycle += delta * swingSpeed;
+          this.stepTimer += delta * (isRunning ? 2.2 : 1.4);
+          if (this.stepTimer > 0.45) {
+            sounds.playStep();
+            this.stepTimer = 0;
+          }
+
+          const angle = Math.sin(this.walkCycle) * maxAngle;
+          this.leftLegPivot.rotation.x = angle;
+          this.rightLegPivot.rotation.x = -angle;
+          this.leftArmPivot.rotation.x = -angle * 0.8;
+          this.rightArmPivot.rotation.x = angle * 0.8;
+          this.leftArmPivot.rotation.z = 0.05;
+          this.rightArmPivot.rotation.z = -0.05;
+
+          // Subtle torso bounce
+          this.torso.position.y = 1.25 + Math.abs(Math.sin(this.walkCycle * 2)) * 0.06;
+          this.head.rotation.y = Math.sin(this.walkCycle) * 0.06;
+        } else {
+          // Idle breathing
+          this.walkCycle += delta * 2;
+          const breath = Math.sin(this.walkCycle) * 0.02;
+          this.torso.position.y = 1.25 + breath;
+          this.leftLegPivot.rotation.x = 0;
+          this.rightLegPivot.rotation.x = 0;
+          this.leftArmPivot.rotation.x = breath;
+          this.rightArmPivot.rotation.x = -breath;
+          this.leftArmPivot.rotation.z = 0.05;
+          this.rightArmPivot.rotation.z = -0.05;
+          this.head.rotation.y = 0;
+        }
+      }
+    }
+
+    const player = new RobloxCharacter();
+    scene.add(player.group);
+
+    // Initial player spawn position (Directly in front of the Farm / Boerderij Woning entrance)
+    const SPAWN_POS = new THREE.Vector3(70.0, 0.0, 78.0);
+    player.group.position.copy(SPAWN_POS);
+    player.group.rotation.y = Math.PI - 0.2; // Facing the front of the farm!
+
+    // -------------------------------------------------------------
+    // HOTSPOTS & TELEPORT TARGETS (Dairy Campus Real Coordinates)
+    // -------------------------------------------------------------
+    const HOTSPOTS = {
+      hoofdgebouw: { pos: new THREE.Vector3(0.0, 0.0, 58.0), rot: Math.PI, name: "Hoofdgebouw Entree" },
+      koeienstal: { pos: new THREE.Vector3(-70.0, 0.0, -60.0), rot: 0, name: "Melkveestal (Schuur 3)" },
+      silos: { pos: new THREE.Vector3(105.0, 0.0, -110.0), rot: Math.PI * 0.75, name: "Voersilo's & Opslag" },
+      woning: { pos: new THREE.Vector3(68.0, 0.0, 62.0), rot: Math.PI, name: "Boerderij Woning" },
+      tractor: { pos: new THREE.Vector3(58.0, 0.0, 18.0), rot: Math.PI / 2, name: "Machinepark & Tractor" }
+    };
+
+    function teleportPlayer(targetKey) {
+      const spot = HOTSPOTS[targetKey];
+      if (spot) {
+        player.group.position.copy(spot.pos);
+        player.group.rotation.y = spot.rot;
+        velocityY = 0;
+        cameraYaw = (spot.rot === Math.PI) ? 0 : (spot.rot + Math.PI);
+        cameraPitch = 0.22;
+        showBanner("📍 Welkom bij " + spot.name + "!", "🧭");
+        triggerGamepadRumble(80, 0.3);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // FLOATING 3D WAYPOINT SIGNS
+    // -------------------------------------------------------------
+    function create3DWaypoint(text, icon, pos) {
+      const c = document.createElement('canvas');
+      c.width = 384;
+      c.height = 96;
+      const ctx = c.getContext('2d');
+
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      ctx.roundRect(10, 10, 364, 76, 20);
+      ctx.fill();
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 30px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${icon} ${text}`, 192, 58);
+
+      const tex = new THREE.CanvasTexture(c);
+      const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+      const sprite = new THREE.Sprite(mat);
+      sprite.position.copy(pos);
+      sprite.scale.set(10, 2.5, 1);
+      scene.add(sprite);
+      return sprite;
+    }
+
+    create3DWaypoint("Hoofdgebouw", "🏛️", new THREE.Vector3(0, 12, 30));
+    create3DWaypoint("Melkveestal", "🐄", new THREE.Vector3(-70, 10, -90));
+    create3DWaypoint("Voersilo's", "🌾", new THREE.Vector3(115, 12, -115));
+    create3DWaypoint("Boerderij Woning", "🏡", new THREE.Vector3(72, 9, 45));
+    create3DWaypoint("Machinepark & Tractor", "🚜", new THREE.Vector3(65, 8, 8));
+
+    // -------------------------------------------------------------
+    // FARM BUILDINGS & TERRAIN (barn.glb with Roblox PBR styling)
+    // -------------------------------------------------------------
+    const walkableMeshes = [baseGround];
+    const gltfLoader = new GLTFLoader();
+
+    function setupBarnMaterials(gltf) {
+      const model = gltf.scene;
+
+      // Assimp already converts FBX Z-up to glTF Y-up in RootNode matrix.
+      // Do NOT rotate model.rotation.x - keep rotation 0 so farm is completely flat/horizontal on ground!
+      model.rotation.set(0, 0, 0);
+      model.scale.set(0.3048, 0.3048, 0.3048);
+      model.position.set(0, 0, 0);
+
+      // Vibrant Roblox-style Materials
+      const matGrass = new THREE.MeshStandardMaterial({
+        color: 0x529a32,
+        roughness: 0.85,
+        metalness: 0.02,
+        side: THREE.DoubleSide
+      });
+      const matRoad = new THREE.MeshStandardMaterial({
+        color: 0x64748b, // Clean asphalt / paving
+        roughness: 0.7,
+        metalness: 0.05,
+        side: THREE.DoubleSide
+      });
+      const matConcrete = new THREE.MeshStandardMaterial({
+        color: 0xe2e8f0, // Clean light concrete
+        roughness: 0.6,
+        metalness: 0.05,
+        side: THREE.DoubleSide
+      });
+      const matWater = new THREE.MeshStandardMaterial({
+        color: 0x38bdf8, // Sparkling Dutch canal water
+        roughness: 0.1,
+        metalness: 0.7,
+        transparent: true,
+        opacity: 0.88,
+        side: THREE.DoubleSide
+      });
+      const matWoodBarn = new THREE.MeshStandardMaterial({
+        color: 0x92400e, // Warm wood cladding
+        roughness: 0.65,
+        metalness: 0.05,
+        side: THREE.DoubleSide
+      });
+      const matSandwichPanelGreen = new THREE.MeshStandardMaterial({
+        color: 0x166534, // Vibrant Dutch agricultural green
+        roughness: 0.45,
+        metalness: 0.2,
+        side: THREE.DoubleSide
+      });
+      const matBrick = new THREE.MeshStandardMaterial({
+        color: 0xb91c1c, // Classic Dutch red brick
+        roughness: 0.75,
+        metalness: 0.05,
+        side: THREE.DoubleSide
+      });
+      const matCampusBuilding = new THREE.MeshStandardMaterial({
+        color: 0xf1f5f9, // Modern Dairy Campus main facade
+        roughness: 0.4,
+        metalness: 0.1,
+        side: THREE.DoubleSide
+      });
+      const matSiloSteel = new THREE.MeshStandardMaterial({
+        color: 0xf8fafc, // Polished galvanized steel
+        roughness: 0.15,
+        metalness: 0.95,
+        side: THREE.DoubleSide
+      });
+      const matRoof = new THREE.MeshStandardMaterial({
+        color: 0x8b3a2b, // Warm Dutch terracotta / barn red roofing
+        roughness: 0.65,
+        metalness: 0.1,
+        side: THREE.DoubleSide
+      });
+      const matGlass = new THREE.MeshPhysicalMaterial({
+        color: 0xbae6fd,
+        roughness: 0.1,
+        transmission: 0.85,
+        transparent: true,
+        opacity: 0.75,
+        side: THREE.DoubleSide
+      });
+      const matDoorIndustrial = new THREE.MeshStandardMaterial({
+        color: 0x0284c7, // Dynaco blue
+        roughness: 0.35,
+        metalness: 0.3,
+        side: THREE.DoubleSide
+      });
+      const matWhiteTrim = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        roughness: 0.4,
+        metalness: 0.1,
+        side: THREE.DoubleSide
+      });
+
+      model.traverse((child) => {
+        if (child.isMesh) {
+          if (!child.geometry.attributes.normal) {
+            child.geometry.computeVertexNormals();
+          }
+          child.castShadow = true;
+          child.receiveShadow = true;
+
+          const n = child.name.toLowerCase();
+
+          // Intelligent Material Assignment
+          if (n.includes('grond')) {
+            child.material = matGrass;
+            walkableMeshes.push(child);
+          } else if (n.includes('straatwerk')) {
+            child.material = matRoad;
+            walkableMeshes.push(child);
+          } else if (n.includes('water')) {
+            child.material = matWater;
+            child.castShadow = false;
+          } else if (n.includes('beton') || n.includes('floor')) {
+            child.material = matConcrete;
+            walkableMeshes.push(child);
+          } else if (n.includes('hoofdgebouw')) {
+            child.material = matCampusBuilding;
+          } else if (n.includes('houten gevel')) {
+            child.material = matWoodBarn;
+          } else if (n.includes('sandwichpaneel') || n.includes('schuur') || n.includes('loods')) {
+            child.material = matSandwichPanelGreen;
+          } else if (n.includes('woning') || n.includes('mw')) {
+            child.material = matBrick;
+          } else if (n.includes('silo')) {
+            child.material = matSiloSteel;
+          } else if (n.includes('boeiboord') || n.includes('trim')) {
+            child.material = matWhiteTrim;
+          } else if (n.includes('roof') || n.includes('dak')) {
+            child.material = matRoof;
+          } else if (n.includes('glas') || n.includes('mullion') || n.includes('curtain')) {
+            child.material = matGlass;
+          } else if (n.includes('door') || n.includes('dynaco')) {
+            child.material = matDoorIndustrial;
+          } else {
+            child.material = matConcrete;
+          }
+        }
+      });
+
+      model.updateMatrixWorld(true);
+      scene.add(model);
+      console.log("Farm barn.glb loaded successfully! Total walkable floor meshes:", walkableMeshes.length);
+    }
+
+    // -------------------------------------------------------------
+    // COWS SIMULATION (Animated cow4.glb models)
+    // -------------------------------------------------------------
+    const cows = [];
+    const cowMixers = [];
+    let nearestCow = null;
+
+    function spawnCows(gltf) {
+      const cowTemplate = gltf.scene;
+      const anims = gltf.animations;
+      const cowSpots = [
+        // In front of Farmhouse / Boerderij Woning
+        { x: 62, z: 65 }, { x: 84, z: 62 }, { x: 78, z: 72 },
+        // Courtyard near barns
+        { x: 20, z: -23 }, { x: 30, z: -25 }, { x: 17, z: -10 }, { x: 33, z: -11 },
+        // Pasture West
+        { x: -90, z: -40 }, { x: -85, z: -55 }, { x: -75, z: -70 }, { x: -65, z: -35 },
+        { x: -110, z: -50 }, { x: -120, z: -80 },
+        // Near Barn 3
+        { x: -55, z: -95 }, { x: -60, z: -110 }, { x: -70, z: -105 },
+        // Farmyard North
+        { x: 30, z: -60 }, { x: 45, z: -75 }, { x: 50, z: -90 },
+        // Meadow East
+        { x: 90, z: 20 }, { x: 105, z: 10 }, { x: 80, z: -10 }
+      ];
+
+      cowSpots.forEach((spot, idx) => {
+        const cow = cowTemplate.clone();
+        cow.scale.set(1.5, 1.5, 1.5);
+        cow.position.set(spot.x + (Math.random() - 0.5) * 8, 0, spot.z + (Math.random() - 0.5) * 8);
+        cow.rotation.y = Math.random() * Math.PI * 2;
+        cow.traverse(m => {
+          if (m.isMesh) {
+            m.castShadow = true;
+            m.receiveShadow = true;
+          }
+        });
+        scene.add(cow);
+
+        // Animation mixer
+        const mixer = new THREE.AnimationMixer(cow);
+        if (anims && anims.length > 0) {
+          const action = mixer.clipAction(anims[0]);
+          action.time = Math.random() * 2; // de-sync
+          action.play();
+        }
+        cowMixers.push(mixer);
+
+        cows.push({
+          mesh: cow,
+          mixer: mixer,
+          direction: new THREE.Vector3(Math.random() - 0.5, 0, Math.random() - 0.5).normalize(),
+          speed: 0.3 + Math.random() * 0.4,
+          changeDirTime: 2 + Math.random() * 4
+        });
+      });
+    }
+
+    // -------------------------------------------------------------
+    // JOHN DEERE STYLE ROBLOX TRACTOR & HAY BALES
+    // -------------------------------------------------------------
+    function createTractor() {
+      const tractorGroup = new THREE.Group();
+      tractorGroup.name = "Tractor";
+
+      const greenMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.3, metalness: 0.2 });
+      const yellowMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.4, metalness: 0.1 });
+      const blackMat = new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.8 });
+      const cabGlassMat = new THREE.MeshPhysicalMaterial({ color: 0xbae6fd, transmission: 0.6, transparent: true, opacity: 0.5 });
+
+      // Chassis & Hood
+      const hood = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.1, 2.4), greenMat);
+      hood.position.set(0, 1.2, -0.6);
+      hood.castShadow = true;
+      tractorGroup.add(hood);
+
+      // Cab
+      const cab = new THREE.Mesh(new THREE.BoxGeometry(1.7, 1.6, 1.6), greenMat);
+      cab.position.set(0, 2.0, 1.1);
+      cab.castShadow = true;
+      tractorGroup.add(cab);
+
+      // Windows
+      const winFront = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.0), cabGlassMat);
+      winFront.position.set(0, 2.1, 0.29);
+      tractorGroup.add(winFront);
+
+      // Exhaust Pipe
+      const exhaust = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.4, 8), blackMat);
+      exhaust.position.set(0.65, 2.3, -1.2);
+      tractorGroup.add(exhaust);
+
+      // Wheels
+      const bigWheelGeo = new THREE.CylinderGeometry(1.1, 1.1, 0.65, 16);
+      bigWheelGeo.rotateZ(Math.PI / 2);
+      const smallWheelGeo = new THREE.CylinderGeometry(0.7, 0.7, 0.5, 16);
+      smallWheelGeo.rotateZ(Math.PI / 2);
+
+      // Rear Big Wheels
+      [-1.15, 1.15].forEach(x => {
+        const w = new THREE.Mesh(bigWheelGeo, blackMat);
+        w.position.set(x, 1.1, 1.1);
+        w.castShadow = true;
+        const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.68, 12), yellowMat);
+        rim.rotateZ(Math.PI / 2);
+        w.add(rim);
+        tractorGroup.add(w);
+      });
+
+      // Front Small Wheels
+      [-1.0, 1.0].forEach(x => {
+        const w = new THREE.Mesh(smallWheelGeo, blackMat);
+        w.position.set(x, 0.7, -1.3);
+        w.castShadow = true;
+        const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.52, 12), yellowMat);
+        rim.rotateZ(Math.PI / 2);
+        w.add(rim);
+        tractorGroup.add(w);
+      });
+
+      tractorGroup.position.set(65.0, 0, 8.0);
+      tractorGroup.rotation.y = -Math.PI * 0.4;
+      scene.add(tractorGroup);
+      return tractorGroup;
+    }
+    const tractor = createTractor();
+
+    // Hay bales
+    function createHayBales() {
+      const strawMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.95 });
+      const hayGeo = new THREE.CylinderGeometry(1.0, 1.0, 1.6, 12);
+      hayGeo.rotateZ(Math.PI / 2);
+
+      const stackPositions = [
+        { x: 60, z: -10 }, { x: 61.8, z: -10 }, { x: 60.9, z: -10, y: 1.7 },
+        { x: 58, z: -12 }, { x: 59.8, z: -12 }
+      ];
+      stackPositions.forEach(p => {
+        const bale = new THREE.Mesh(hayGeo, strawMat);
+        bale.position.set(p.x, p.y || 0.9, p.z);
+        bale.castShadow = true;
+        bale.receiveShadow = true;
+        scene.add(bale);
+      });
+    }
+    createHayBales();
+
+    // -------------------------------------------------------------
+    // COLLECTABLE MILK BOTTLES QUEST (10 Hidden Bottles)
+    // -------------------------------------------------------------
+    const milkBottles = [];
+    let milkCollected = 0;
+
+    function createMilkBottle(x, y, z, id, hint) {
+      const bottleGroup = new THREE.Group();
+      bottleGroup.position.set(x, y, z);
+
+      // Glass & Milk body
+      const bodyGeo = new THREE.CylinderGeometry(0.28, 0.32, 0.8, 16);
+      const whiteMat = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        roughness: 0.2,
+        metalness: 0.1,
+        emissive: 0xffffff,
+        emissiveIntensity: 0.25
+      });
+      const body = new THREE.Mesh(bodyGeo, whiteMat);
+      body.castShadow = true;
+      bottleGroup.add(body);
+
+      // Gold cap
+      const capGeo = new THREE.CylinderGeometry(0.18, 0.18, 0.18, 16);
+      const goldMat = new THREE.MeshStandardMaterial({
+        color: 0xfacc15,
+        roughness: 0.3,
+        metalness: 0.8,
+        emissive: 0xfacc15,
+        emissiveIntensity: 0.4
+      });
+      const cap = new THREE.Mesh(capGeo, goldMat);
+      cap.position.y = 0.48;
+      bottleGroup.add(cap);
+
+      // Glow Aura
+      const haloGeo = new THREE.SphereGeometry(0.65, 12, 12);
+      const haloMat = new THREE.MeshBasicMaterial({
+        color: 0x60a5fa,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.3
+      });
+      const halo = new THREE.Mesh(haloGeo, haloMat);
+      bottleGroup.add(halo);
+
+      scene.add(bottleGroup);
+      milkBottles.push({
+        group: bottleGroup,
+        id: id,
+        hint: hint,
+        collected: false,
+        baseY: y
+      });
+    }
+
+    // Place 10 bottles at iconic spots
+    createMilkBottle(-4.2, 1.2, 45.0, 1, "Entree Hoofdgebouw");
+    createMilkBottle(-2.0, 1.2, 22.0, 2, "Voordeur Campus");
+    createMilkBottle(73.0, 1.2, 45.0, 3, "Veranda Boerderij Woning");
+    createMilkBottle(65.0, 1.8, 12.0, 4, "Achterop de Tractor");
+    createMilkBottle(60.9, 2.6, -10.0, 5, "Bovenop de Hooibalen");
+    createMilkBottle(120.0, 1.2, -120.0, 6, "Bij de Grote Voersilo's");
+    createMilkBottle(-71.0, 1.2, -92.0, 7, "Melkveestal tussen de koeien");
+    createMilkBottle(-125.0, 1.2, -36.0, 8, "Milk & Dairy Melkcentrum");
+    createMilkBottle(-177.0, 1.2, -101.0, 9, "Schuur 1 Voerpad");
+    createMilkBottle(0.0, 1.2, -40.0, 10, "Brug over de sloot");
+
+    // -------------------------------------------------------------
+    // CONTROLS SYSTEM: GAMEPAD + KEYBOARD + TOUCH
+    // -------------------------------------------------------------
+    const keys = {};
+    window.addEventListener('keydown', (e) => {
+      keys[e.code] = true;
+      sounds.init();
+
+      if (e.code === 'KeyC') cycleCameraMode();
+      if (e.code === 'KeyE') handleInteract();
+      if (e.code === 'Digit1') teleportPlayer('hoofdgebouw');
+      if (e.code === 'Digit2') teleportPlayer('koeienstal');
+      if (e.code === 'Digit3') teleportPlayer('silos');
+      if (e.code === 'Digit4') teleportPlayer('woning');
+      if (e.code === 'Digit5') teleportPlayer('tractor');
+      if (e.code === 'KeyH') toggleHelp();
+    });
+    window.addEventListener('keyup', (e) => {
+      keys[e.code] = false;
+    });
+
+    // Mouse Look / Orbit
+    let isMouseDown = false;
+    let mousePrevX = 0, mousePrevY = 0;
+    let cameraYaw = 0.2;
+    let cameraPitch = 0.22; // slight top-down angle
+    let cameraDistance = 6.5; // Roblox 3rd person distance
+    let cameraMode = 0; // 0: 3rd person follow, 1: 1st person, 2: Far Drone
+
+    // Initialize camera directly behind player looking forward
+    camera.position.set(
+      SPAWN_POS.x + Math.sin(cameraYaw) * Math.cos(cameraPitch) * cameraDistance,
+      SPAWN_POS.y + 1.6 + Math.sin(cameraPitch) * cameraDistance,
+      SPAWN_POS.z + Math.cos(cameraYaw) * Math.cos(cameraPitch) * cameraDistance
+    );
+    camera.lookAt(SPAWN_POS.x, SPAWN_POS.y + 1.6, SPAWN_POS.z);
+
+    window.addEventListener('mousedown', (e) => {
+      if (e.target === canvas) {
+        isMouseDown = true;
+        mousePrevX = e.clientX;
+        mousePrevY = e.clientY;
+        sounds.init();
+      }
+    });
+    window.addEventListener('mouseup', () => { isMouseDown = false; });
+    window.addEventListener('mousemove', (e) => {
+      if (isMouseDown || document.pointerLockElement === canvas) {
+        const dx = e.movementX !== undefined ? e.movementX : (e.clientX - mousePrevX);
+        const dy = e.movementY !== undefined ? e.movementY : (e.clientY - mousePrevY);
+        cameraYaw -= dx * 0.005;
+        cameraPitch = Math.max(-0.4, Math.min(1.2, cameraPitch + dy * 0.005));
+        mousePrevX = e.clientX;
+        mousePrevY = e.clientY;
+      }
+    });
+    window.addEventListener('wheel', (e) => {
+      cameraDistance = Math.max(0.5, Math.min(22, cameraDistance + e.deltaY * 0.01));
+    });
+
+    function cycleCameraMode() {
+      cameraMode = (cameraMode + 1) % 3;
+      const crosshair = document.getElementById('crosshair');
+      if (cameraMode === 1) {
+        cameraDistance = 0.5;
+        crosshair.style.display = 'block';
+        player.torso.visible = false;
+      } else if (cameraMode === 0) {
+        cameraDistance = 7.0;
+        crosshair.style.display = 'none';
+        player.torso.visible = true;
+      } else {
+        cameraDistance = 18.0;
+        cameraPitch = 0.65;
+        crosshair.style.display = 'none';
+        player.torso.visible = true;
+      }
+    }
+
+    // GAMEPAD POLLING & STATE
+    let gamepadIndex = null;
+    const prevButtonState = {};
+    const gamepadBadge = document.getElementById('gamepad-badge');
+
+    window.addEventListener('gamepadconnected', (e) => {
+      gamepadIndex = e.gamepad.index;
+      gamepadBadge.classList.add('connected');
+      gamepadBadge.innerHTML = `<span>🎮 ${e.gamepad.id.slice(0, 18)}</span>`;
+      showBanner("🎮 Controller Verbonden!", "🎮");
+      sounds.init();
+    });
+
+    window.addEventListener('gamepaddisconnected', () => {
+      gamepadIndex = null;
+      gamepadBadge.classList.remove('connected');
+      gamepadBadge.innerHTML = '<span>🎮 Geen Controller</span>';
+    });
+
+    function isButtonPressed(gamepad, btnIndex) {
+      if (!gamepad || !gamepad.buttons[btnIndex]) return false;
+      const b = gamepad.buttons[btnIndex];
+      return typeof b === 'object' ? b.pressed : b > 0.5;
+    }
+
+    function isButtonJustPressed(gamepad, btnIndex) {
+      const pressed = isButtonPressed(gamepad, btnIndex);
+      const wasPressed = !!prevButtonState[btnIndex];
+      prevButtonState[btnIndex] = pressed;
+      return pressed && !wasPressed;
+    }
+
+    function triggerGamepadRumble(durationMs = 120, strength = 0.5) {
+      const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+      const gp = (gamepadIndex !== null) ? gamepads[gamepadIndex] : gamepads[0];
+      if (gp && gp.vibrationActuator && gp.vibrationActuator.playEffect) {
+        gp.vibrationActuator.playEffect('dual-rumble', {
+          startDelay: 0,
+          duration: durationMs,
+          weakMagnitude: strength * 0.7,
+          strongMagnitude: strength
+        }).catch(() => {});
+      }
+    }
+
+    // UI Buttons
+    document.getElementById('btn-camera').addEventListener('click', cycleCameraMode);
+    document.getElementById('btn-sound').addEventListener('click', () => {
+      sounds.enabled = !sounds.enabled;
+      document.getElementById('btn-sound').textContent = sounds.enabled ? "🔊 Geluid" : "🔇 Geluid";
+    });
+    function toggleHelp() {
+      const hint = document.getElementById('controller-hint');
+      hint.style.display = hint.style.display === 'none' ? 'block' : 'none';
+    }
+    document.getElementById('btn-help').addEventListener('click', toggleHelp);
+
+    document.querySelectorAll('.travel-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        teleportPlayer(btn.dataset.target);
+      });
+    });
+
+    // -------------------------------------------------------------
+    // MOBILE TOUCH CONTROLS SYSTEM
+    // -------------------------------------------------------------
+    let touchMoveX = 0, touchMoveZ = 0;
+    let touchJump = false;
+    let touchSprint = false;
+
+    const touchControls = document.getElementById('touch-controls');
+    const joystickZone = document.getElementById('touch-joystick-zone');
+    const joystickKnob = document.getElementById('touch-knob');
+    let joystickTouchId = null;
+    let joystickCenter = { x: 0, y: 0 };
+    const maxRadius = 42;
+
+    // Automatically enable on touch devices (phones, tablets, iPads)
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (window.innerWidth <= 1024);
+    if (isTouchDevice && touchControls) {
+      touchControls.style.display = 'block';
+    }
+
+    // Toggle touch controls button in TopBar
+    const btnTouchToggle = document.getElementById('btn-touch');
+    if (btnTouchToggle) {
+      btnTouchToggle.addEventListener('click', () => {
+        const isVisible = touchControls.style.display === 'block';
+        touchControls.style.display = isVisible ? 'none' : 'block';
+        btnTouchToggle.textContent = isVisible ? "📱 Touch" : "📱 Touch (Aan)";
+      });
+    }
+
+    // Virtual Joystick Touch Handlers
+    if (joystickZone) {
+      joystickZone.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        sounds.init();
+        const touch = e.changedTouches[0];
+        joystickTouchId = touch.identifier;
+        const rect = joystickZone.getBoundingClientRect();
+        joystickCenter = {
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2
+        };
+        updateJoystickPosition(touch.clientX, touch.clientY);
+      }, { passive: false });
+
+      window.addEventListener('touchmove', (e) => {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          const touch = e.changedTouches[i];
+          if (touch.identifier === joystickTouchId) {
+            e.preventDefault();
+            updateJoystickPosition(touch.clientX, touch.clientY);
+            break;
+          }
+        }
+      }, { passive: false });
+
+      function resetJoystick() {
+        joystickTouchId = null;
+        touchMoveX = 0;
+        touchMoveZ = 0;
+        joystickKnob.style.transform = `translate(0px, 0px)`;
+      }
+
+      window.addEventListener('touchend', (e) => {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          if (e.changedTouches[i].identifier === joystickTouchId) {
+            resetJoystick();
+            break;
+          }
+        }
+      });
+      window.addEventListener('touchcancel', resetJoystick);
+
+      function updateJoystickPosition(clientX, clientY) {
+        const dx = clientX - joystickCenter.x;
+        const dy = clientY - joystickCenter.y;
+        const dist = Math.hypot(dx, dy);
+        const angle = Math.atan2(dy, dx);
+        const clampedDist = Math.min(dist, maxRadius);
+
+        const knobX = Math.cos(angle) * clampedDist;
+        const knobY = Math.sin(angle) * clampedDist;
+        joystickKnob.style.transform = `translate(${knobX}px, ${knobY}px)`;
+
+        // Normalized movement output
+        touchMoveX = knobX / maxRadius;
+        touchMoveZ = knobY / maxRadius;
+      }
+    }
+
+    // Touch Action Buttons Handlers
+    const btnTouchJump = document.getElementById('touch-btn-jump');
+    if (btnTouchJump) {
+      btnTouchJump.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        touchJump = true;
+        sounds.init();
+      }, { passive: false });
+      btnTouchJump.addEventListener('touchend', () => { touchJump = false; });
+      btnTouchJump.addEventListener('touchcancel', () => { touchJump = false; });
+    }
+
+    const btnTouchSprint = document.getElementById('touch-btn-sprint');
+    if (btnTouchSprint) {
+      btnTouchSprint.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        touchSprint = !touchSprint;
+        btnTouchSprint.classList.toggle('active', touchSprint);
+        sounds.init();
+      }, { passive: false });
+    }
+
+    const btnTouchInteract = document.getElementById('touch-btn-interact');
+    if (btnTouchInteract) {
+      btnTouchInteract.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        handleInteract();
+      }, { passive: false });
+    }
+
+    // Camera Swipe on Canvas for Mobile (right side of screen)
+    let cameraTouchId = null;
+    let lastCamTouchX = 0, lastCamTouchY = 0;
+
+    canvas.addEventListener('touchstart', (e) => {
+      sounds.init();
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const touch = e.changedTouches[i];
+        if (touch.clientX > window.innerWidth * 0.35 && cameraTouchId === null) {
+          cameraTouchId = touch.identifier;
+          lastCamTouchX = touch.clientX;
+          lastCamTouchY = touch.clientY;
+          break;
+        }
+      }
+    }, { passive: true });
+
+    canvas.addEventListener('touchmove', (e) => {
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const touch = e.changedTouches[i];
+        if (touch.identifier === cameraTouchId) {
+          const dx = touch.clientX - lastCamTouchX;
+          const dy = touch.clientY - lastCamTouchY;
+          cameraYaw -= dx * 0.007;
+          cameraPitch = Math.max(-0.4, Math.min(1.2, cameraPitch + dy * 0.007));
+          lastCamTouchX = touch.clientX;
+          lastCamTouchY = touch.clientY;
+          break;
+        }
+      }
+    }, { passive: true });
+
+    const clearCamTouch = (e) => {
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        if (e.changedTouches[i].identifier === cameraTouchId) {
+          cameraTouchId = null;
+          break;
+        }
+      }
+    };
+    canvas.addEventListener('touchend', clearCamTouch);
+    canvas.addEventListener('touchcancel', clearCamTouch);
+
+    // Notification Banner Helper
+    const banner = document.getElementById('banner');
+    const bannerMsg = document.getElementById('banner-msg');
+    const bannerIcon = document.getElementById('banner-icon');
+    let bannerTimer = null;
+    function showBanner(text, icon = "🎉") {
+      bannerMsg.textContent = text;
+      bannerIcon.textContent = icon;
+      banner.style.display = 'flex';
+      clearTimeout(bannerTimer);
+      bannerTimer = setTimeout(() => {
+        banner.style.display = 'none';
+      }, 3500);
+    }
+
+    // -------------------------------------------------------------
+    // INTERACTION LOGIC (Pet Cow, Honk Tractor)
+    // -------------------------------------------------------------
+    function handleInteract() {
+      sounds.init();
+      // Near cow?
+      if (nearestCow) {
+        sounds.playMoo();
+        spawnHeartEffect(nearestCow.mesh.position);
+        showBanner("Je aaide de koe! 🐮 *Moo-ooo*", "❤️");
+        return;
+      }
+      // Near tractor?
+      const distToTractor = player.group.position.distanceTo(tractor.position);
+      if (distToTractor < 6.0) {
+        sounds.playHorn();
+        showBanner("TUUUT TUUUT! 🚜", "🚜");
+        return;
+      }
+    }
+
+    // Floating heart particle effect
+    function spawnHeartEffect(pos) {
+      const spriteCanvas = document.createElement('canvas');
+      spriteCanvas.width = 64;
+      spriteCanvas.height = 64;
+      const sCtx = spriteCanvas.getContext('2d');
+      sCtx.font = '48px sans-serif';
+      sCtx.fillText('❤️', 8, 48);
+      const spriteTex = new THREE.CanvasTexture(spriteCanvas);
+      const heartMat = new THREE.SpriteMaterial({ map: spriteTex, transparent: true });
+      const heart = new THREE.Sprite(heartMat);
+      heart.position.set(pos.x, pos.y + 2.5, pos.z);
+      heart.scale.set(1.5, 1.5, 1);
+      scene.add(heart);
+
+      let elapsed = 0;
+      const interval = setInterval(() => {
+        elapsed += 0.04;
+        heart.position.y += 0.08;
+        heart.material.opacity = Math.max(0, 1 - elapsed);
+        if (elapsed >= 1.0) {
+          clearInterval(interval);
+          scene.remove(heart);
+        }
+      }, 40);
+    }
+
+    // -------------------------------------------------------------
+    // MINIMAP SYSTEM
+    // -------------------------------------------------------------
+    const minimapCanvas = document.getElementById('minimap-canvas');
+    const minimapCtx = minimapCanvas.getContext('2d');
+
+    function updateMinimap() {
+      minimapCtx.clearRect(0, 0, 170, 170);
+
+      // Radar background
+      minimapCtx.fillStyle = '#0f172a';
+      minimapCtx.fillRect(0, 0, 170, 170);
+
+      const px = player.group.position.x;
+      const pz = player.group.position.z;
+      const zoom = 0.55; // pixels per meter
+
+      // Center of minimap is (85, 85)
+      const cx = 85, cy = 85;
+
+      // Draw Key Buildings
+      Object.entries(HOTSPOTS).forEach(([k, spot]) => {
+        const mx = cx + (spot.pos.x - px) * zoom;
+        const my = cy + (spot.pos.z - pz) * zoom;
+        if (mx >= 5 && mx <= 165 && my >= 5 && my <= 165) {
+          minimapCtx.fillStyle = '#38bdf8';
+          minimapCtx.fillRect(mx - 4, my - 4, 8, 8);
+        }
+      });
+
+      // Draw Cows
+      minimapCtx.fillStyle = '#f8fafc';
+      cows.forEach(c => {
+        const mx = cx + (c.mesh.position.x - px) * zoom;
+        const my = cy + (c.mesh.position.z - pz) * zoom;
+        if (mx >= 5 && mx <= 165 && my >= 5 && my <= 165) {
+          minimapCtx.beginPath();
+          minimapCtx.arc(mx, my, 2.5, 0, Math.PI * 2);
+          minimapCtx.fill();
+        }
+      });
+
+      // Draw Milk Bottles
+      minimapCtx.fillStyle = '#facc15';
+      milkBottles.forEach(b => {
+        if (!b.collected) {
+          const mx = cx + (b.group.position.x - px) * zoom;
+          const my = cy + (b.group.position.z - pz) * zoom;
+          if (mx >= 5 && mx <= 165 && my >= 5 && my <= 165) {
+            minimapCtx.beginPath();
+            minimapCtx.arc(mx, my, 3.5, 0, Math.PI * 2);
+            minimapCtx.fill();
+          }
+        }
+      });
+
+      // Player direction pointer
+      minimapCtx.save();
+      minimapCtx.translate(cx, cy);
+      minimapCtx.rotate(player.group.rotation.y + Math.PI);
+      minimapCtx.fillStyle = '#ef4444';
+      minimapCtx.beginPath();
+      minimapCtx.moveTo(0, -7);
+      minimapCtx.lineTo(5, 5);
+      minimapCtx.lineTo(-5, 5);
+      minimapCtx.closePath();
+      minimapCtx.fill();
+      minimapCtx.restore();
+    }
+
+    // -------------------------------------------------------------
+    // MOVEMENT & RAYCAST PHYSICS
+    // -------------------------------------------------------------
+    const raycaster = new THREE.Raycaster();
+    const downVector = new THREE.Vector3(0, -1, 0);
+    let velocityY = 0;
+    const GRAVITY = 24.0;
+    const JUMP_POWER = 9.5;
+    let isGrounded = true;
+
+    function getGroundHeight(pos) {
+      raycaster.set(new THREE.Vector3(pos.x, pos.y + 4.0, pos.z), downVector);
+      raycaster.far = 12.0;
+      const hits = raycaster.intersectObjects(walkableMeshes, false);
+      if (hits.length > 0) {
+        return hits[0].point.y;
+      }
+      return 0.0; // fallback base ground
+    }
+
+    // -------------------------------------------------------------
+    // MAIN LOOP & GAME UPDATE
+    // -------------------------------------------------------------
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+
+      const delta = Math.min(clock.getDelta(), 0.1);
+
+      // --- GAMEPAD & INPUT READING ---
+      let moveX = 0, moveZ = 0;
+      let isRunning = false;
+      let jumpRequested = false;
+
+      // Keyboard input
+      if (keys['KeyW'] || keys['ArrowUp']) moveZ -= 1;
+      if (keys['KeyS'] || keys['ArrowDown']) moveZ += 1;
+      if (keys['KeyA'] || keys['ArrowLeft']) moveX -= 1;
+      if (keys['KeyD'] || keys['ArrowRight']) moveX += 1;
+      if (keys['ShiftLeft'] || keys['ShiftRight']) isRunning = true;
+      if (keys['Space']) jumpRequested = true;
+
+      // Gamepad Input
+      const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+      const gp = (gamepadIndex !== null) ? gamepads[gamepadIndex] : gamepads[0];
+
+      if (gp) {
+        if (!gamepadBadge.classList.contains('connected')) {
+          gamepadBadge.classList.add('connected');
+          gamepadBadge.innerHTML = `<span>🎮 ${gp.id.slice(0, 16)}</span>`;
+        }
+
+        // Left Stick Movement (with deadzone 0.15)
+        const deadzone = 0.15;
+        const lx = gp.axes[0] || 0;
+        const ly = gp.axes[1] || 0;
+        if (Math.abs(lx) > deadzone) moveX += lx;
+        if (Math.abs(ly) > deadzone) moveZ += ly;
+
+        // Right Stick Camera Look
+        const rx = gp.axes[2] || 0;
+        const ry = gp.axes[3] || 0;
+        if (Math.abs(rx) > deadzone) cameraYaw -= rx * delta * 2.6;
+        if (Math.abs(ry) > deadzone) {
+          cameraPitch = Math.max(-0.4, Math.min(1.2, cameraPitch + ry * delta * 2.2));
+        }
+
+        // Gamepad Buttons
+        if (isButtonPressed(gp, 0)) jumpRequested = true; // A / Cross
+        if (isButtonJustPressed(gp, 1)) handleInteract(); // B / Circle
+        if (isButtonPressed(gp, 2)) isRunning = true;     // X / Square
+        if (isButtonJustPressed(gp, 3)) cycleCameraMode(); // Y / Triangle
+        if (isButtonPressed(gp, 4)) cameraDistance = Math.max(1.0, cameraDistance - delta * 8); // LB
+        if (isButtonPressed(gp, 5)) cameraDistance = Math.min(22.0, cameraDistance + delta * 8); // RB
+        if (isButtonPressed(gp, 6) || isButtonPressed(gp, 7)) isRunning = true; // Triggers
+
+        // D-Pad Fast Teleport
+        if (isButtonJustPressed(gp, 12)) teleportPlayer('hoofdgebouw'); // Up
+        if (isButtonJustPressed(gp, 13)) teleportPlayer('koeienstal');   // Down
+        if (isButtonJustPressed(gp, 14)) teleportPlayer('woning');       // Left
+        if (isButtonJustPressed(gp, 15)) teleportPlayer('silos');        // Right
+      }
+
+      // Touch Screen Input (Mobile / Tablet)
+      if (touchJump) jumpRequested = true;
+      if (touchSprint) isRunning = true;
+      if (Math.abs(touchMoveX) > 0.05) moveX += touchMoveX;
+      if (Math.abs(touchMoveZ) > 0.05) moveZ += touchMoveZ;
+
+      // Normalize movement direction vector
+      const inputVector = new THREE.Vector2(moveX, moveZ);
+      const isMoving = inputVector.length() > 0.05;
+      if (inputVector.length() > 1.0) inputVector.normalize();
+
+      // Camera-relative movement
+      const moveSpeed = (isRunning ? 10.5 : 5.8);
+      const forward = new THREE.Vector3(-Math.sin(cameraYaw), 0, -Math.cos(cameraYaw));
+      const right = new THREE.Vector3(Math.cos(cameraYaw), 0, -Math.sin(cameraYaw));
+      const moveDir = new THREE.Vector3();
+      moveDir.addScaledVector(forward, -inputVector.y);
+      moveDir.addScaledVector(right, inputVector.x);
+
+      if (isMoving) {
+        player.group.position.x += moveDir.x * moveSpeed * delta;
+        player.group.position.z += moveDir.z * moveSpeed * delta;
+
+        // Smoothly rotate character toward movement direction
+        const targetRot = Math.atan2(moveDir.x, moveDir.z);
+        let diff = targetRot - player.group.rotation.y;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        player.group.rotation.y += diff * delta * 14;
+      }
+
+      // --- VERTICAL PHYSICS & JUMPING ---
+      const groundY = getGroundHeight(player.group.position);
+
+      if (isGrounded) {
+        if (jumpRequested) {
+          velocityY = JUMP_POWER;
+          isGrounded = false;
+          sounds.playJump();
+          triggerGamepadRumble(60, 0.4);
+        } else {
+          // Snap to ground (follow terrain elevation, ramps, bridges)
+          player.group.position.y = THREE.MathUtils.lerp(player.group.position.y, groundY, delta * 20);
+          velocityY = 0;
+        }
+      } else {
+        // Airborne physics
+        velocityY -= GRAVITY * delta;
+        player.group.position.y += velocityY * delta;
+
+        if (player.group.position.y <= groundY) {
+          player.group.position.y = groundY;
+          velocityY = 0;
+          isGrounded = true;
+        }
+      }
+
+      // Update Roblox character animation
+      player.updateAnimation(delta, isMoving, isRunning, !isGrounded);
+
+      // --- CAMERA FOLLOW (ROBLOX 3RD PERSON ORBIT) ---
+      const targetFocus = new THREE.Vector3(
+        player.group.position.x,
+        player.group.position.y + 1.6,
+        player.group.position.z
+      );
+
+      if (cameraMode === 1) {
+        // First person mode
+        camera.position.set(
+          player.group.position.x,
+          player.group.position.y + 1.85,
+          player.group.position.z
+        );
+        const lookTarget = new THREE.Vector3(
+          camera.position.x - Math.sin(cameraYaw) * Math.cos(cameraPitch) * 10,
+          camera.position.y + Math.sin(cameraPitch) * 10,
+          camera.position.z - Math.cos(cameraYaw) * Math.cos(cameraPitch) * 10
+        );
+        camera.lookAt(lookTarget);
+      } else {
+        // Third person follow
+        const camOffsetX = Math.sin(cameraYaw) * Math.cos(cameraPitch) * cameraDistance;
+        const camOffsetY = Math.sin(cameraPitch) * cameraDistance;
+        const camOffsetZ = Math.cos(cameraYaw) * Math.cos(cameraPitch) * cameraDistance;
+
+        const desiredCamPos = new THREE.Vector3(
+          targetFocus.x + camOffsetX,
+          targetFocus.y + camOffsetY,
+          targetFocus.z + camOffsetZ
+        );
+
+        // Keep camera above ground without snapping to high building roofs
+        const camGroundY = getGroundHeight(desiredCamPos);
+        if (camGroundY < targetFocus.y + 1.2 && desiredCamPos.y < camGroundY + 0.8) {
+          desiredCamPos.y = camGroundY + 0.8;
+        }
+
+        camera.position.lerp(desiredCamPos, delta * 15);
+        camera.lookAt(targetFocus);
+
+        if (!window._logged) {
+          window._logged = true;
+          document.title = "DEBUG_CAM: " + JSON.stringify({
+            playerPos: player.group.position,
+            camPos: camera.position,
+            desiredCamPos: desiredCamPos,
+            targetFocus: targetFocus,
+            cameraDistance: cameraDistance,
+            camGroundY: camGroundY
+          });
+        }
+      }
+
+      // --- COWS UPDATE & PROXIMITY CHECK ---
+      nearestCow = null;
+      let minCowDist = 999;
+
+      cows.forEach(cow => {
+        // Wander AI
+        cow.changeDirTime -= delta;
+        if (cow.changeDirTime <= 0) {
+          cow.changeDirTime = 3 + Math.random() * 5;
+          cow.direction.set(Math.random() - 0.5, 0, Math.random() - 0.5).normalize();
+          cow.mesh.rotation.y = Math.atan2(cow.direction.x, cow.direction.z);
+        }
+        cow.mesh.position.addScaledVector(cow.direction, cow.speed * delta);
+
+        // Check distance to player
+        const dist = player.group.position.distanceTo(cow.mesh.position);
+        if (dist < minCowDist) {
+          minCowDist = dist;
+          if (dist < 4.0) {
+            nearestCow = cow;
+          }
+        }
+      });
+
+      // Update animation mixers
+      cowMixers.forEach(m => m.update(delta));
+
+      // --- INTERACTION PROMPT DISPLAY ---
+      const promptEl = document.getElementById('interact-prompt');
+      const promptText = document.getElementById('interact-text');
+      const distToTractor = player.group.position.distanceTo(tractor.position);
+
+      if (nearestCow) {
+        promptEl.style.display = 'flex';
+        promptText.textContent = "Aai de koe! 🐮";
+      } else if (distToTractor < 5.0) {
+        promptEl.style.display = 'flex';
+        promptText.textContent = "Tractor toeteren! 🚜";
+      } else {
+        promptEl.style.display = 'none';
+      }
+
+      // --- MILK BOTTLES UPDATE & COLLECTION ---
+      milkBottles.forEach(bottle => {
+        if (!bottle.collected) {
+          bottle.group.rotation.y += delta * 2.0;
+          bottle.group.position.y = bottle.baseY + Math.sin(clock.getElapsedTime() * 3.5 + bottle.id) * 0.15;
+
+          const d = player.group.position.distanceTo(bottle.group.position);
+          if (d < 2.0) {
+            // Collect!
+            bottle.collected = true;
+            scene.remove(bottle.group);
+            milkCollected++;
+            document.getElementById('milk-val').textContent = milkCollected;
+            sounds.playDing();
+            triggerGamepadRumble(120, 0.7);
+            showBanner(`Melkfles verzameld (${milkCollected}/10)! 🥛`, "✨");
+
+            if (milkCollected === 10) {
+              setTimeout(() => {
+                showBanner("🏆 Gefeliciteerd! Je hebt alle 10 melkflessen gevonden! Echte Dairy Campus Boer!", "🌟");
+              }, 1200);
+            }
+          }
+        }
+      });
+
+      // Update minimap
+      updateMinimap();
+
+      renderer.render(scene, camera);
+    }
+
+    // -------------------------------------------------------------
+    // ASSET LOADING SEQUENCE
+    // -------------------------------------------------------------
+    const loadingBar = document.getElementById('loading-bar');
+    const loadingText = document.getElementById('loading-text');
+    const loadingScreen = document.getElementById('loading-screen');
+
+    loadingBar.style.width = "30%";
+    loadingText.textContent = "Dairy Campus 3D Boerderij inladen...";
+
+    gltfLoader.load(
+      'barn.glb',
+      (gltf) => {
+        setupBarnMaterials(gltf);
+        loadingBar.style.width = "75%";
+        loadingText.textContent = "Koeien en animaties inladen...";
+
+        // Load cows
+        gltfLoader.load(
+          'cow4.glb',
+          (cowGltf) => {
+            spawnCows(cowGltf);
+            loadingBar.style.width = "100%";
+            loadingText.textContent = "Klaar om te spelen!";
+
+            loadingScreen.style.display = 'none';
+            showBanner("Welkom op de Dairy Campus! Gebruik de controller of WASD om te lopen!", "🤠");
+            animate();
+          },
+          undefined,
+          (err) => {
+            console.warn("Cow model load error, proceeding without cows:", err);
+            loadingBar.style.width = "100%";
+            loadingScreen.style.display = 'none';
+            animate();
+          }
+        );
+      },
+      (xhr) => {
+        if (xhr.total) {
+          const p = Math.round((xhr.loaded / xhr.total) * 60);
+          loadingBar.style.width = (15 + p) + "%";
+        }
+      },
+      (err) => {
+        console.error("Barn model load error:", err);
+        loadingText.textContent = "Fout bij inladen van het boerderij model.";
+        // Still start game on base pasture
+        loadingScreen.style.display = 'none';
+        animate();
+      }
+    );
+
+    // Resize handling
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
