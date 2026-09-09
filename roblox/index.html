@@ -1185,6 +1185,8 @@
     scene.fog = new THREE.FogExp2(0x89c7f4, 0.0028);
 
     const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 800);
+    window.debugScene = scene;
+    window.debugCamera = camera;
 
     // Sunlight & Ambience
     const sunLight = new THREE.DirectionalLight(0xfffaed, 2.2);
