@@ -1833,13 +1833,20 @@
     const walkableMeshes = [baseGround];
     const gltfLoader = new GLTFLoader();
 
-    function setupBarnMaterials(gltf) {
+    function setupBarnMaterials(gltf, modelScale = null) {
       const model = gltf.scene;
 
-      // Assimp already converts FBX Z-up to glTF Y-up in RootNode matrix.
-      // Do NOT rotate model.rotation.x - keep rotation 0 so farm is completely flat/horizontal on ground!
+      // Auto-detect scale:
+      // barn_textured.glb from Blender is already in exact real-world meters (scale 1.0)
+      // legacy barn.glb from raw FBX Assimp conversion was in imperial feet (scale 0.3048)
+      let finalScale = modelScale;
+      if (finalScale === null) {
+        const isBlenderModel = !!model.getObjectByName('Campus_Roofs') || !!model.getObjectByName('Campus_Walls_Wood') || !!model.getObjectByName('Campus_Floors_Ground');
+        finalScale = isBlenderModel ? 1.0 : 0.3048;
+      }
+
       model.rotation.set(0, 0, 0);
-      model.scale.set(0.3048, 0.3048, 0.3048);
+      model.scale.set(finalScale, finalScale, finalScale);
       model.position.set(0, 0, 0);
 
       // Vibrant Roblox-style Materials
