@@ -651,7 +651,7 @@
     }
     .char-cards-grid {
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 10px;
       margin-bottom: 20px;
     }
@@ -722,6 +722,9 @@
     }
   </style>
 
+  <!-- ES Module Shims for 100% Mobile Browser Compatibility (iOS Safari & Android) -->
+  <script async src="https://ga.jspm.io/npm:es-module-shims@1.10.0/dist/es-module-shims.js"></script>
+
   <!-- Import Maps for Three.js -->
   <script type="importmap">
     {
@@ -730,6 +733,16 @@
         "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
       }
     }
+  </script>
+  <script>
+    window.addEventListener('error', function(e) {
+      console.error("Global game error:", e);
+      var text = document.getElementById('loading-text');
+      if (text) {
+        text.style.color = '#ef4444';
+        text.textContent = 'Fout bij opstarten: ' + (e.message || e);
+      }
+    });
   </script>
 </head>
 <body>
@@ -806,6 +819,21 @@
           <div class="char-card-avatar">👨‍🌾</div>
           <div class="char-card-name">Aebe</div>
           <span class="char-card-gender gender-man">Man</span>
+        </div>
+        <div class="char-card" data-char="martin">
+          <div class="char-card-avatar">👨‍🌾</div>
+          <div class="char-card-name">Martin</div>
+          <span class="char-card-gender gender-man">Man</span>
+        </div>
+        <div class="char-card" data-char="tiny">
+          <div class="char-card-avatar">👩‍🌾</div>
+          <div class="char-card-name">Tiny</div>
+          <span class="char-card-gender gender-vrouw">Vrouw</span>
+        </div>
+        <div class="char-card" data-char="toos">
+          <div class="char-card-avatar">👩‍🌾</div>
+          <div class="char-card-name">Toos</div>
+          <span class="char-card-gender gender-vrouw">Vrouw</span>
         </div>
         <div class="char-card selected" data-char="bert">
           <div class="char-card-avatar">🤠</div>
@@ -913,8 +941,29 @@
 
   <!-- Game Logic Module -->
   <script type="module">
-    import * as THREE from 'three';
-    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+    import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js';
+
+    // Polyfill roundRect for iOS < 16.1 & mobile browsers
+    if (typeof CanvasRenderingContext2D !== 'undefined' && !CanvasRenderingContext2D.prototype.roundRect) {
+      CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+        if (!r) r = 0;
+        if (typeof r === 'number') r = [r, r, r, r];
+        const rad = r[0] || 0;
+        this.beginPath();
+        this.moveTo(x + rad, y);
+        this.lineTo(x + w - rad, y);
+        this.quadraticCurveTo(x + w, y, x + w, y + rad);
+        this.lineTo(x + w, y + h - rad);
+        this.quadraticCurveTo(x + w, y + h, x + w - rad, y + h);
+        this.lineTo(x + rad, y + h);
+        this.quadraticCurveTo(x, y + h, x, y + h - rad);
+        this.lineTo(x, y + rad);
+        this.quadraticCurveTo(x, y, x + rad, y);
+        this.closePath();
+        return this;
+      };
+    }
 
     // -------------------------------------------------------------
     // AUDIO ENGINE (Web Audio API Synthesizer - Zero missing files)
@@ -1035,11 +1084,23 @@
     // THREE.JS SETUP
     // -------------------------------------------------------------
     const canvas = document.getElementById('game-canvas');
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+    const isMobileDevice = (window.innerWidth <= 800) || ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    let renderer;
+    try {
+      renderer = new THREE.WebGLRenderer({
+        canvas,
+        antialias: !isMobileDevice,
+        powerPreference: 'default'
+      });
+    } catch (e) {
+      console.warn("Fallback WebGLRenderer:", e);
+      renderer = new THREE.WebGLRenderer({ canvas });
+    }
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobileDevice ? 1.5 : 2));
+    renderer.setClearColor(0x7ec0ee, 1);
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type = isMobileDevice ? THREE.BasicShadowMap : THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.05;
 
@@ -1053,8 +1114,8 @@
     const sunLight = new THREE.DirectionalLight(0xfffaed, 2.2);
     sunLight.position.set(120, 180, 90);
     sunLight.castShadow = true;
-    sunLight.shadow.mapSize.width = 2048;
-    sunLight.shadow.mapSize.height = 2048;
+    sunLight.shadow.mapSize.width = isMobileDevice ? 1024 : 2048;
+    sunLight.shadow.mapSize.height = isMobileDevice ? 1024 : 2048;
     sunLight.shadow.camera.near = 10;
     sunLight.shadow.camera.far = 400;
     const d = 160;
@@ -1163,6 +1224,44 @@
         hatBandColor: 0x451a03,
         hatBrimColor: 0xd97706,
         icon: '🤠'
+      },
+      martin: {
+        id: 'martin',
+        name: 'Martin',
+        title: '👨‍🌾 Boer Martin',
+        gender: 'man',
+        colorPlaid: '#7c3aed', // Purple plaid flannel
+        colorDarkPlaid: '#5b21b6',
+        colorOveralls: '#1e3a8a',
+        hatBandColor: 0x6d28d9,
+        hatBrimColor: 0xd97706,
+        icon: '👨‍🌾'
+      },
+      tiny: {
+        id: 'tiny',
+        name: 'Tiny',
+        title: '👩‍🌾 Boerin Tiny',
+        gender: 'vrouw',
+        hairColor: 0xb45309, // Warm auburn hair
+        colorPlaid: '#0d9488', // Teal plaid flannel
+        colorDarkPlaid: '#115e59',
+        colorOveralls: '#1e3a8a',
+        hatBandColor: 0x0f766e,
+        hatBrimColor: 0xeab308,
+        icon: '👩‍🌾'
+      },
+      toos: {
+        id: 'toos',
+        name: 'Toos',
+        title: '👩‍🌾 Boerin Toos',
+        gender: 'vrouw',
+        hairColor: 0x64748b, // Silver-slate hair
+        colorPlaid: '#ea580c', // Warm rust plaid flannel
+        colorDarkPlaid: '#9a3412',
+        colorOveralls: '#334155',
+        hatBandColor: 0xe11d48,
+        hatBrimColor: 0xeab308,
+        icon: '👩‍🌾'
       }
     };
 
@@ -1365,15 +1464,15 @@
         hatGroup.rotation.x = -0.05;
         this.head.add(hatGroup);
 
-        // Female Hair Group (for Anna - Blond!)
+        // Female Hair Group (for Anna, Tiny, Toos)
         this.hairGroup = new THREE.Group();
-        const blondeHairMat = new THREE.MeshStandardMaterial({
-          color: 0xfbbf24, // Radiant golden blonde
+        this.hairMat = new THREE.MeshStandardMaterial({
+          color: 0xfbbf24, // Radiant golden blonde (default for Anna)
           roughness: 0.55,
           metalness: 0.08
         });
         const ponytailGeo = new THREE.CylinderGeometry(0.12, 0.18, 0.65, 10);
-        const ponytail = new THREE.Mesh(ponytailGeo, blondeHairMat);
+        const ponytail = new THREE.Mesh(ponytailGeo, this.hairMat);
         ponytail.position.set(0, -0.16, -0.36);
         ponytail.rotation.x = 0.28;
         this.hairGroup.add(ponytail);
@@ -1387,9 +1486,9 @@
         this.hairGroup.add(scrunchie);
 
         const sideHairGeo = new THREE.BoxGeometry(0.08, 0.35, 0.26);
-        const leftHair = new THREE.Mesh(sideHairGeo, blondeHairMat);
+        const leftHair = new THREE.Mesh(sideHairGeo, this.hairMat);
         leftHair.position.set(-0.29, 0.04, 0.08);
-        const rightHair = new THREE.Mesh(sideHairGeo, blondeHairMat);
+        const rightHair = new THREE.Mesh(sideHairGeo, this.hairMat);
         rightHair.position.set(0.29, 0.04, 0.08);
         this.hairGroup.add(leftHair);
         this.hairGroup.add(rightHair);
@@ -1555,9 +1654,12 @@
           this.hatBand.material.color.setHex(data.hatBandColor);
         }
 
-        // 4. Update Hair (Ponytail for Anna)
+        // 4. Update Hair (for female characters: Anna, Tiny, Toos)
         if (this.hairGroup) {
           this.hairGroup.visible = isFemale;
+          if (isFemale && this.hairMat) {
+            this.hairMat.color.setHex(data.hairColor || 0xfbbf24);
+          }
         }
 
         // 5. Update Floating Name Tag above head
