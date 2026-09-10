@@ -22,14 +22,15 @@
             /* Technical, monospaced font family */
             font-family: 'Courier New', Courier, monospace;
             color: #e0f2f1; /* Light, cool text color */
-            overflow: hidden; /* Keep it contained like a screen */
-            padding: 20px;
+            overflow-x: hidden;
+            overflow-y: auto;
+            padding: 20px 15px;
         }
 
         /* Scanline effect for screen texture */
         body::before {
             content: "";
-            position: absolute;
+            position: fixed;
             top: 0;
             left: 0;
             width: 100%;
@@ -42,6 +43,7 @@
                 transparent 2px
             );
             pointer-events: none;
+            z-index: 1;
         }
 
         .lab-container {
@@ -54,6 +56,7 @@
             max-width: 700px;
             border: 1px solid rgba(0, 255, 255, 0.1);
             position: relative;
+            z-index: 2;
         }
 
         /* Portal header style */
@@ -61,36 +64,41 @@
             border-bottom: 2px solid rgba(0, 255, 255, 0.3);
             margin-bottom: 30px;
             padding-bottom: 15px;
-            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 15px;
         }
 
         h1 {
-            font-size: 2.5em;
+            font-size: 2.2em;
             color: #00ffff; /* Bright Cyan for titles */
             text-transform: uppercase;
             letter-spacing: 2px;
             text-shadow: 0 0 10px rgba(0, 255, 255, 0.7);
+            line-height: 1.15;
+            word-break: break-word;
         }
 
         /* Metadata info box */
         .protocol-label {
-            position: absolute;
-            top: 0;
-            right: 0;
             font-size: 0.8em;
             color: rgba(0, 255, 255, 0.5);
             background: rgba(0, 0, 0, 0.3);
             padding: 4px 8px;
             border-radius: 4px;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
         p.welcome-text {
             margin: 15px 0 30px 0;
-            font-size: 1.1em;
+            font-size: 1.05em;
             color: #b0bec5;
             line-height: 1.6;
             border-left: 3px solid rgba(0, 255, 255, 0.3);
             padding-left: 15px;
+            word-break: break-word;
         }
 
         /* Modular link container */
@@ -105,16 +113,16 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            font-size: 1.2em;
+            font-size: 1.1em;
             color: #00ffff;
             background-color: rgba(0, 0, 0, 0.4);
-            padding: 20px 30px;
+            padding: 20px 24px;
             border-radius: 8px;
             text-decoration: none;
             transition: all 0.3s ease;
             border: 1px solid rgba(0, 255, 255, 0.1);
             position: relative;
-            overflow: hidden;
+            gap: 16px;
         }
 
         /* Hover interaction: glowing module */
@@ -130,19 +138,15 @@
             content: ":: ACCESS >";
             font-size: 0.7em;
             color: rgba(0, 255, 255, 0.5);
-            margin-left: 20px;
             opacity: 0.7;
             transition: opacity 0.3s ease;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
         .link-module:hover::after {
             opacity: 1;
             color: #00ffff;
-        }
-
-        /* Remove the horizontal lines, we use gap now */
-        hr {
-            display: none;
         }
 
         /* Input specific detail text within the link */
@@ -151,8 +155,55 @@
             color: rgba(176, 190, 197, 0.8); /* Faded cool gray */
             display: block;
             margin-top: 5px;
+            line-height: 1.4;
         }
 
+        /* Mobile specific adjustments */
+        @media (max-width: 640px) {
+            body {
+                padding: 12px;
+                align-items: flex-start;
+            }
+
+            .lab-container {
+                padding: 20px 16px;
+            }
+
+            .lab-header {
+                flex-direction: column-reverse;
+                align-items: flex-start;
+                gap: 10px;
+                margin-bottom: 20px;
+                padding-bottom: 12px;
+            }
+
+            h1 {
+                font-size: 1.5em;
+                letter-spacing: 1px;
+            }
+
+            p.welcome-text {
+                font-size: 0.95em;
+                margin: 10px 0 20px 0;
+                padding-left: 10px;
+            }
+
+            .access-modules {
+                gap: 12px;
+            }
+
+            .link-module {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 14px 16px;
+                font-size: 0.95em;
+                gap: 10px;
+            }
+
+            .link-module::after {
+                align-self: flex-end;
+            }
+        }
     </style>
 </head>
 <body>
@@ -166,7 +217,7 @@
         
         <div class="access-modules">
             <a href="camera" class="link-module">
-                Prototype 1.0: View Camera
+                <span>Prototype 1.0: View Camera</span>
             </a>
 
             <a href="game" class="link-module">
