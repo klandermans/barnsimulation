@@ -106,16 +106,34 @@ flowchart TD
 | **Head-Nod Pulse Amplitude** | $0.0^\circ$ | $3.0^\circ$ | $9.5^\circ$ | $18.0^\circ$ | $25.5^\circ$ |
 | **Ground Reaction Force ($F_z$)**| 100% | 88% | 76% | 64% | 48% |
 
-* **Head-Nod Coupling Mechanism:**
-  * **Forelimb lameness (FL / FR):** Head and neck are thrust **UPWARD** upon claw impact via a Gaussian pulse ($\sigma = 0.08$ cycle duration) to reduce peak vertical ground reaction force on the painful limb.
-  * **Hindlimb lameness (HL / HR):** Head and neck dive **DOWNWARD** upon claw impact, shifting the center of gravity anteriorly over the forelimbs to unload the painful hindquarter.
+* **Temporal Cadence Warping (`_computeCadenceWarp`):**
+  * *Hurry off the lame leg:* As the painful hoof strikes ground, cycle playback speed increases dynamically (+40% to +65%) to abbreviate the painful stance phase.
+  * *Lingering on the sound leg:* Stance time on the healthy contralateral limb is extended (-25% to -35%), resulting in an authentic asymmetric footfall cadence (*tap... TAAAP, tap... TAAAP*).
+* **"Down on Sound" Head-Nod & Body Dip Dynamics:**
+  * **Forelimb lameness (FL / FR):** Head and neck are thrust **UPWARD** upon claw impact to unweight the front limb, and drop deeply **DOWNWARD** onto the sound forelimb as body mass is absorbed by the healthy shoulder ("Down on sound").
+  * **Hindlimb lameness (HL / HR):** Head and neck dive **DOWNWARD** upon claw impact, shifting center of gravity anteriorly over the forelimbs to unload the painful hindquarter, returning upward on the sound hind step.
+  * **Vertical & Lateral Body Recoil:** The center of mass (`bones.root.position.y`) dips into the sound leg, while `bones.root.position.x` and pelvic roll shift laterally away from the painful claw.
+  * **Stiff Pastern (Fetlock Guard):** Pastern hyperextension is suppressed during stance to spare the sesamoidean apparatus.
 * **Outer Claw Abduction:** Because $>75\%$ of claw pathologies occur on the lateral claw of the hindlimbs (*van der Tol et al., 2003*), affected limbs swing in an outward arc of $8^\circ$ to $20^\circ$ (`upperLegH.ry = sideSign · abduct`) during the swing phase.
 * **Multilateral Superposition:**
   * *Bilateral Hind (LA + RA):* Wide-tracking gait ("cow-hocked" abduction) and persistent kyphosis ($8.5^\circ$).
   * *Bilateral Fore (LV + RV):* Stiff, shortened, stilted strides ("walking on eggshells") with lowered, rigid head carriage.
   * *Quadruple Lameness (Laminitis):* Maximum kyphosis ($>11.5^\circ$), minimal ground contact duration, continuous weight shifting.
 
-### 3.3 Physical Transitions & Recumbency Postures
+### 3.3 Zootechnical Conformation (BCS, Gestation & Parity)
+1. **Body Condition Score (BCS 1.0 – 5.0, Ferguson / Edmonson):**
+   * *Thin (BCS 1.0–2.5):* Visible 13 ribs (*costae*), deep hollow hunger groove (*fossa paralumbalis*), sharp horizontal lumbar shelf, razorback dorsal line (*processus spinosi*), deep sunken tailhead cavity (*cavitas sacralis*), and sharp V-line between hooks and pins.
+   * *Fat (BCS 3.75–5.0):* Padded flat back, filled hunger groove, rounded hooks/pins, heavy brisket/dewlap, and bulging adipose cushions (*fat patches*) beside the tailhead.
+2. **Gestation (0 – 280 days):**
+   * *Ventral Abdominal Sag:* Progressive belly drop under the weight of the 45–65 kg fetus and amniotic fluid.
+   * *Right Flank Asymmetry:* Pronounced unilateral bulge on the right abdominal floor where the gravid uterus rests.
+   * *Pre-Partum Udder Edema (Day 240–280):* Udder swelling and teat distension prior to calving.
+   * *Waddling Gait (Day 180–280):* Widened hindlimb stance and pelvic waddle during walk to clear the heavy abdomen.
+3. **Parity & Age (Parity 0 to 5+):**
+   * *Heifer (Parity 0, ~2 years):* Slender, narrower pin bones, tightly suspended juvenile udder held high above the hocks, brisk step (+8% cadence).
+   * *Mature Cow (Parity 4–5+, 6–8+ years):* Broad pelvic pin spread, deeper ribcage, stretched lateral suspensory ligament (*ligamentum suspensorium*) causing the udder floor to drop closer to the hocks, and a heavier, more deliberate walking pace (-12% base speed).
+
+### 3.4 Physical Transitions & Recumbency Postures
 1. **Lying Down Sequence (*Lidfors, 1989*):** Sniffing/inspection $\rightarrow$ carpal joints drop first to the floor $\rightarrow$ controlled pelvic roll into sternal recumbency.
 2. **Standing Up Sequence (*Bovine Law*):**
    * *Longing motion:* Anterior lunge of the 40–50 kg head/neck (`neck1.rx = 0.55 rad`) shifts center of mass over the front knees.
@@ -126,7 +144,7 @@ flowchart TD
    * *Sternal:* Upright resting posture on sternum, legs tucked under body (normal resting/rumination state).
    * *Lateral (Deep REM sleep):* Complete muscular atony, head flat on pasture substrate, limbs extended sideways (lasts only 30–45 min/day, *Ruckebusch, 1972*).
 
-### 3.4 Micro-Behaviors & Ethology
+### 3.5 Micro-Behaviors & Ethology
 1. **Rumination Biomechanics (*Bos taurus* standard):**
    * **Closed mouth:** Chewing cud occurs with lips together. Motion is a rhythmic lateral-circular grinding stroke of the mandible against maxillary molars at 55–65 bpm:
      $$\theta_{\text{jaw, yaw}} = \sin(\omega t) \cdot 0.035\text{ rad}, \quad \theta_{\text{jaw, roll}} = \cos(\omega t) \cdot 0.012\text{ rad}$$
