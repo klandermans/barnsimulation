@@ -136,6 +136,7 @@ export class ControlPanel {
             this.state.parity = Math.round(v);
             this._updateParityLabel(Math.round(v));
             this._syncCowPassportUI();
+            if (this.behavior) this.behavior.onLamenessChanged();
         });
 
         document.querySelectorAll('.zt-preset-btn').forEach(btn => {
@@ -631,9 +632,9 @@ export class ControlPanel {
         } else if (lameHoeven.length === 1) {
             const [leg, s] = lameHoeven[0];
             const isFront = leg.startsWith('F');
-            const nod = isFront ? 'Kop OMHOOG bij hoefslag' : 'Kop OMLAAG (gewichtsoverdracht)';
-            const abduct = !isFront ? ' • Abductie buitenklauw (8°-20°)' : ' • Verkorte zwaaifase';
-            summary = `Score ${s.toFixed(1)} [${legNames[leg]}]: ${nod}${abduct} • Kyfose`;
+            const nod = isFront ? 'Kop OMHOOG bij pijnlijke slag ("Down on sound" bij gezonde poot)' : 'Kopduik bij pijnlijke slag • Bekkendaling';
+            const abduct = !isFront ? ' • Abductie buitenklauw' : ' • Stijve koot & pootontlasting';
+            summary = `Score ${s.toFixed(1)} [${legNames[leg]}]: Asymmetrisch hinken • ${nod}${abduct} • Kyfose`;
         } else {
             const details = lameHoeven.map(([l, s]) => `${legCodes[l]}:${s.toFixed(1)}`).join(', ');
             summary = `Multilateraal [${details}]: Max ${maxScore.toFixed(1)} • Gecombineerde kopdeining & rugboog`;
