@@ -2,260 +2,1136 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Barn Simulator - Lab Portal</title>
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        /* Reset default styles */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
+            min-height: 100vh;
+            background-color: #000201;
+            font-family: 'Courier New', Courier, monospace;
+            color: #d1fae5;
+            overflow-x: hidden;
+            overflow-y: auto;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            /* Dark, technical background gradient */
-            background: radial-gradient(circle at center, #0a192f 0%, #02060c 100%);
-            /* Technical, monospaced font family */
-            font-family: 'Courier New', Courier, monospace;
-            color: #e0f2f1; /* Light, cool text color */
-            overflow-x: hidden;
-            overflow-y: auto;
-            padding: 20px 15px;
+            padding: 30px 15px;
+            position: relative;
+            perspective: 1200px;
         }
 
-        /* Scanline effect for screen texture */
-        body::before {
-            content: "";
+        /* WebGL Background Canvas */
+        #bg-canvas {
             position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            background: repeating-linear-gradient(
-                0deg,
-                rgba(0, 0, 0, 0.05),
-                rgba(0, 0, 0, 0.05) 1px,
-                transparent 1px,
-                transparent 2px
-            );
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
             pointer-events: none;
-            z-index: 1;
+        }
+
+        /* Scanline & Lens Texture */
+        .crt-glass-filter {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.45) 50%),
+                        repeating-linear-gradient(90deg, rgba(0, 255, 70, 0.02) 0px, rgba(0, 255, 70, 0.02) 1px, transparent 1px, transparent 3px);
+            background-size: 100% 3px, 6px 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .vignette {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(circle at center, transparent 30%, rgba(0, 5, 2, 0.94) 90%);
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        /* Bash Terminal Overlay */
+        #terminal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(1, 10, 4, 0.96);
+            z-index: 20;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.8, 0, 0.2, 1);
+        }
+
+        #terminal-overlay.hidden {
+            opacity: 0;
+            transform: scale(1.15);
+            pointer-events: none;
+        }
+
+        .terminal-window {
+            width: 100%;
+            max-width: 860px;
+            height: 82vh;
+            background: #020b04;
+            border: 1px solid rgba(0, 255, 100, 0.4);
+            border-radius: 8px;
+            box-shadow: 0 0 50px rgba(0, 255, 100, 0.25);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .terminal-bar {
+            background: rgba(0, 40, 15, 0.8);
+            border-bottom: 1px solid rgba(0, 255, 100, 0.3);
+            padding: 8px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75em;
+            color: #00ff66;
+            letter-spacing: 1px;
+        }
+
+        .terminal-dots {
+            display: flex;
+            gap: 6px;
+        }
+
+        .terminal-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .dot-red { background: #ff5f56; }
+        .dot-yellow { background: #ffbd2e; }
+        .dot-green { background: #27c93f; }
+
+        .terminal-body {
+            flex: 1;
+            padding: 16px 20px;
+            overflow-y: auto;
+            font-size: 0.82em;
+            line-height: 1.5;
+            color: #4ade80;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .t-cmd { color: #ffffff; font-weight: bold; }
+        .t-ok { color: #00ff66; }
+        .t-warn { color: #facc15; }
+        .t-crit { color: #f87171; font-weight: bold; }
+        .t-cyan { color: #38bdf8; }
+        .t-dim { color: #166534; }
+
+        .terminal-skip {
+            position: absolute;
+            bottom: 14px;
+            right: 18px;
+            background: rgba(0, 255, 100, 0.15);
+            border: 1px solid #00ff66;
+            color: #00ff66;
+            padding: 5px 12px;
+            font-family: inherit;
+            font-size: 0.72em;
+            cursor: pointer;
+            border-radius: 4px;
+            letter-spacing: 1px;
+            transition: all 0.2s;
+        }
+
+        .terminal-skip:hover {
+            background: #00ff66;
+            color: #000;
+        }
+
+        /* 3D Monitor Viewport */
+        .monitor-viewport {
+            width: 100%;
+            max-width: 780px;
+            position: relative;
+            z-index: 2;
+            transform-style: preserve-3d;
+            transition: transform 0.08s ease-out;
         }
 
         .lab-container {
-            text-align: left; /* Align left for technical readouts */
-            padding: 40px;
-            background-color: rgba(10, 25, 47, 0.85); /* Semi-transparent lab dark */
-            box-shadow: 0px 0px 30px rgba(0, 255, 255, 0.2); /* Subtle cyan glow */
+            text-align: left;
+            padding: 30px 36px;
+            background: rgba(2, 16, 6, 0.75);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            box-shadow: 0 0 60px rgba(0, 255, 100, 0.25), inset 0 0 40px rgba(0, 255, 70, 0.08);
             border-radius: 12px;
-            width: 100%;
-            max-width: 700px;
-            border: 1px solid rgba(0, 255, 255, 0.1);
+            border: 1px solid rgba(0, 255, 100, 0.4);
             position: relative;
-            z-index: 2;
+            transform: scaleY(0.005) scaleX(0.2);
+            opacity: 0;
+            transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s ease;
+            pointer-events: none;
         }
 
-        /* Portal header style */
+        .lab-container.booted {
+            transform: scaleY(1) scaleX(1);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .lab-container::before {
+            content: "";
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            width: 22px;
+            height: 22px;
+            border-top: 3px solid #00ff66;
+            border-left: 3px solid #00ff66;
+        }
+
+        .lab-container::after {
+            content: "";
+            position: absolute;
+            bottom: -2px;
+            right: -2px;
+            width: 22px;
+            height: 22px;
+            border-bottom: 3px solid #00ff66;
+            border-right: 3px solid #00ff66;
+        }
+
         .lab-header {
-            border-bottom: 2px solid rgba(0, 255, 255, 0.3);
-            margin-bottom: 30px;
-            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(0, 255, 100, 0.35);
+            margin-bottom: 22px;
+            padding-bottom: 14px;
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
+            align-items: center;
             gap: 15px;
         }
 
         h1 {
-            font-size: 2.2em;
-            color: #00ffff; /* Bright Cyan for titles */
+            font-size: 1.7em;
+            color: #55ff99;
             text-transform: uppercase;
-            letter-spacing: 2px;
-            text-shadow: 0 0 10px rgba(0, 255, 255, 0.7);
-            line-height: 1.15;
-            word-break: break-word;
+            letter-spacing: 3px;
+            text-shadow: 0 0 16px rgba(0, 255, 100, 0.8), 0 0 2px #fff;
+            line-height: 1.2;
         }
 
-        /* Metadata info box */
-        .protocol-label {
-            font-size: 0.8em;
-            color: rgba(0, 255, 255, 0.5);
-            background: rgba(0, 0, 0, 0.3);
-            padding: 4px 8px;
+        .hud-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .hud-btn {
+            background: rgba(0, 255, 100, 0.1);
+            border: 1px solid rgba(0, 255, 100, 0.4);
+            color: #00ff66;
+            padding: 6px 12px;
+            font-family: inherit;
+            font-size: 0.75em;
+            letter-spacing: 1px;
             border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
             white-space: nowrap;
-            flex-shrink: 0;
         }
 
-        p.welcome-text {
-            margin: 15px 0 30px 0;
-            font-size: 1.05em;
-            color: #b0bec5;
-            line-height: 1.6;
-            border-left: 3px solid rgba(0, 255, 255, 0.3);
-            padding-left: 15px;
-            word-break: break-word;
+        .hud-btn:hover {
+            background: #00ff66;
+            color: #000;
+            box-shadow: 0 0 20px #00ff66;
         }
 
-        /* Modular link container */
         .access-modules {
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 10px;
         }
 
-        /* Styled as technical access modules */
         .link-module {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            font-size: 1.1em;
-            color: #00ffff;
-            background-color: rgba(0, 0, 0, 0.4);
-            padding: 20px 24px;
-            border-radius: 8px;
+            font-size: 0.98em;
+            color: #a7f3d0;
+            background-color: rgba(1, 22, 8, 0.6);
+            padding: 14px 18px;
+            border-radius: 6px;
             text-decoration: none;
-            transition: all 0.3s ease;
-            border: 1px solid rgba(0, 255, 255, 0.1);
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            border: 1px solid rgba(0, 255, 100, 0.18);
             position: relative;
-            gap: 16px;
+            gap: 14px;
         }
 
-        /* Hover interaction: glowing module */
         .link-module:hover {
-            background-color: rgba(0, 255, 255, 0.1);
-            box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
-            transform: translateY(-2px);
-            border: 1px solid rgba(0, 255, 255, 0.5);
+            background-color: rgba(0, 255, 100, 0.18);
+            border-color: rgba(0, 255, 100, 0.9);
+            box-shadow: 0 0 25px rgba(0, 255, 100, 0.4), inset 0 0 15px rgba(0, 255, 100, 0.1);
+            transform: translateX(8px);
+            color: #ffffff;
         }
 
-        /* Icon/Arrow for the module */
         .link-module::after {
-            content: ":: ACCESS >";
+            content: "[LAUNCH] >";
             font-size: 0.7em;
-            color: rgba(0, 255, 255, 0.5);
-            opacity: 0.7;
-            transition: opacity 0.3s ease;
+            font-weight: bold;
+            color: rgba(0, 255, 100, 0.5);
+            transition: all 0.2s ease;
             white-space: nowrap;
             flex-shrink: 0;
+            letter-spacing: 1px;
         }
 
         .link-module:hover::after {
-            opacity: 1;
-            color: #00ffff;
+            color: #55ff99;
+            text-shadow: 0 0 10px #00ff66;
         }
 
-        /* Input specific detail text within the link */
         .input-detail {
-            font-size: 0.8em;
-            color: rgba(176, 190, 197, 0.8); /* Faded cool gray */
+            font-size: 0.74em;
+            color: #059669;
             display: block;
-            margin-top: 5px;
-            line-height: 1.4;
+            margin-top: 3px;
+            line-height: 1.35;
         }
 
-        /* Mobile specific adjustments */
+        .link-module:hover .input-detail {
+            color: #34d399;
+        }
+
+        #hud-telemetry {
+            position: fixed;
+            top: 20px;
+            left: 25px;
+            font-size: 0.75em;
+            letter-spacing: 2px;
+            color: #00ff66;
+            text-shadow: 0 0 8px #00ff66;
+            z-index: 10;
+            pointer-events: none;
+            line-height: 1.6;
+        }
+
+        #warp-status {
+            position: fixed;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.85em;
+            letter-spacing: 4px;
+            color: #55ff99;
+            text-shadow: 0 0 14px #00ff88;
+            z-index: 10;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+            text-align: center;
+            width: 100%;
+            opacity: 0;
+        }
+
         @media (max-width: 640px) {
             body {
-                padding: 12px;
+                padding: 12px 10px;
                 align-items: flex-start;
             }
-
             .lab-container {
-                padding: 20px 16px;
+                padding: 18px 14px;
             }
-
             .lab-header {
                 flex-direction: column-reverse;
                 align-items: flex-start;
                 gap: 10px;
-                margin-bottom: 20px;
-                padding-bottom: 12px;
             }
-
             h1 {
-                font-size: 1.5em;
-                letter-spacing: 1px;
+                font-size: 1.3em;
             }
-
-            p.welcome-text {
-                font-size: 0.95em;
-                margin: 10px 0 20px 0;
-                padding-left: 10px;
-            }
-
-            .access-modules {
-                gap: 12px;
-            }
-
             .link-module {
                 flex-direction: column;
                 align-items: flex-start;
-                padding: 14px 16px;
-                font-size: 0.95em;
-                gap: 10px;
+                gap: 6px;
+                padding: 12px 14px;
             }
-
             .link-module::after {
                 align-self: flex-end;
+            }
+            #hud-telemetry {
+                display: none;
             }
         }
     </style>
 </head>
 <body>
-    <div class="lab-container">
-        <div class="lab-header">
-            <h1>Prototyping the Barn Simulation game</h1>
-            <span class="protocol-label">PROTOCOL: BLCA-v5.0</span>
-        </div>
-        
-        <p class="welcome-text">Initialising system... Welcome to the ultimate barn simulation experience. Select access node below:</p>
-        
-        <div class="access-modules">
-            <a href="camera" class="link-module">
-                <span>Prototype 1.0: View Camera</span>
-            </a>
 
-            <a href="game" class="link-module">
-                <div>
-                    Prototype 2.0: Barn Simulation Experience
-                    <span class="input-detail">(Inputs: W, A, D & Mouse, or Gamepad)</span>
-                </div>
-            </a>
+    <!-- 3D WebGL Canvas Layer -->
+    <canvas id="bg-canvas"></canvas>
+    <div class="crt-glass-filter"></div>
+    <div class="vignette"></div>
 
-            <a href="nlas" class="link-module">
-                <div>
-                    Prototype 3.0: Nlas Simulation Experience
-                    <span class="input-detail">(Inputs: Cursors / W, A, D & Mouse, or Gamepad)</span>
-                </div>
-            </a>
+    <div id="hud-telemetry">
+        [SYS_CORE: STANDBY]<br>
+        [NODE_TARGET: IDLE]<br>
+        [CAMERA_VECTOR: TRACKING]
+    </div>
 
-            <a href="real" class="link-module">
-                <div>
-                    Prototype 4.0: Calibrated Real Simulation Experience
-                    <span class="input-detail">(Inputs: Calibrated Camera Views, 19 Keypoints, 3D Cow Models)</span>
-                </div>
-            </a>
+    <div id="warp-status">SINGULARITY DETECTED: ENGAGING TRAJECTORY</div>
 
-            <a href="roblox/index.html" class="link-module">
-                <div>
-                    Prototype 5.0: Roblox Farm Game
-                    <span class="input-detail">(Inputs: Controller / Gamepad, Touch Mobile, WASD & Muis)</span>
+    <!-- Fullscreen Bash Terminal Simulation Layer -->
+    <div id="terminal-overlay">
+        <div class="terminal-window">
+            <div class="terminal-bar">
+                <div class="terminal-dots">
+                    <span class="terminal-dot dot-red"></span>
+                    <span class="terminal-dot dot-yellow"></span>
+                    <span class="terminal-dot dot-green"></span>
                 </div>
-            </a>
-
-            <a href="cow/index.html" class="link-module">
-                <div>
-                    Prototype 6.0: The cow
-                </div>
-            </a>
-            
-            
+                <div>bash - wur-dairy-cluster-node01 (~/sim_cluster)</div>
+                <div>ZSH 5.9 (x86_64-linux-gnu)</div>
+            </div>
+            <div class="terminal-body" id="terminal-output"></div>
+            <button class="terminal-skip" onclick="skipBootSequence()">[ESC / SKIP BOOT]</button>
         </div>
     </div>
+
+    <!-- 3D Perspective Mounted Mainframe Viewport -->
+    <div class="monitor-viewport" id="monitorViewport">
+        <div class="lab-container" id="labContainer">
+            <div class="lab-header">
+                <h1>the Barn Simulation game</h1>
+                <div class="hud-actions">
+                    <button class="hud-btn" id="audioBtn" onclick="toggleAudio()">AUDIO: OFF</button>
+                    <button class="hud-btn" onclick="startTerminalBoot()">[RE-RUN BASH BOOT]</button>
+                </div>
+            </div>
+            
+            <div class="access-modules">
+                <a href="camera" class="link-module" data-action="camera">
+                    <span>Prototype 1.0: View Camera</span>
+                </a>
+
+                <a href="game" class="link-module" data-action="sim">
+                    <div>
+                        Prototype 2.0: Barn Simulation Experience
+                        <span class="input-detail">(Inputs: W, A, D &amp; Mouse, or Gamepad)</span>
+                    </div>
+                </a>
+
+                <a href="nlas" class="link-module" data-action="sim">
+                    <div>
+                        Prototype 3.0: Nlas Simulation Experience
+                        <span class="input-detail">(Inputs: Cursors / W, A, D &amp; Mouse, or Gamepad)</span>
+                    </div>
+                </a>
+
+                <a href="real" class="link-module" data-action="cow-keypoints">
+                    <div>
+                        Prototype 4.0: Calibrated Real Simulation Experience
+                        <span class="input-detail">(Inputs: Calibrated Camera Views, 19 Keypoints, 3D Cow Models)</span>
+                    </div>
+                </a>
+
+                <a href="roblox/index.html" class="link-module" data-action="barn">
+                    <div>
+                        Prototype 5.0: Roblox Farm Game
+                        <span class="input-detail">(Inputs: Controller / Gamepad, Touch Mobile, WASD &amp; Muis)</span>
+                    </div>
+                </a>
+
+                <a href="cow/index.html" class="link-module" data-action="cow-focus">
+                    <div>
+                        Prototype 6.0: The cow
+                    </div>
+                </a>
+                
+                <a href="demarke/index.html" class="link-module" data-action="barn">
+                    <div>
+                        Prototype 7.0: Roblox De Marke Barn Game
+                        <span class="input-detail">(WUR Proefboerderij De Marke, Isaac Sim 3D Barn, Trioliet Robot &amp; Authentieke Koeien)</span>
+                    </div>
+                </a>
+
+                <a href="dairycampus/index.html" class="link-module" data-action="barn">
+                    <div>
+                        Prototype 8.0: Roblox Dairy Campus Pro Experience
+                        <span class="input-detail">(WUR Dairy Campus Stallen, GEA 40-stands Draaicarrousel, Trioliet Voerrobot &amp; Gecorrigeerde Koe-Fysica)</span>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Integrated WebGL, Bovine Keypoint Calibration & Slow Transition Engine -->
+    <script>
+        // --- 1. Procedural Audio Synthesizer ---
+        let audioCtx = null;
+        let audioEnabled = false;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function toggleAudio() {
+            initAudio();
+            audioEnabled = !audioEnabled;
+            document.getElementById('audioBtn').textContent = audioEnabled ? 'AUDIO: ON' : 'AUDIO: OFF';
+            if (audioEnabled) playTerminalClack();
+        }
+
+        function playTerminalClack() {
+            if (!audioEnabled || !audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(1100 + Math.random() * 600, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.015, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.04);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.04);
+        }
+
+        function playKeypointBlip(freq = 880) {
+            if (!audioEnabled || !audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.025, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.08);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.08);
+        }
+
+        function playWarpSound() {
+            if (!audioEnabled || !audioCtx) return;
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(65, now);
+            osc.frequency.exponentialRampToValueAtTime(450, now + 4.5);
+            osc.frequency.exponentialRampToValueAtTime(80, now + 7.5);
+            gain.gain.setValueAtTime(0.08, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 7.5);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 7.5);
+        }
+
+        // --- 2. Paced Bash Boot Sequence ---
+        const terminalOverlay = document.getElementById('terminal-overlay');
+        const terminalOutput = document.getElementById('terminal-output');
+        let bootAborted = false;
+
+        const bootScriptLines = [
+            { text: "root@wur-node01:~$ ./launch_sim_cluster.sh --env=prod --gpu-tensorrt --bovine-mesh", cls: "t-cmd", delay: 140 },
+            { text: "[INIT] Starting WUR Dairy Campus Simulation Infrastructure v5.0...", cls: "t-ok", delay: 80 },
+            { text: "[KERNEL] Probing hardware topology: 1x NVIDIA RTX Ada 24GB VRAM detected.", cls: "t-dim", delay: 60 },
+            { text: "[CUDA] Allocating pinned memory buffers: 16,384 MiB pool initialized.", cls: "t-cyan", delay: 90 },
+            { text: "[LOAD] Compiling TensorRT model: 'yolov8x-pose-bovine-19kpts.engine'...", cls: "t-cyan", delay: 120 },
+            { text: "[DONE] TensorRT FP16 engine loaded in 0.42s (Mean Latency: 2.1ms).", cls: "t-ok", delay: 80 },
+            { text: "[STREAM] Initializing TimescaleDB telemetry sink [30 MooLogger methane sensors]...", cls: "t-dim", delay: 90 },
+            { text: "[NET] Camera rig socket sync: [CAM_01 .. CAM_08] RTSP synchronized at 60 FPS.", cls: "t-ok", delay: 70 },
+            { text: "[WARN] Microclimate sensor reading: Barn Section 4 THI index: 69.2 (nominal).", cls: "t-warn", delay: 70 },
+            { text: "[MESH] Mounting procedural environments:", cls: "t-dim", delay: 50 },
+            { text: "       -> Proefboerderij De Marke (Isaac Sim 3D Barn)", cls: "t-cyan", delay: 40 },
+            { text: "       -> Dairy Campus GEA 40-stall Rotary Milking Carousel", cls: "t-cyan", delay: 40 },
+            { text: "       -> Trioliet Autonomous Feeding Robotics Grid", cls: "t-cyan", delay: 40 },
+            { text: "[GLTF] Parsing 3D Holo-Cow LOD-0: 19 kinetic keypoints mapped.", cls: "t-ok", delay: 90 },
+            { text: "[MATRIX] Allocating Instanced WebGL stream: 5,500 glyph vectors active.", cls: "t-cyan", delay: 70 },
+            { text: "[CRIT] WARNING: Gravitational boundary breached at Z=180.0!", cls: "t-crit", delay: 150 },
+            { text: "[SYS] Event Horizon threshold collapsed: Singularity Inflow active.", cls: "t-crit", delay: 120 },
+            { text: "[EXEC] Jacking into mainframe runtime in 3... 2... 1...", cls: "t-cmd", delay: 160 }
+        ];
+
+        async function startTerminalBoot() {
+            bootAborted = false;
+            terminalOverlay.classList.remove('hidden');
+            terminalOutput.innerHTML = '';
+            labContainer.classList.remove('booted');
+
+            for (let line of bootScriptLines) {
+                if (bootAborted) return;
+                const p = document.createElement('div');
+                p.className = line.cls;
+                p.textContent = line.text;
+                terminalOutput.appendChild(p);
+                terminalOutput.scrollTop = terminalOutput.scrollHeight;
+                playTerminalClack();
+                await new Promise(r => setTimeout(r, line.delay));
+            }
+
+            if (!bootAborted) {
+                await new Promise(r => setTimeout(r, 600));
+                skipBootSequence();
+            }
+        }
+
+        function skipBootSequence() {
+            bootAborted = true;
+            terminalOverlay.classList.add('hidden');
+            triggerCinematicSequence();
+        }
+
+        // --- 3. Three.js Scene Setup ---
+        const canvas = document.getElementById('bg-canvas');
+        const labContainer = document.getElementById('labContainer');
+        const monitorViewport = document.getElementById('monitorViewport');
+        const warpStatus = document.getElementById('warp-status');
+        const telemetry = document.getElementById('hud-telemetry');
+
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x000201, 0.014);
+
+        const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const isMobile = /Mobi|Android|iPhone/i.test(navigator.userAgent);
+
+        const renderer = new THREE.WebGLRenderer({ 
+            canvas: canvas, 
+            antialias: !isMobile, 
+            powerPreference: "high-performance" 
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2.0));
+        renderer.setClearColor(scene.fog.color);
+
+        // --- 4. Matrix Glyph Texture Atlas ---
+        const glyphCanvas = document.createElement('canvas');
+        glyphCanvas.width = 512;
+        glyphCanvas.height = 512;
+        const gCtx = glyphCanvas.getContext('2d');
+        gCtx.fillStyle = '#000000';
+        gCtx.fillRect(0, 0, 512, 512);
+
+        const chars = "ｦｱｳｴｵｶｷｹｹｻｽｾﾀﾂﾃﾅﾆﾇﾈﾊﾋﾎﾏﾐﾑﾒﾓﾔﾕﾗﾘﾜ1234567890XYZABC#$&%*+<>";
+        const cols = 8;
+        const rows = 8;
+        const cellSize = 512 / cols;
+        gCtx.font = `bold ${cellSize * 0.72}px monospace`;
+        gCtx.textAlign = 'center';
+        gCtx.textBaseline = 'middle';
+        gCtx.fillStyle = '#ffffff';
+
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const char = chars[(r * cols + c) % chars.length];
+                gCtx.fillText(char, c * cellSize + cellSize / 2, r * cellSize + cellSize / 2);
+            }
+        }
+        const matrixTexture = new THREE.CanvasTexture(glyphCanvas);
+
+        // --- 5. 3D Black Hole & Singularity Objects ---
+        const blackHoleGroup = new THREE.Group();
+        blackHoleGroup.position.set(0, 0, 180);
+
+        const accretionDisk = new THREE.Mesh(
+            new THREE.RingGeometry(3, 42, 64, 16),
+            new THREE.MeshBasicMaterial({
+                color: 0x00ff77,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.65,
+                side: THREE.DoubleSide
+            })
+        );
+        accretionDisk.rotation.x = Math.PI / 2.3;
+        blackHoleGroup.add(accretionDisk);
+
+        const photonRing = new THREE.Mesh(
+            new THREE.RingGeometry(3.2, 22, 48, 8),
+            new THREE.MeshBasicMaterial({ color: 0x55ffaa, wireframe: true, transparent: true, opacity: 0.8, side: THREE.DoubleSide })
+        );
+        blackHoleGroup.add(photonRing);
+
+        blackHoleGroup.add(new THREE.Mesh(
+            new THREE.SphereGeometry(3.0, 32, 32),
+            new THREE.MeshBasicMaterial({ color: 0x000000 })
+        ));
+
+        const wormholeTunnel = new THREE.Mesh(
+            new THREE.CylinderGeometry(16, 1.8, 180, 32, 48, true),
+            new THREE.MeshBasicMaterial({ color: 0x03441a, wireframe: true, transparent: true, opacity: 0.35 })
+        );
+        wormholeTunnel.rotateX(-Math.PI / 2);
+        wormholeTunnel.position.z = -80;
+        blackHoleGroup.add(wormholeTunnel);
+
+        scene.add(blackHoleGroup);
+
+        // --- 6. 3D Wireframe CRT Terminal ---
+        const terminalGroup = new THREE.Group();
+        terminalGroup.position.set(0, 0, 0);
+
+        const termMat = new THREE.MeshBasicMaterial({
+            color: 0x00ff77,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.38
+        });
+
+        const crtCase = new THREE.Mesh(new THREE.BoxGeometry(20, 15, 12), termMat);
+        crtCase.position.set(0, 0, -2);
+        terminalGroup.add(crtCase);
+
+        const screenBezel = new THREE.Mesh(
+            new THREE.BoxGeometry(17.5, 12.5, 0.5),
+            new THREE.MeshBasicMaterial({ color: 0x02240d, wireframe: true })
+        );
+        screenBezel.position.set(0, 0, 4);
+        terminalGroup.add(screenBezel);
+
+        scene.add(terminalGroup);
+
+        // --- 7. Digital Twin Cow & 19 AI Keypoints ---
+        const holoCowGroup = new THREE.Group();
+        holoCowGroup.position.set(0, 0.5, -4); // Centered prominently
+
+        const cowMat = new THREE.MeshBasicMaterial({
+            color: 0x00ff88,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.35
+        });
+
+        const bodyMesh = new THREE.Mesh(new THREE.BoxGeometry(4.8, 3.2, 7.5, 4, 3, 5), cowMat);
+        bodyMesh.position.set(0, 2.5, 0);
+        holoCowGroup.add(bodyMesh);
+
+        const neckMesh = new THREE.Mesh(new THREE.BoxGeometry(2.2, 2.4, 2.8), cowMat);
+        neckMesh.position.set(0, 3.8, 4.2);
+        neckMesh.rotateX(0.3);
+        holoCowGroup.add(neckMesh);
+
+        const headMesh = new THREE.Mesh(new THREE.BoxGeometry(2.0, 2.0, 2.4), cowMat);
+        headMesh.position.set(0, 4.3, 5.5);
+        holoCowGroup.add(headMesh);
+
+        const muzzle = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.2, 1.5), cowMat);
+        muzzle.position.set(0, 3.8, 6.6);
+        holoCowGroup.add(muzzle);
+
+        const legGeo = new THREE.BoxGeometry(0.8, 3.2, 0.8);
+        [[-1.8, 0, 2.4], [1.8, 0, 2.4], [-1.8, 0, -2.4], [1.8, 0, -2.4]].forEach(pt => {
+            const leg = new THREE.Mesh(legGeo, cowMat);
+            leg.position.set(pt[0], pt[1], pt[2]);
+            holoCowGroup.add(leg);
+        });
+
+        // 19 AI Tracking Keypoints with anatomical labels
+        const keypointLabels = [
+            "NOSE", "FOREHEAD", "POLL", "WITHERS",
+            "SPINE_MID", "HOOKS_HIP", "PINS_TAIL",
+            "SHOULDER_L", "SHOULDER_R", "KNEE_FL", "KNEE_FR",
+            "HOOF_FL", "HOOF_FR",
+            "STIFLE_RL", "STIFLE_RR", "HOCK_RL", "HOCK_RR",
+            "HOOF_RL", "HOOF_RR"
+        ];
+
+        const keypointCoords = [
+            [0, 3.8, 7.3], [0, 5.1, 5.0], [0, 4.2, 3.6], [0, 4.1, 2.8],
+            [0, 4.0, 0.0], [0, 3.9, -3.4], [0, 3.6, -4.2],
+            [-1.8, 2.2, 2.4], [1.8, 2.2, 2.4], [-1.8, 0.2, 2.4], [1.8, 0.2, 2.4],
+            [-1.8, -1.5, 2.4], [1.8, -1.5, 2.4],
+            [-1.8, 2.4, -2.4], [1.8, 2.4, -2.4], [-1.8, 0.6, -2.4], [1.8, 0.6, -2.4],
+            [-1.8, -1.5, -2.4], [1.8, -1.5, -2.4]
+        ];
+
+        const keypointGeo = new THREE.SphereGeometry(0.2, 12, 12);
+        const keypointMeshes = [];
+
+        keypointCoords.forEach((k, idx) => {
+            const kpMat = new THREE.MeshBasicMaterial({ color: 0x224433 }); // Dim initial state
+            const kp = new THREE.Mesh(keypointGeo, kpMat);
+            kp.position.set(k[0], k[1], k[2]);
+            holoCowGroup.add(kp);
+            keypointMeshes.push(kp);
+        });
+
+        // Laser Scan Grid Line passing over Cow
+        const scanPlaneGeo = new THREE.PlaneGeometry(8, 8);
+        scanPlaneGeo.rotateX(Math.PI / 2);
+        const scanPlaneMat = new THREE.MeshBasicMaterial({
+            color: 0x00ff66,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.0
+        });
+        const scanPlane = new THREE.Mesh(scanPlaneGeo, scanPlaneMat);
+        holoCowGroup.add(scanPlane);
+
+        const cowBoundingBox = new THREE.Mesh(
+            new THREE.BoxGeometry(7.2, 7.2, 12.2),
+            new THREE.MeshBasicMaterial({ color: 0x00ff88, wireframe: true, transparent: true, opacity: 0.15 })
+        );
+        cowBoundingBox.position.set(0, 2.5, 1);
+        holoCowGroup.add(cowBoundingBox);
+
+        holoCowGroup.scale.set(0.72, 0.72, 0.72);
+        scene.add(holoCowGroup);
+
+        // --- 8. Matrix Glyphs Rain Cloud ---
+        const STREAM_COUNT = isMobile ? 120 : 250;
+        const CHARS_PER_STREAM = 22;
+        const TOTAL_POINTS = STREAM_COUNT * CHARS_PER_STREAM;
+
+        const baseGeometry = new THREE.PlaneGeometry(0.75, 0.95);
+        const instancedGeo = new THREE.InstancedBufferGeometry();
+        instancedGeo.index = baseGeometry.index;
+        instancedGeo.attributes.position = baseGeometry.attributes.position;
+        instancedGeo.attributes.uv = baseGeometry.attributes.uv;
+
+        const aOffsets = new Float32Array(TOTAL_POINTS * 3);
+        const aCharIndices = new Float32Array(TOTAL_POINTS);
+        const aHeadDist = new Float32Array(TOTAL_POINTS);
+        const aSpeed = new Float32Array(TOTAL_POINTS);
+
+        for (let s = 0; s < STREAM_COUNT; s++) {
+            const streamX = (Math.random() - 0.5) * 65;
+            const streamZ = (Math.random() - 0.5) * 35 - 6;
+            const streamSpeed = 10.0 + Math.random() * 14.0;
+            const initialY = (Math.random() - 0.5) * 60;
+
+            for (let c = 0; c < CHARS_PER_STREAM; c++) {
+                const idx = s * CHARS_PER_STREAM + c;
+                aOffsets[idx * 3 + 0] = streamX;
+                aOffsets[idx * 3 + 1] = initialY + c * 1.1;
+                aOffsets[idx * 3 + 2] = streamZ;
+                aCharIndices[idx] = Math.floor(Math.random() * 64.0);
+                aHeadDist[idx] = c / CHARS_PER_STREAM;
+                aSpeed[idx] = streamSpeed;
+            }
+        }
+
+        instancedGeo.setAttribute('aOffset', new THREE.InstancedBufferAttribute(aOffsets, 3));
+        instancedGeo.setAttribute('aCharIndex', new THREE.InstancedBufferAttribute(aCharIndices, 1));
+        instancedGeo.setAttribute('aHeadDist', new THREE.InstancedBufferAttribute(aHeadDist, 1));
+        instancedGeo.setAttribute('aSpeed', new THREE.InstancedBufferAttribute(aSpeed, 1));
+
+        const matrixMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+                uTime: { value: 0 },
+                uTexture: { value: matrixTexture },
+                uOpacity: { value: 0.0 }
+            },
+            vertexShader: `
+                uniform float uTime;
+                attribute vec3 aOffset;
+                attribute float aCharIndex;
+                attribute float aHeadDist;
+                attribute float aSpeed;
+                varying vec2 vUv;
+                varying float vHeadDist;
+
+                void main() {
+                    vHeadDist = aHeadDist;
+                    float fallHeight = 65.0;
+                    float yPos = mod(aOffset.y - uTime * aSpeed, fallHeight) - (fallHeight * 0.5);
+                    vec3 transformed = position + vec3(aOffset.x, yPos, aOffset.z);
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(transformed, 1.0);
+
+                    float col = mod(aCharIndex, 8.0);
+                    float row = floor(aCharIndex / 8.0);
+                    vUv = (uv + vec2(col, 7.0 - row)) / 8.0;
+                }
+            `,
+            fragmentShader: `
+                uniform sampler2D uTexture;
+                uniform float uOpacity;
+                varying vec2 vUv;
+                varying float vHeadDist;
+
+                void main() {
+                    vec4 glyph = texture2D(uTexture, vUv);
+                    if (glyph.r < 0.25) discard;
+
+                    vec3 headColor = vec3(0.9, 1.0, 0.95);
+                    vec3 tailColor = vec3(0.0, 0.9, 0.25);
+                    vec3 color = mix(headColor, tailColor, smoothstep(0.0, 0.25, vHeadDist));
+
+                    gl_FragColor = vec4(color * 1.5, (1.0 - vHeadDist) * glyph.r * uOpacity);
+                }
+            `,
+            transparent: true,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending
+        });
+
+        const matrixMesh = new THREE.Mesh(instancedGeo, matrixMaterial);
+        scene.add(matrixMesh);
+
+        // --- 9. Interactive Telemetry Hover Handling ---
+        let currentMode = 'idle';
+
+        document.querySelectorAll('.link-module').forEach(item => {
+            item.addEventListener('mouseenter', () => {
+                const action = item.getAttribute('data-action');
+                currentMode = action;
+                telemetry.innerHTML = `[SYS_CORE: ONLINE]<br>[NODE_TARGET: ${action.toUpperCase()}]<br>[CALIBRATION: ACTIVE]`;
+
+                if (action === 'cow-focus' || action === 'cow-keypoints') {
+                    keypointMeshes.forEach(kp => kp.material.color.setHex(0xff0055));
+                    cowBoundingBox.material.opacity = 0.6;
+                } else if (action === 'camera') {
+                    keypointMeshes.forEach(kp => kp.material.color.setHex(0x55ffff));
+                    cowBoundingBox.material.opacity = 0.15;
+                }
+            });
+
+            item.addEventListener('mouseleave', () => {
+                currentMode = 'idle';
+                telemetry.innerHTML = `[SYS_CORE: ONLINE]<br>[NODE_TARGET: IDLE]<br>[CAMERA_VECTOR: TRACKING]`;
+                keypointMeshes.forEach(kp => kp.material.color.setHex(0x55ffff));
+                cowBoundingBox.material.opacity = 0.15;
+            });
+        });
+
+        // --- 10. Multi-Stage Cinematic Sequence State Machine ---
+        // Stages: 0: IDLE_IN_BOOT, 1: WARP_DIVE, 2: COW_INSPECTION, 3: MENU_ACTIVE
+        let cinematicStage = 0;
+        let stageStartTime = 0;
+
+        const DURATION_WARP = 6.2;       // Extended wormhole dive
+        const DURATION_COW_SCAN = 6.5;   // Dedicated inspection showcase of the cow
+
+        function triggerCinematicSequence() {
+            initAudio();
+            cinematicStage = 1; // Start Warp Dive
+            stageStartTime = performance.now();
+            labContainer.classList.remove('booted');
+            warpStatus.style.opacity = '1';
+            warpStatus.textContent = 'SINGULARITY COLLAPSE: PENETRATING EVENT HORIZON';
+            playWarpSound();
+        }
+
+        // Parallax Look
+        let targetX = 0;
+        let targetY = 0;
+        let currentRotX = 0;
+        let currentRotY = 0;
+
+        window.addEventListener('mousemove', (e) => {
+            const nx = (e.clientX / window.innerWidth) * 2 - 1;
+            const ny = (e.clientY / window.innerHeight) * 2 - 1;
+            targetX = nx * 3.5;
+            targetY = -ny * 2.5;
+            currentRotY = nx * 8;
+            currentRotX = -ny * 8;
+        });
+
+        window.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 0) {
+                const touch = e.touches[0];
+                const nx = (touch.clientX / window.innerWidth) * 2 - 1;
+                const ny = (touch.clientY / window.innerHeight) * 2 - 1;
+                targetX = nx * 3.0;
+                targetY = -ny * 2.0;
+                currentRotY = nx * 6;
+                currentRotX = -ny * 6;
+            }
+        }, { passive: true });
+
+        window.addEventListener('deviceorientation', (e) => {
+            if (e.gamma !== null && e.beta !== null) {
+                const tiltX = Math.min(Math.max(e.gamma / 30, -1), 1);
+                const tiltY = Math.min(Math.max((e.beta - 40) / 30, -1), 1);
+                targetX = tiltX * 3.0;
+                targetY = -tiltY * 2.0;
+                currentRotY = tiltX * 6;
+                currentRotX = -tiltY * 6;
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2.0));
+        });
+
+        // --- 11. Main Render Loop ---
+        const clock = new THREE.Clock();
+        let lastLitKeypoint = -1;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+            const elapsed = clock.getElapsedTime();
+
+            accretionDisk.rotation.z += delta * 1.5;
+            photonRing.rotation.y += delta * 1.2;
+            wormholeTunnel.rotation.z -= delta * 0.8;
+
+            // STAGE 0: Waiting for bash boot sequence
+            if (cinematicStage === 0) {
+                camera.position.set(0, 0, 195);
+                camera.lookAt(0, 0, 180);
+            }
+
+            // STAGE 1: Extended Warp Dive Through Singularity
+            else if (cinematicStage === 1) {
+                const curTime = (performance.now() - stageStartTime) * 0.001;
+                const p = Math.min(curTime / DURATION_WARP, 1.0);
+
+                // Smooth S-curve
+                const tEase = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+
+                // Move from Black Hole (Z: 185) directly through CRT Screen to Cow approach (Z: 6)
+                const currentZ = THREE.MathUtils.lerp(185, 5.5, tEase);
+                terminalGroup.scale.setScalar(THREE.MathUtils.lerp(0.01, 1.1, Math.min(p * 1.4, 1.0)));
+
+                camera.position.z = currentZ;
+
+                // Slower, grand vortex spiral
+                const spin = Math.sin(p * Math.PI) * 7.5;
+                camera.position.x = Math.sin(p * Math.PI * 2.5) * spin;
+                camera.position.y = Math.cos(p * Math.PI * 2.5) * (spin * 0.5);
+                camera.rotation.z = Math.sin(p * Math.PI) * 1.0;
+                camera.lookAt(0, 0, -4);
+
+                matrixMaterial.uniforms.uOpacity.value = Math.max(0, (p - 0.5) * 2.0);
+
+                if (p >= 1.0) {
+                    cinematicStage = 2; // Transition to Cow Inspection Show
+                    stageStartTime = performance.now();
+                    warpStatus.textContent = 'BOVINE SKELETON CALIBRATION: 19 KEYPOINTS ACTIVE';
+                    scanPlane.material.opacity = 0.45;
+                }
+            }
+
+            // STAGE 2: Dedicated 3D Cow Showcase & Keypoint Calibration
+            else if (cinematicStage === 2) {
+                const curTime = (performance.now() - stageStartTime) * 0.001;
+                const p = Math.min(curTime / DURATION_COW_SCAN, 1.0);
+
+                // Sweeping cinematic camera arc around the cow
+                const arcAngle = (p * Math.PI * 1.2) - 0.4;
+                const radius = 9.0;
+                camera.position.x = Math.sin(arcAngle) * radius;
+                camera.position.z = -4 + Math.cos(arcAngle) * radius;
+                camera.position.y = 2.4 + Math.sin(p * Math.PI) * 1.2;
+                camera.rotation.z *= 0.92;
+                camera.lookAt(holoCowGroup.position.x, 2.2, holoCowGroup.position.z);
+
+                // Laser scan plane translates vertically over the cow
+                scanPlane.position.y = Math.sin(curTime * 2.5) * 3.5 + 2.0;
+
+                // Progressively activate and illuminate 19 keypoints
+                const currentKpIndex = Math.floor(p * keypointCoords.length);
+                if (currentKpIndex > lastLitKeypoint && currentKpIndex < keypointCoords.length) {
+                    keypointMeshes[currentKpIndex].material.color.setHex(0x00ffff);
+                    keypointMeshes[currentKpIndex].scale.setScalar(1.6);
+                    playKeypointBlip(600 + currentKpIndex * 35);
+                    
+                    const label = keypointLabels[currentKpIndex];
+                    const coord = keypointCoords[currentKpIndex];
+                    telemetry.innerHTML = `[AI_RECONSTRUCTION: ACTIVE]<br>[CALIBRATING KP_${currentKpIndex + 1}/19: ${label}]<br>[COORD: X:${coord[0]} Y:${coord[1]} Z:${coord[2]}]`;
+                    lastLitKeypoint = currentKpIndex;
+                }
+
+                // Reset keypoint scale pulse
+                keypointMeshes.forEach(kp => {
+                    kp.scale.lerp(new THREE.Vector3(1, 1, 1), 0.1);
+                });
+
+                if (p >= 1.0) {
+                    cinematicStage = 3; // Finished scan, open portal
+                    scanPlane.material.opacity = 0.0;
+                    warpStatus.style.opacity = '0';
+                    telemetry.innerHTML = `[SYS_CORE: ONLINE]<br>[CALIBRATION: 100% COMPLETE]<br>[CAMERA_VECTOR: TRACKING]`;
+                    labContainer.classList.add('booted');
+                }
+            }
+
+            // STAGE 3: Main Portal Menu Active
+            else if (cinematicStage === 3) {
+                let camTargetX = targetX;
+                let camTargetY = targetY;
+                let camTargetZ = 18;
+
+                if (currentMode === 'camera') {
+                    camTargetX = 14;
+                    camTargetY = 12;
+                    camTargetZ = 12;
+                } else if (currentMode === 'cow-focus' || currentMode === 'cow-keypoints') {
+                    camTargetX = 0;
+                    camTargetY = 2;
+                    camTargetZ = 6;
+                } else if (currentMode === 'barn') {
+                    camTargetX = -12;
+                    camTargetY = 6;
+                    camTargetZ = 24;
+                }
+
+                camera.position.x += (camTargetX - camera.position.x) * 0.05;
+                camera.position.y += (camTargetY - camera.position.y) * 0.05;
+                camera.position.z += (camTargetZ - camera.position.z) * 0.05;
+                camera.rotation.z *= 0.9;
+                camera.lookAt(0, currentMode.startsWith('cow') ? 1.8 : 0, 0);
+
+                matrixMaterial.uniforms.uOpacity.value = 1.0;
+                monitorViewport.style.transform = `rotateX(${currentRotX}deg) rotateY(${currentRotY}deg)`;
+            }
+
+            // Continuous Visual Loops
+            matrixMaterial.uniforms.uTime.value = elapsed;
+
+            if (cinematicStage === 3) {
+                if (currentMode === 'cow-focus' || currentMode === 'cow-keypoints') {
+                    holoCowGroup.rotation.y += delta * 0.8;
+                    holoCowGroup.position.z = -1;
+                } else {
+                    holoCowGroup.rotation.y = elapsed * 0.22;
+                    holoCowGroup.position.y = 0.5 + Math.sin(elapsed * 1.2) * 0.2;
+                    holoCowGroup.position.z = -5;
+                }
+            } else if (cinematicStage === 2) {
+                // Gentle slow turn during inspection
+                holoCowGroup.rotation.y = elapsed * 0.15;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // Automatic boot on load
+        window.addEventListener('DOMContentLoaded', () => {
+            startTerminalBoot();
+        });
+
+        animate();
+    </script>
 </body>
 </html>
