@@ -105,10 +105,13 @@ class SceneController {
             if (txt) txt.textContent = text;
         };
 
-        // 1. Laad het gerigd koemodel met volledige animatiesuite (Echte Melkkoe Cow_F met uier)
-        setProgress(30, 'Biologische Melkkoe (Cow_F) met uier & animaties laden...');
         const gltfCow = await gltfLoader.loadAsync('models/cow_melkkoe.glb');
         this.cowModel = gltfCow.scene;
+        this.cowModel.traverse(obj => {
+            if (obj.isMesh && obj.geometry && obj.geometry.attributes.position) {
+                obj.geometry.userData.basePositions = new Float32Array(obj.geometry.attributes.position.array);
+            }
+        });
 
         this.animClips = {};
         if (gltfCow.animations && gltfCow.animations.length > 0) {
@@ -118,7 +121,10 @@ class SceneController {
             });
         }
 
-        setProgress(70, 'Texturen voor 4 melkkoerassen laden...');
+        // 1b. Gevalideerde GLTF-animatiesuite gereedmelden
+        setProgress(60, 'Gevalideerde animatiesuite voorbereiden...');
+
+        setProgress(70, 'Fotorealistische PBR-lagen & rassen laden...');
         const textureLoader = new THREE.TextureLoader();
         this.textures = {
             baseBlackWhite: textureLoader.load('textures/cow_f_blackwhite.jpg', (t) => {
@@ -137,10 +143,15 @@ class SceneController {
                 t.flipY = false;
                 t.colorSpace = THREE.SRGBColorSpace;
             }),
+            pbr: {
+                normal: textureLoader.load('textures/cow_f_normal.jpg', t => { t.flipY = false; }),
+                ao: textureLoader.load('textures/cow_f_ao.jpg', t => { t.flipY = false; }),
+                roughness: textureLoader.load('textures/cow_f_roughness.jpg', t => { t.flipY = false; }),
+            }
         };
 
         // 2. Initialiseer Kudde van 4 Melkkoeien
-        setProgress(88, 'Melkkoe-kudde initialiseren...');
+        setProgress(90, 'Melkkoe-kudde initialiseren...');
         this.herd = new HerdManager(this.scene, this.cowModel, this.animClips, this.textures);
         this.behavior = this.herd.getSelectedBehavior();
 
@@ -157,6 +168,16 @@ class SceneController {
         if (!clips) return;
         clips.forEach(clip => {
             if (!clip || !clip.name) return;
+
+            // 1. Sanitizeer wortelpositie: zet RigRoot.position op (0,0,0) in alle clips zodat
+            // alle animaties exact dezelfde stationaire oorsprong delen zonder teleportatiesprongen
+            const rootPos = clip.tracks.find(t => t.name === 'RigRoot.position');
+            if (rootPos) {
+                for (let i = 0; i < rootPos.values.length; i++) {
+                    rootPos.values[i] = 0;
+                }
+            }
+
             const name = clip.name.toLowerCase();
             const isLoco = name.includes('walk') || name.includes('trot');
             if (!isLoco) return;
@@ -278,6 +299,51 @@ class SceneController {
 
     applyTexture(type) {
         if (this.herd) this.herd.applyTexture(type);
+    }
+
+    generateProceduralSkin(options) {
+        if (this.herd) return this.herd.generateProceduralSkin(options);
+    }
+
+    randomizeEntireHerd() {
+        if (this.herd) this.herd.randomizeEntireHerd();
+    }
+
+    applyDomainRandomization(breedType) {
+        if (this.herd) this.herd.applyDomainRandomization(breedType);
+    }
+
+    randomizeConformation(cowIndex) {
+        if (this.herd) this.herd.randomizeConformation(cowIndex);
+    }
+
+    togglePBR(enabled) {
+        if (this.herd) this.herd.setPBREnabled(enabled);
+    }
+
+    turnSelectedCow(direction = 'left') {
+        const cow = this.herd ? this.herd.getSelectedCow() : null;
+        if (cow) {
+            const delta = direction === 'left' ? Math.PI / 2 : -Math.PI / 2;
+            if (cow.targetRotY === undefined) cow.targetRotY = cow.group.rotation.y;
+            cow.targetRotY += delta;
+            if (cow.behavior && cow.behavior.onTurn) {
+                cow.behavior.onTurn(direction);
+            }
+        }
+    }
+
+    setDownerCow(enable = true) {
+        const cow = this.herd ? this.herd.getSelectedCow() : null;
+        if (cow && cow.behavior && cow.behavior.setDownerCow) {
+            cow.behavior.setDownerCow(enable);
+        }
+    }
+
+    setHorns(enabledOrScale) {
+        if (this.herd) {
+            this.herd.setHorns(this.herd.selectedCowIndex, enabledOrScale);
+        }
     }
 
     setCameraMode(mode) {

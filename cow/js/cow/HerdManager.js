@@ -11,6 +11,7 @@ import * as THREE from 'three';
 import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
 import { CowBehavior } from './CowBehavior.js';
 import { BreedingManager } from './BreedingValues.js';
+import { ProceduralSkinGenerator } from './ProceduralSkinGenerator.js';
 
 export class HerdManager {
     constructor(scene, baseModel, animClips, textures, poseTemplates = {}) {
@@ -26,6 +27,9 @@ export class HerdManager {
         this.currentInteraction = 'free';
         this.displayMode = 'solo';
         this.skeletonVisible = false;
+        this.pbrEnabled = true;
+
+        this.skinGenerator = new ProceduralSkinGenerator();
 
         this._initHerd();
     }
@@ -45,6 +49,8 @@ export class HerdManager {
                 parity: 3,           // Volwassen 3e kalfs
                 gestationDays: 140,  // Midden-dracht (5 maanden)
                 bcs: 3.0,            // Optimaal
+                hasHorns: false,     // Onthoorn / Genetisch hoornloos
+                hornScale: 0.0,
             },
             {
                 id: 1,
@@ -59,6 +65,8 @@ export class HerdManager {
                 parity: 2,           // 2e kalfs (vroege lactatie)
                 gestationDays: 45,   // Vroege dracht
                 bcs: 2.75,          // Melktypisch
+                hasHorns: false,     // Onthoorn
+                hornScale: 0.0,
             },
             {
                 id: 2,
@@ -73,6 +81,8 @@ export class HerdManager {
                 parity: 4,           // Oudere meerkalfs
                 gestationDays: 240,  // Hoogdrachtig
                 bcs: 3.5,            // Weideconditie
+                hasHorns: true,      // Authentiek gehoornd Groninger weideras
+                hornScale: 1.0,
             },
             {
                 id: 3,
@@ -87,6 +97,8 @@ export class HerdManager {
                 parity: 0,           // Vaars / Pink (strak vaarzenuier)
                 gestationDays: 0,    // Niet drachtig
                 bcs: 3.25,          // Jeugdig compact
+                hasHorns: false,     // Onthoorn
+                hornScale: 0.0,
             },
         ];
 
@@ -97,12 +109,7 @@ export class HerdManager {
             this.scene.add(cowGroup);
 
             // 1. Geanimeerd loop- en bewegingsmodel (cow_walk.glb)
-            let walkModel;
-            if (idx === 0) {
-                walkModel = this.baseModel;
-            } else {
-                walkModel = SkeletonUtils.clone(this.baseModel);
-            }
+            const walkModel = SkeletonUtils.clone(this.baseModel);
             cowGroup.add(walkModel);
 
             // Kloon geometrie en materialen zodat elke koe een unieke vachttextuur en onafhankelijke anatomische BCS-sculptuur heeft
@@ -111,8 +118,11 @@ export class HerdManager {
                     obj.castShadow = true;
                     obj.receiveShadow = true;
                     if (obj.geometry) {
+                        const origBase = obj.geometry.userData.basePositions;
                         obj.geometry = obj.geometry.clone();
-                        if (obj.geometry.attributes.position) {
+                        if (origBase) {
+                            obj.geometry.userData.basePositions = new Float32Array(origBase);
+                        } else if (obj.geometry.attributes.position) {
                             obj.geometry.userData.basePositions = new Float32Array(obj.geometry.attributes.position.array);
                         }
                     }
@@ -144,11 +154,12 @@ export class HerdManager {
             behavior.state.parity = cfg.parity;
             behavior.state.gestationDays = cfg.gestationDays;
             behavior.state.bcs = cfg.bcs;
+            behavior.setHorns(cfg.hornScale !== undefined ? cfg.hornScale : (cfg.hasHorns ? 1.0 : 0.0));
 
             // Fokkerij (NVI / CRV)
             const breedingManager = new BreedingManager();
-            const presets = ['balanced_nvi', 'show_conformation', 'pasture_health', 'high_production'];
-            breedingManager.setPreset(presets[idx] || 'balanced_nvi');
+            const presets = ['delta_framework_red', 'delta_framework_red', 'pasture_health', 'show_conformation'];
+            breedingManager.setPreset(presets[idx] || 'delta_framework_red');
             behavior.breedingManager = breedingManager;
 
             // Stel initiële toestand in
@@ -188,16 +199,143 @@ export class HerdManager {
         });
     }
 
-    _applyTextureToModel(model, tex) {
+    _applyTextureToModel(model, tex, resetTint = true) {
         if (!tex || !model) return;
         model.traverse(obj => {
             if (obj.isMesh && obj.material) {
+                if (obj.geometry && obj.geometry.attributes.uv && !obj.geometry.attributes.uv2) {
+                    obj.geometry.attributes.uv2 = obj.geometry.attributes.uv;
+                }
                 const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
                 mats.forEach(m => {
                     m.map = tex;
+                    if (resetTint) m.color.setHex(0xffffff);
+                    if (this.textures && this.textures.pbr && this.pbrEnabled !== false) {
+                        m.normalMap = this.textures.pbr.normal;
+                        if (!m.normalScale) m.normalScale = new THREE.Vector2(0.85, 0.85);
+                        else m.normalScale.set(0.85, 0.85);
+                        m.aoMap = this.textures.pbr.ao;
+                        m.aoMapIntensity = 0.75;
+                        m.roughnessMap = this.textures.pbr.roughness;
+                        m.roughness = 0.75;
+                        m.metalness = 0.05;
+                    }
                     m.needsUpdate = true;
                 });
             }
+        });
+    }
+
+    /**
+     * Genereert een nieuwe procedurale vacht voor de geselecteerde koe (of alle koeien)
+     */
+    generateProceduralSkin(options = {}) {
+        const cow = (this.selectedCowIndex === 'all') ? this.cows[0] : this.getSelectedCow();
+        if (!cow) return;
+
+        const res = this.skinGenerator.generateSkin(options);
+        if (res && res.texture) {
+            if (this.selectedCowIndex === 'all') {
+                this.cows.forEach(c => this._applyTextureToModel(c.model, res.texture));
+            } else {
+                this._applyTextureToModel(cow.model, res.texture);
+            }
+        }
+        return res;
+    }
+
+    /**
+     * Randomizeert de gehele kudde (4 unieke procedurale vachten, variërende body scales en BCS)
+     */
+    randomizeEntireHerd() {
+        const patterns = ['holstein', 'roodbont', 'blaarkop', 'lakenvelder'];
+        this.cows.forEach((cow, i) => {
+            const pat = patterns[i % patterns.length];
+            const density = 0.25 + Math.random() * 0.55;
+            const res = this.skinGenerator.generateSkin({
+                pattern: pat,
+                seed: Math.floor(Math.random() * 999999),
+                density: density,
+                spotSize: 0.8 + Math.random() * 0.5
+            });
+            if (res && res.texture) {
+                this._applyTextureToModel(cow.model, res.texture);
+            }
+            this.skinGenerator.randomizeConformation(cow);
+        });
+    }
+
+    /**
+     * Past snelle domain randomization (kleurtint) toe op de geselecteerde koe of hele kudde
+     */
+    applyDomainRandomization(breedType = 'random') {
+        if (this.selectedCowIndex === 'all') {
+            this.cows.forEach(c => this.skinGenerator.applyDomainRandomization(c.model, breedType));
+        } else {
+            const cow = this.getSelectedCow();
+            if (cow) this.skinGenerator.applyDomainRandomization(cow.model, breedType);
+        }
+    }
+
+    /**
+     * Randomizeert morfologie (girth, lengte, schofthoogte, BCS)
+     */
+    randomizeConformation(cowIndex) {
+        const idx = cowIndex !== undefined ? cowIndex : this.selectedCowIndex;
+        if (idx === 'all') {
+            this.cows.forEach(c => this.skinGenerator.randomizeConformation(c));
+        } else {
+            const cow = this.cows[idx] || this.getSelectedCow();
+            if (cow) this.skinGenerator.randomizeConformation(cow);
+        }
+    }
+
+    /**
+     * Stelt hoornstatus in voor een specifieke koe of de gehele kudde
+     * @param {number|'all'} cowIndex
+     * @param {boolean|number} enabledOrScale - true/false of numerieke schaal (0.0=onthoorn, 1.0=gehoornd)
+     */
+    setHorns(cowIndex, enabledOrScale) {
+        const idx = cowIndex !== undefined ? cowIndex : this.selectedCowIndex;
+        if (idx === 'all') {
+            this.cows.forEach(c => {
+                if (c && c.behavior) c.behavior.setHorns(enabledOrScale);
+            });
+        } else {
+            const cow = this.cows[idx] || this.getSelectedCow();
+            if (cow && cow.behavior) {
+                cow.behavior.setHorns(enabledOrScale);
+            }
+        }
+    }
+
+    /**
+     * Schakelt PBR-reliëflagen (normalMap, aoMap, roughnessMap) in of uit
+     */
+    setPBREnabled(enabled) {
+        this.pbrEnabled = enabled;
+        this.cows.forEach(cow => {
+            cow.model.traverse(obj => {
+                if (obj.isMesh && obj.material) {
+                    const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+                    mats.forEach(m => {
+                        if (enabled && this.textures && this.textures.pbr) {
+                            m.normalMap = this.textures.pbr.normal;
+                            m.aoMap = this.textures.pbr.ao;
+                            m.roughnessMap = this.textures.pbr.roughness;
+                            m.roughness = 0.75;
+                            m.metalness = 0.05;
+                        } else {
+                            m.normalMap = null;
+                            m.aoMap = null;
+                            m.roughnessMap = null;
+                            m.roughness = 0.6;
+                            m.metalness = 0.0;
+                        }
+                        m.needsUpdate = true;
+                    });
+                }
+            });
         });
     }
 
@@ -499,7 +637,12 @@ export class HerdManager {
             const activeCow = this.cows[this.selectedCowIndex] || this.cows[0];
             if (activeCow) {
                 activeCow.group.position.set(0, 0.005, 0);
-                activeCow.group.rotation.y = 0;
+                if (activeCow.targetRotY === undefined) activeCow.targetRotY = 0;
+                let diffRot = activeCow.targetRotY - activeCow.group.rotation.y;
+                while (diffRot < -Math.PI) diffRot += Math.PI * 2;
+                while (diffRot > Math.PI) diffRot -= Math.PI * 2;
+                activeCow.group.rotation.y += diffRot * Math.min(1.0, dt * 3.5);
+
                 if (activeCow.mixer) activeCow.mixer.update(dt);
                 if (activeCow.behavior) activeCow.behavior.update(dt);
             }
@@ -554,6 +697,9 @@ export class HerdManager {
     }
 
     applyTexture(texKey) {
+        if (['lakenvelder', 'witrug', 'jersey', 'simmentaler', 'charolais', 'angus'].includes(texKey)) {
+            return this.generateProceduralSkin({ pattern: texKey });
+        }
         const tex = (texKey === 'redwhite') ? this.textures.brown :
                     (texKey === 'black') ? this.textures.black :
                     (texKey === 'blaarkop') ? this.textures.blaarkop : this.textures.baseBlackWhite;

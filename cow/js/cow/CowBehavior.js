@@ -57,6 +57,10 @@ export class CowBehavior {
 
             // Lichaamsconditie & Fysiologie
             rumenFill:          0.65,        // 0=ingevallen, 1=volle pens links
+            rumenScore:         3.0,         // Jan Hulsen Zaagmethode: 1.0 (diep hol) t/m 5.0 (bol)
+            dungScore:          3.0,         // Mestconsistentie: 1 (waterdun) t/m 5 (paardenvijgen)
+            hockScore:          1.0,         // Hak- en kniebeschadiging: 1 (gaaf) t/m 4 (bursitis)
+            teatScore:          1.0,         // Speenconditiescore: 1 (glad) t/m 4 (bloemkool/eeltkraag)
             udderFill:          0.50,        // 0=leeg, 1=vol
             breathingRate:      26,          // 15 - 100+ bpm
 
@@ -64,6 +68,8 @@ export class CowBehavior {
             parity:             2,           // 0=vaars, 1=eersterangs, 2-3=volwassen, 4-5=oudere meerkalfs
             gestationDays:      0,           // 0 - 282 dagen (rund ~280d)
             bcs:                3.0,         // Body Condition Score: 1.0 - 5.0 (stappen 0.25)
+            hasHorns:           false,       // false = Onthoorn / Hoornloos (polled), true = Gehoornd
+            hornScale:          0.0,         // 0.0 = Glad onthoorn, 0.35 = Scurs / Stompen, 1.0 = Gehoornd, 1.3 = Lang
 
             // Micro-gedragingen: Vertering & Voeding
             ruminating:         false,       // Herkauwen
@@ -86,25 +92,25 @@ export class CowBehavior {
             flankLicking:       false,       // Zelf likken op flank
             headShake:          false,       // Vliegenschudden
             footStamping:       false,       // Pootstampen tegen vliegen
-            earFlickL:          false,       // Oor links
-            earFlickR:          false,       // Oor rechts
-            tailSwishIntensity: 0.25,        // Staart zwaaien
+            earFlickL:          false,       // Oorlinks richten
+            earFlickR:          false,       // Oorrechts richten
+            tailSwish:          0.25,        // Staartzwaai-intensiteit
 
-            // Micro-gedragingen: Gezondheid, Stress & Pijn
-            heatStress:         false,       // Hittestress
-            pantingScore:       0,           // 0=normaal, 1=versneld, 2=open bek, 3=tong uit, 4=ernstig
-            bovinePainFace:     false,       // Pijngezicht (knijpende ogen, oren achteruit)
-            sawhorseStance:     false,       // Zaagbokshouding (poten wijd bij buikpijn)
-            lethargic:          false,       // Apathisch / ziek (kop en oren hangend)
-            dogSitting:         false,       // Hondenzit pathologie (n. obturatorius)
+            // Micro-gedragingen: Pathologie, Gezondheid & Stress
+            heatStress:         false,       // Hittestress (hijgen)
+            pantingScore:       0,           // 0-4 schaal
+            bovinePainFace:     false,       // Gleerup et al. 2015
+            sawhorseStance:     false,       // Buikpijn zaagbokshouding
+            lethargic:          false,       // Ziek/lusteloos
+            dogSitting:         false,       // Paralyse nervus obturatorius
 
-            // Eliminatie
+            // Micro-gedragingen: Uitscheiding
             defecation:         false,       // Mesten
             urination:          false,       // Plassen
 
-            // Biomechanica Toggles (research.md)
-            enableSynsarcosis:  true,        // Scapula translatie
-            enableReciprocal:   true,        // Knie-hak koppeling
+            // Biomechanische Kinetica Toggles (Onderzoeks-validatie)
+            enableSynsarcosis:  true,        // Dorsale scapula translatie
+            enableReciprocal:   true,        // Reciproque apparaat achterhand
             enableFetlockSpring:true,        // Kogelgewricht doorvering
             enableEyelidBlink:  true,        // Knipperen
         };
@@ -120,6 +126,7 @@ export class CowBehavior {
             pelvicTiltDeg: 0,
             currentPantingScore: 0,
             chewingRateBpm: 0,
+            bolusChews: 0,
         };
 
         // ── Actions & Clips ───────────────────────────────────────────────────
@@ -286,7 +293,9 @@ export class CowBehavior {
      * De koe kan NOOIT grotesk breed of hoog worden wanneer alle sliders op maximum staan!
      */
     _applyAnatomicalConformation(bcs, gestDays, parity, rumenFill) {
-        const key = `${bcs.toFixed(2)}_${gestDays}_${parity}_${rumenFill.toFixed(2)}`;
+        const hornScale = (this.state && this.state.hornScale !== undefined) ? this.state.hornScale : (this.state && this.state.hasHorns ? 1.0 : 0.0);
+        const bt = (this.breedingManager) ? this.breedingManager.getTraits() : {};
+        const key = `${bcs.toFixed(2)}_${gestDays}_${parity}_${rumenFill.toFixed(2)}_${hornScale.toFixed(2)}_${bt.stature||100}_${bt.chestWidth||100}_${bt.bodyDepth||100}_${bt.angularity||100}_${bt.rumpAngle||100}_${bt.rumpWidth||100}_${bt.foreUdder||100}_${bt.rearUdderHeight||100}_${bt.suspensoryLigament||100}`;
         if (this._lastConformationKey === key) return;
         if (!this.sculptMeshes || this.sculptMeshes.length === 0) {
             this._initSculptMeshes();
@@ -308,7 +317,16 @@ export class CowBehavior {
         const gestProg = Math.max(0, Math.min(1.0, gestDays / 280.0));
         const fetalVolume = Math.pow(gestProg, 2.8); // Exponentiële foetale groei in trimester 3
 
-        const parityDelta = (parity === 0 ? -0.010 : (parity >= 4 ? 0.012 : 0.0));
+        const parityDelta = (parity === 0 ? -0.018 : (parity >= 4 ? 0.024 : 0.0));
+
+        // CRV lineaire modifiers (-1.0 .. +1.0)
+        const modAngularity = ((bt.angularity || 100) - 100) / 12.0;
+        const modBodyDepth  = ((bt.bodyDepth || 100) - 100) / 12.0;
+        const modChestWidth = ((bt.chestWidth || 100) - 100) / 12.0;
+        const modRumpWidth  = ((bt.rumpWidth || 100) - 100) / 12.0;
+        const modForeUdder  = ((bt.foreUdder || 100) - 100) / 12.0;
+        const modRearUdderH = ((bt.rearUdderHeight || 100) - 100) / 12.0;
+        const modCleft      = ((bt.suspensoryLigament || 100) - 100) / 12.0;
 
         this.sculptMeshes.forEach(mesh => {
             const geom = mesh.geometry;
@@ -326,158 +344,202 @@ export class CowBehavior {
                 const absX = Math.abs(x);
                 const signX = Math.sign(x) || 1;
 
-                // 1. RIBBEN (Costae): Z = 0.12 tot 0.52, Y = 0.45 tot 0.88, absX > 0.10
-                // Bij schrale koeien (BCS <= 2.5) worden de 13 ribben duidelijk zichtbaar door de huid
-                if (z > 0.12 && z < 0.52 && y > 0.45 && y < 0.88 && absX > 0.10) {
-                    if (thin > 0) {
-                        const ribFreq = 62.0;
-                        const ribWave = Math.sin((z - 0.12) * ribFreq);
-                        const ribWeight = Math.sin(((z - 0.12) / 0.40) * Math.PI) * Math.sin(((y - 0.45) / 0.43) * Math.PI);
-                        x += signX * ribWave * 0.009 * thin * ribWeight;
+                // 1. RIBBEN (Costae): Z = -0.65 tot -0.05, Y = 0.70 tot 1.30, absX > 0.15
+                // Zichtbaarheid van ribben bij schrale koeien (BCS <= 2.5) en open ribwelving (CRV Ribvorm)
+                if (z > -0.65 && z < -0.05 && y > 0.70 && y < 1.30 && absX > 0.15) {
+                    const ribFreq = 38.0;
+                    const ribWave = Math.sin((z - -0.65) * ribFreq);
+                    const ribWeight = Math.sin(((z - -0.65) / 0.60) * Math.PI) * Math.sin(((y - 0.70) / 0.60) * Math.PI);
+                    const ribTotalAmp = thin * 0.040 + Math.max(0, modAngularity) * 0.024;
+                    if (ribTotalAmp > 0) {
+                        x += signX * ribWave * ribTotalAmp * ribWeight;
+                    }
+                    if (fat > 0) {
+                        // Vette koe: gladstrijkend vetdek over ribben
+                        x += signX * fat * 0.035 * ribWeight;
                     }
                 }
 
                 // 2. HONGERGROEVE & KORTE RIBBEN (Fossa paralumbalis & Processus transversi):
-                // Z = -0.05 tot 0.18, Y = 0.62 tot 0.88, absX > 0.09
-                if (z > -0.05 && z < 0.18 && y > 0.62 && y < 0.88 && absX > 0.09) {
-                    const fossaWeight = Math.sin(((z - -0.05) / 0.23) * Math.PI);
+                // Z = -0.85 tot -0.55, Y = 0.90 tot 1.32, absX > 0.12
+                if (z > -0.85 && z < -0.55 && y > 0.90 && y < 1.32 && absX > 0.12) {
+                    const fossaWeight = Math.sin(((z - -0.85) / 0.30) * Math.PI) * Math.sin(((y - 0.90) / 0.42) * Math.PI);
                     if (thin > 0) {
-                        if (y < 0.80) {
+                        if (y < 1.22) {
                             // Diep ingevallen driehoekige hongergroeve
-                            x -= signX * thin * 0.024 * fossaWeight;
+                            x -= signX * thin * 0.085 * fossaWeight;
                         } else {
                             // Korte ribben (lumbar shelf) steken als horizontale richel uit
-                            const shelfBlend = smoothstep(0.80, 0.86, y);
-                            x += signX * thin * 0.014 * fossaWeight * shelfBlend;
+                            x += signX * thin * 0.045 * fossaWeight;
                         }
                     } else if (fat > 0) {
                         // Vette koe: hongergroeve is strak/bol gevuld met vetweefsel
-                        x += signX * fat * 0.020 * fossaWeight;
+                        x += signX * fat * 0.065 * fossaWeight;
                     }
                 }
 
                 // 3. HEUPKNOBBELS (Tuber coxae / Hook bones):
-                // Z rond -0.05, Y rond 0.82
-                const distHookZ = z - (-0.05);
-                const distHookY = y - 0.82;
-                const distHook = Math.sqrt(distHookZ * distHookZ * 4.0 + distHookY * distHookY * 2.5);
-                if (distHook < 0.16 && absX > 0.11) {
-                    const hookWeight = smoothstep(0.16, 0.0, distHook);
-                    if (thin > 0) {
-                        // Hoekige, scherp uitstekende botknobbel
-                        x += signX * thin * 0.026 * hookWeight;
-                        y += thin * 0.016 * hookWeight;
-                    } else if (fat > 0) {
-                        // Zacht afgerond door vetkussen
-                        x -= signX * fat * 0.008 * hookWeight;
-                        y -= fat * 0.005 * hookWeight;
+                // Z rond -0.84, Y rond 1.28
+                if (z > -0.92 && z < -0.76 && y > 1.18 && y < 1.36 && absX > 0.16) {
+                    const distHook = Math.hypot((z - -0.84) * 2.5, (y - 1.28) * 2.0);
+                    if (distHook < 0.22) {
+                        const hookWeight = Math.cos(distHook * Math.PI / 0.22 * 0.5);
+                        if (thin > 0) {
+                            // Hoekige, scherp uitstekende botknobbel
+                            x += signX * thin * 0.080 * hookWeight;
+                            y += thin * 0.035 * hookWeight;
+                        } else if (fat > 0) {
+                            // Zacht afgerond door vetkussen
+                            x -= signX * fat * 0.030 * hookWeight;
+                        }
                     }
                 }
 
                 // 4. ZITBEENKNOBBELS (Tuber ischiadica / Pin bones):
-                // Z rond -0.47, Y rond 0.78
-                const distPinZ = z - (-0.47);
-                const distPinY = y - 0.78;
-                const distPin = Math.sqrt(distPinZ * distPinZ * 3.5 + distPinY * distPinY * 2.5);
-                if (distPin < 0.15 && absX > 0.09) {
-                    const pinWeight = smoothstep(0.15, 0.0, distPin);
-                    if (thin > 0) {
-                        // Scherpe hoekige pinnen naar caudaal-lateraal
-                        z -= thin * 0.024 * pinWeight;
-                        x += signX * thin * 0.020 * pinWeight;
-                        y += thin * 0.012 * pinWeight;
-                    } else if (fat > 0) {
-                        // Begraven onder vetkussens
-                        z += fat * 0.016 * pinWeight;
-                        x += signX * fat * 0.018 * pinWeight;
+                // Z rond -1.12, Y rond 1.22
+                if (z > -1.22 && z < -1.00 && y > 1.12 && y < 1.34 && absX > 0.08) {
+                    const distPin = Math.hypot((z - -1.12) * 2.0, (y - 1.22) * 2.0);
+                    if (distPin < 0.22) {
+                        const pinWeight = Math.cos(distPin * Math.PI / 0.22 * 0.5);
+                        if (thin > 0) {
+                            // Scherpe hoekige pinnen naar caudaal-lateraal
+                            z -= thin * 0.075 * pinWeight;
+                            x += signX * thin * 0.055 * pinWeight;
+                            y += thin * 0.030 * pinWeight;
+                        } else if (fat > 0) {
+                            // Begraven onder vetkussens
+                            z += fat * 0.045 * pinWeight;
+                            x += signX * fat * 0.050 * pinWeight;
+                        }
+                        // Pariteit: bredere bekkenpinnen bij meerkalfskoeien vs vaarzen
+                        x += signX * (parity === 0 ? -0.025 : (parity >= 4 ? 0.035 : 0.0)) * pinWeight;
                     }
-                    // Pariteit: bredere bekkenpinnen bij meerkalfskoeien vs vaarzen
-                    const pinAgeDelta = (parity === 0 ? -0.010 : (parity >= 4 ? 0.015 : 0.0));
-                    x += signX * pinAgeDelta * pinWeight;
                 }
 
                 // 5. DE "V" VS "U" LIJN TUSSEN HOOK EN PIN:
-                // Z tussen -0.42 en -0.08, Y = 0.70 tot 0.86
-                if (z < -0.08 && z > -0.42 && y > 0.70 && y < 0.86 && absX > 0.11) {
-                    const midZWeight = Math.sin(((z - -0.42) / 0.34) * Math.PI);
+                // Z tussen -1.08 en -0.85, Y = 1.10 tot 1.32, absX > 0.14
+                if (z > -1.08 && z < -0.85 && y > 1.10 && y < 1.32 && absX > 0.14) {
+                    const vWeight = Math.sin(((z - -1.08) / 0.23) * Math.PI);
                     if (thin > 0) {
                         // Diepe V-vormige kuil tussen heup- en zitbeen
-                        x -= signX * thin * 0.030 * midZWeight;
-                        y -= thin * 0.014 * midZWeight;
+                        x -= signX * thin * 0.075 * vWeight;
+                        y -= thin * 0.030 * vWeight;
                     } else if (fat > 0) {
                         // U-vorm / komvormig gevuld met vet
-                        x += signX * fat * 0.024 * midZWeight;
-                        y += fat * 0.010 * midZWeight;
+                        x += signX * fat * 0.060 * vWeight;
+                        y += fat * 0.020 * vWeight;
                     }
                 }
 
                 // 6. STAARTINPLANT & THURL (Cavitas sacralis / Holte naast staartbasis):
-                // Z = -0.48 tot -0.28, Y = 0.82 tot 0.98
-                if (z < -0.28 && z > -0.48 && y > 0.82 && y < 0.98 && absX > 0.015 && absX < 0.12) {
-                    const tailWeight = Math.sin(((z - -0.48) / 0.20) * Math.PI);
+                // Z = -1.28 tot -1.05, Y = 1.25 tot 1.45, absX > 0.02 && absX < 0.15
+                if (z > -1.28 && z < -1.05 && y > 1.25 && y < 1.45 && absX > 0.02 && absX < 0.15) {
+                    const tailCavWeight = Math.sin(((z - -1.28) / 0.23) * Math.PI) * Math.sin(((y - 1.25) / 0.20) * Math.PI);
                     if (thin > 0) {
                         // Diepe holtes naast de staartwortel (sunken tailhead cavity)
-                        x -= signX * thin * 0.034 * tailWeight;
-                        y -= thin * 0.026 * tailWeight;
+                        x -= signX * thin * 0.090 * tailCavWeight;
+                        y -= thin * 0.060 * tailCavWeight;
                     } else if (fat > 0) {
                         // Vetkussens (fat patches / vetbulten) naast de staartbasis
-                        x += signX * fat * 0.040 * tailWeight;
-                        y += fat * 0.032 * tailWeight;
+                        x += signX * fat * 0.095 * tailCavWeight;
+                        y += fat * 0.070 * tailCavWeight;
                     }
                 }
 
                 // 7. RUGKAM & ZAAGRUG (Processus spinosi):
-                // Z = -0.25 tot 0.40, Y > 0.86, absX < 0.07
-                if (z > -0.25 && z < 0.40 && y > 0.86 && absX < 0.07) {
-                    const ridgeDist = absX / 0.07;
+                // Z = -0.95 tot 0.15, Y = 1.20 tot 1.45, absX < 0.08
+                if (z > -0.95 && z < 0.15 && y > 1.20 && absX < 0.08) {
+                    const spineDist = absX / 0.08;
                     if (thin > 0) {
                         // Dakvormige scherpe kam (zaagrug)
-                        const crest = Math.max(0, 1.0 - ridgeDist);
-                        y += thin * 0.022 * (crest * crest);
-                        x -= signX * thin * 0.006 * Math.sin(ridgeDist * Math.PI);
+                        y += thin * 0.055 * (1.0 - spineDist);
                     } else if (fat > 0) {
-                        // Afgeronde rug met vetkussens
-                        const padWeight = Math.sin(ridgeDist * Math.PI);
-                        y += fat * 0.012 * padWeight;
-                        x += signX * fat * 0.008 * padWeight;
+                        // Brede, vlakke rug met vetkammen
+                        y -= fat * 0.020 * (1.0 - spineDist);
+                        x += signX * fat * 0.025 * Math.sin(spineDist * Math.PI);
                     }
                 }
 
                 // 8. BORSTKWAB / DEWLAP (Brisket):
-                // Z = 0.35 tot 0.65, Y = 0.35 tot 0.55, absX < 0.12
-                if (z > 0.35 && z < 0.65 && y > 0.35 && y < 0.55 && absX < 0.12) {
+                // Z = 0.0 tot 0.35, Y = 0.55 tot 0.90, absX < 0.18
+                if (z > 0.0 && z < 0.35 && y > 0.55 && y < 0.90 && absX < 0.18) {
                     if (fat > 0) {
-                        const dewlapWeight = Math.sin(((z - 0.35) / 0.30) * Math.PI) * Math.sin(((y - 0.35) / 0.20) * Math.PI);
-                        y -= fat * 0.018 * dewlapWeight;
-                        x += signX * fat * 0.014 * dewlapWeight;
+                        const dewlapWeight = Math.sin(((z - 0.0) / 0.35) * Math.PI) * Math.sin(((y - 0.55) / 0.35) * Math.PI);
+                        y -= fat * 0.055 * dewlapWeight;
+                        x += signX * fat * 0.040 * dewlapWeight;
                     }
                 }
 
                 // 9. DRACHT: VENTRALE BUIKDOORHANG (Ventral Sag van zwaar kalf 45-65kg):
-                // Z = 0.05 tot 0.45, Y = 0.38 tot 0.70
-                if (z > 0.05 && z < 0.45 && y < 0.70 && y > 0.38) {
-                    const sagWeight = Math.sin(((z - 0.05) / 0.40) * Math.PI) * Math.sin(((y - 0.38) / 0.32) * Math.PI);
-                    y -= fetalVolume * 0.045 * sagWeight;
+                // Z = -0.75 tot 0.05, Y = 0.45 tot 0.85
+                if (z > -0.75 && z < 0.05 && y > 0.45 && y < 0.85) {
+                    const sagWeight = Math.sin(((z - -0.75) / 0.80) * Math.PI) * Math.sin(((y - 0.45) / 0.40) * Math.PI);
+                    y -= fetalVolume * 0.110 * sagWeight;
+                    x += signX * fetalVolume * 0.045 * sagWeight;
                 }
 
-                // 10. DRACHT: RECHTERFLANK ASYMMETRIE (Kalf rechts):
-                // Alleen rechterflank (x > 0.06), Z = 0.02 tot 0.38, Y = 0.45 tot 0.78
-                if (x > 0.06 && z > 0.02 && z < 0.38 && y > 0.45 && y < 0.78) {
-                    const rWeight = Math.sin(((z - 0.02) / 0.36) * Math.PI) * Math.sin(((y - 0.45) / 0.33) * Math.PI);
-                    x += fetalVolume * 0.035 * rWeight;
+                // 10. DRACHT: RECHTERFLANK ASYMMETRIE (Kalf bevindt zich rechts):
+                // Alleen rechterflank (x > 0.08), Z = -0.70 tot -0.15, Y = 0.50 tot 0.90
+                if (x > 0.08 && z > -0.70 && z < -0.15 && y > 0.50 && y < 0.90) {
+                    const rWeight = Math.sin(((z - -0.70) / 0.55) * Math.PI) * Math.sin(((y - 0.50) / 0.40) * Math.PI);
+                    x += fetalVolume * 0.095 * rWeight;
                 }
 
-                // 11. PENSVULLING: LINKERFLANK (Reticulorumen links):
-                // Alleen linkerflank (x < -0.06), Z = -0.05 tot 0.25, Y = 0.52 tot 0.82
-                if (x < -0.06 && z > -0.05 && z < 0.25 && y > 0.52 && y < 0.82) {
-                    const lWeight = Math.sin(((z - -0.05) / 0.30) * Math.PI) * Math.sin(((y - 0.52) / 0.30) * Math.PI);
-                    const rumenDelta = (rumenFill - 0.5) * 0.030 * lWeight;
-                    x -= rumenDelta; // naar links (-X) bij volle pens
+                // 11. PENSVULLING: LINKERFLANK (Reticulorumen links - Jan Hulsen Zaagmethode):
+                // Alleen linkerflank (x < -0.08), Z = -0.85 tot -0.45, Y = 0.75 tot 1.25
+                if (x < -0.08 && z > -0.85 && z < -0.45 && y > 0.75 && y < 1.25) {
+                    const rumenWeight = Math.sin(((z - -0.85) / 0.40) * Math.PI) * Math.sin(((y - 0.75) / 0.50) * Math.PI);
+                    const rumenDelta = (rumenFill - 0.5) * 0.125 * rumenWeight;
+                    x -= rumenDelta; // naar links (-X) bij volle pens, naar binnen (+X) bij lege pens / diepe hongergroeve
                 }
 
-                // 12. PARITEITSKADER (Rompbreedte vaars vs meerkalfs)
-                if (z > -0.15 && z < 0.45 && y > 0.50 && y < 0.85 && absX > 0.10) {
+                // 12. CRV LINEAIRE KENMERKEN SCULPTING (Voorhand, Inhoud, Kruisbreedte, Uier)
+                // A. Voorhand / Chest Width: Z = -0.15 tot 0.30, Y = 0.60 tot 1.30, absX > 0.10
+                if (z > -0.15 && z < 0.30 && y > 0.60 && y < 1.30 && absX > 0.10) {
+                    x += signX * modChestWidth * 0.045;
+                }
+                // B. Inhoud / Rompdiepte: Z = -0.65 tot 0.15, Y = 0.50 tot 1.05
+                if (z > -0.65 && z < 0.15 && y > 0.50 && y < 1.05) {
+                    y -= modBodyDepth * 0.055;
+                    x += signX * modBodyDepth * 0.035;
+                }
+                // C. Kruisbreedte: Z = -1.25 tot -0.75, Y = 1.05 tot 1.38, absX > 0.10
+                if (z > -1.25 && z < -0.75 && y > 1.05 && y < 1.38 && absX > 0.10) {
+                    x += signX * modRumpWidth * 0.050;
+                }
+                // D. Uierconformatie (Vooruier, Achteruierhoogte, Ophangband): Z = -1.05 tot -0.70, Y = 0.45 tot 0.85
+                if (z > -1.05 && z < -0.70 && y > 0.45 && y < 0.85) {
+                    // Ophangband (centrale groeve bij x rond 0)
+                    if (absX < 0.05) {
+                        y += modCleft * 0.035 * (1.0 - absX / 0.05);
+                    }
+                    // Vooruieraanhechting (z > -0.80)
+                    if (z > -0.80) {
+                        z += modForeUdder * 0.040;
+                    }
+                    // Achteruierhoogte (z < -0.92)
+                    if (z < -0.92) {
+                        y += modRearUdderH * 0.045;
+                    }
+                }
+
+                // 13. PARITEITSKADER (Rompbreedte vaars vs meerkalfs)
+                if (z > -0.85 && z < 0.20 && y > 0.50 && y < 1.25 && absX > 0.10) {
                     x += signX * parityDelta;
+                }
+
+                // 14. HOORNS (Gehoornd vs Onthoorn / Genetisch Hoornloos / Scurs)
+                // Hoorns bevinden zich bij: absX > 0.06, y > 1.35, z > 0.85 && z < 1.15
+                if (absX > 0.06 && y > 1.35 && z > 0.85 && z < 1.15) {
+                    if (hornScale !== 1.0) {
+                        const baseX = signX * 0.085;
+                        const baseY = 1.390;
+                        const baseZ = 0.960;
+                        const retract = 1.0 - Math.max(0.0, Math.min(1.4, hornScale));
+                        x = x + (baseX - x) * retract;
+                        y = y + (baseY - y) * retract;
+                        z = z + (baseZ - z) * retract;
+                    }
                 }
 
                 p[idx]     = x;
@@ -491,20 +553,39 @@ export class CowBehavior {
         });
     }
 
+    /**
+     * Schakelt tussen Gehoornd, Onthoorn (Polled) en Hoornstompjes (Scurs)
+     * @param {boolean|number} enabledOrScale - true/false of schaal 0.0 .. 1.4
+     */
+    setHorns(enabledOrScale) {
+        if (typeof enabledOrScale === 'boolean') {
+            this.state.hasHorns = enabledOrScale;
+            this.state.hornScale = enabledOrScale ? 1.0 : 0.0;
+        } else {
+            const s = Math.max(0.0, Math.min(1.4, parseFloat(enabledOrScale)));
+            this.state.hornScale = s;
+            this.state.hasHorns = s > 0.05;
+        }
+        this._lastConformationKey = null;
+        this._applyAnatomicalConformation(this.state.bcs, this.state.gestationDays, this.state.parity, this.state.rumenFill);
+    }
+
     _resetProceduralBones() {
-        // AnimationMixer evalueert en overschrijft alle 49 botten accuraat vanuit de animatieclip tracks.
-        // We overschrijven botten NOOIT met de bind-pose zodat authentieke houdingen (liggen, grazen, transitie) 100% behouden blijven.
+        // Wortelpositie altijd resetten naar (0, 0, 0) om per-frame accumulatie te voorkomen
+        if (this.bones.root) {
+            this.bones.root.position.set(0, 0, 0);
+        }
     }
 
     _buildActions() {
         const map = {
             walk:        ['walk', 'Loco_Walk', 'Armature.001|Loco_Walk|BaseLayer'],
-            walkSlow:    ['walkSlow', 'Loco_WalkSlow-IP'],
+            walkSlow:    ['walk', 'Loco_Walk'],
             trot:        ['trot', 'Loco_Trot-IP'],
             backingUp:   ['backingUp', 'Loco_WalkBack-IP'],
             gallopPlay:  ['gallopPlay', 'Loco_Sprint-IP'],
             idle:        ['idle', 'stand0', 'stand1', 'Stand_00-IP', 'Stand_01-IP'],
-            idleRest:    ['idleRest', 'Stand_01-IP'],
+            idleRest:    ['idleRest', 'Stand_01-IP', 'Stand_02-IP'],
             grazing:     ['grazing', 'eating0', 'eating1', 'Eating_01-IP'],
             eating:      ['eating', 'Eating_02-IP'],
             drinking:    ['drinking', 'Drinking_01-IP'],
@@ -513,6 +594,7 @@ export class CowBehavior {
             lyingSleep:  ['lyingSleep', 'Sitting_02-IP'],
             lieDown:     ['lieDown', 'lyingDown', 'Trans_Stand_To_Sitting-IP'],
             standUp:     ['standUp', 'standingUp', 'Trans_Sitting_To_Stand-IP'],
+            downerCow:   ['lying', 'sitting0', 'Sitting_00-IP', 'lieDown'],
         };
 
         for (const [key, candidates] of Object.entries(map)) {
@@ -525,10 +607,12 @@ export class CowBehavior {
             }
         }
 
-        // Mixer finished listener voor overgang na voltooien van opstaan
+        // Mixer finished listener voor overgang na voltooien van opstaan of transities
         this.mixer.addEventListener('finished', (e) => {
             if (this.actions['standUp'] && e.action === this.actions['standUp']) {
                 this.setGait('idle');
+            } else if (this.actions['lieDown'] && e.action === this.actions['lieDown']) {
+                this.setGait(this.state.gait === 'downerCow' ? 'downerCow' : 'lying');
             }
         });
     }
@@ -538,11 +622,21 @@ export class CowBehavior {
     // ═══════════════════════════════════════════════════════════════════════════
 
     setGait(gait) {
+        if (gait === 'turnLeft90') {
+            this.turn90('left');
+            return;
+        }
+        if (gait === 'turnRight90') {
+            this.turn90('right');
+            return;
+        }
+
         this.state.gait = gait;
         const prevAction = this.currentAction;
 
         let targetKey = 'idle';
         if (gait === 'walk') targetKey = 'walk';
+        else if (gait === 'walkSlow') targetKey = 'walkSlow';
         else if (gait === 'trot') targetKey = 'trot';
         else if (gait === 'gallopPlay') targetKey = 'gallopPlay';
         else if (gait === 'backingUp') targetKey = 'backingUp';
@@ -552,9 +646,28 @@ export class CowBehavior {
         else if (gait === 'eatingBunk' || gait === 'eating') targetKey = 'eating';
         else if (gait === 'drinking') targetKey = 'drinking';
         else if (gait === 'lyingSternal' || gait === 'lying') targetKey = 'lying';
+        else if (gait === 'lyingSleepFlank') targetKey = 'lying';
+        else if (gait === 'boxHanging') targetKey = 'idle';
         else if (gait === 'lyingLateral' || gait === 'lyingSleep') targetKey = 'lyingSleep';
         else if (gait === 'lieDown') targetKey = 'lieDown';
         else if (gait === 'standUp') targetKey = 'standUp';
+        else if (gait === 'downerCow' || gait === 'downer' || gait === 'fallen') targetKey = 'downerCow';
+
+        if (gait === 'boxHanging') {
+            const idleAction = this.actions['idle'];
+            if (idleAction) {
+                if (prevAction && prevAction !== idleAction) prevAction.fadeOut(0.35);
+                idleAction.reset();
+                idleAction.setLoop(THREE.LoopRepeat, Infinity);
+                idleAction.paused = false;
+                idleAction.setEffectiveWeight(1.0);
+                idleAction.fadeIn(0.35);
+                idleAction.play();
+                this.currentAction = idleAction;
+                this._updateStatusUI();
+                return;
+            }
+        }
 
         if (gait === 'lieDown') {
             const lieAction = this.actions['lieDown'];
@@ -592,19 +705,38 @@ export class CowBehavior {
             }
         }
 
-        if (gait === 'lyingSternal' || gait === 'lying' || gait === 'lyingLateral' || gait === 'lyingSleep') {
+        if (gait === 'lyingSternal' || gait === 'lying' || gait === 'lyingLateral' || gait === 'lyingSleep' || gait === 'downerCow' || gait === 'lyingSleepFlank') {
             const lieAction = this.actions['lieDown'];
             if (lieAction) {
                 if (prevAction && prevAction !== lieAction) prevAction.fadeOut(0.35);
                 lieAction.reset();
                 lieAction.setLoop(THREE.LoopOnce, 1);
                 lieAction.clampWhenFinished = true;
-                // Houd de definitieve borstligging houding vast
+                // De definitieve borstligging houding (sternal recumbency) bevindt zich op het einde van de lieDown cyclus
                 lieAction.time = Math.max(0, lieAction.getClip().duration - 0.02);
                 lieAction.paused = true;
                 lieAction.setEffectiveWeight(1.0);
+                lieAction.fadeIn(0.35);
                 lieAction.play();
                 this.currentAction = lieAction;
+                this._updateStatusUI();
+                return;
+            }
+        }
+
+        if (gait === 'turnLeft90' || gait === 'turnRight90') {
+            const turnAction = this.actions[gait];
+            if (turnAction) {
+                if (prevAction && prevAction !== turnAction) prevAction.fadeOut(0.25);
+                turnAction.reset();
+                turnAction.setLoop(THREE.LoopOnce, 1);
+                turnAction.clampWhenFinished = true;
+                turnAction.paused = false;
+                turnAction.time = 0;
+                turnAction.setEffectiveWeight(1.0);
+                turnAction.fadeIn(0.25);
+                turnAction.play();
+                this.currentAction = turnAction;
                 this._updateStatusUI();
                 return;
             }
@@ -644,7 +776,7 @@ export class CowBehavior {
     }
 
     onLamenessChanged() {
-        if (this.currentAction && (this.state.gait === 'walk' || this.state.gait === 'trot')) {
+        if (this.currentAction && (this.state.gait === 'walk' || this.state.gait === 'walkSlow' || this.state.gait === 'trot')) {
             this.currentAction.setEffectiveTimeScale(this._computeTimeScale());
         }
         this._updateStatusUI();
@@ -657,6 +789,7 @@ export class CowBehavior {
         const parity = this.state.parity !== undefined ? this.state.parity : 2;
         // Oudere, zwaardere meerkalfskoeien stappen rustiger; jeugdige vaarzen vlotter
         const ageSpeedMod = (parity === 0) ? 1.08 : (parity >= 4 ? 0.88 : 1.0);
+        if (this.state.gait === 'walkSlow') return Math.max(0.20, baseSpeed * 0.58 * speedFactor * ageSpeedMod);
         if (this.state.gait === 'trot') return Math.max(0.4, baseSpeed * 1.75 * speedFactor * ageSpeedMod);
         if (this.state.gait === 'gallopPlay') return Math.max(0.5, baseSpeed * 2.1);
         if (this.state.gait === 'backingUp') return Math.max(0.2, baseSpeed * 0.6);
@@ -709,6 +842,38 @@ export class CowBehavior {
         return Math.max(0.40, Math.min(2.10, warp));
     }
 
+    turn90(direction = 'left') {
+        const delta = direction === 'left' ? Math.PI / 2 : -Math.PI / 2;
+        const cow = (this.options && this.options.cow) || (this.options && this.options.group && this.options.group.userData && this.options.group.userData.cow);
+        if (cow) {
+            if (cow.targetRotY === undefined) cow.targetRotY = cow.group.rotation.y;
+            cow.targetRotY += delta;
+        } else if (this.options && this.options.group) {
+            this.options.group.rotation.y += delta;
+        }
+        this.onTurn(direction);
+    }
+
+    onTurn(direction = 'left') {
+        if (this.state.gait === 'idle' || this.state.gait === 'idleRest') {
+            const prevGait = this.state.gait;
+            this.setGait('walk');
+            setTimeout(() => {
+                if (this.state.gait === 'walk') {
+                    this.setGait(prevGait);
+                }
+            }, 1200);
+        }
+    }
+
+    setDownerCow(enable = true) {
+        if (enable) {
+            this.setGait('downerCow');
+        } else {
+            this.setGait('standUp');
+        }
+    }
+
     getIKTargets() { return this.ikTargets; }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -754,13 +919,14 @@ export class CowBehavior {
     _updateWalkPhase(dt) {
         const walkAction = this.actions['walk'];
         const cadenceMod = this._computeCadenceWarp(this.walkCyclePhase);
+        const mountSlowdown = this._mountBlend ? (1.0 - 0.70 * this._mountBlend) : 1.0;
         if (walkAction && walkAction.isRunning()) {
             const clipDur = walkAction.getClip().duration || 1.42;
             this.walkCyclePhase = (walkAction.time / clipDur) % 1.0;
-            const effectiveScale = this._computeTimeScale() * cadenceMod;
+            const effectiveScale = this._computeTimeScale() * cadenceMod * mountSlowdown;
             walkAction.setEffectiveTimeScale(effectiveScale);
         } else {
-            const freq = (this.state.gait === 'trot' ? 1.6 : (this.state.gait === 'gallopPlay' ? 2.2 : 0.85)) * this.state.walkSpeed * cadenceMod;
+            const freq = (this.state.gait === 'trot' ? 1.6 : (this.state.gait === 'gallopPlay' ? 2.2 : 0.85)) * this.state.walkSpeed * cadenceMod * mountSlowdown;
             this.walkCyclePhase = (this.walkCyclePhase + dt * freq) % 1.0;
         }
         this.telemetry.cyclePhase = this.walkCyclePhase;
@@ -776,22 +942,24 @@ export class CowBehavior {
 
         // ── A. Koeiendans / Speels Bokken (Spring Pasture Play Behavior) ──────
         if (gait === 'gallopPlay') {
-            const leap = Math.sin(cycle * Math.PI * 2);
-            if (this.bones.root) this.bones.root.position.y += Math.max(0, leap) * 0.18;
+            const suppress = this._mountBlend ? (1.0 - this._mountBlend) : 1.0;
+            const leap = Math.sin(cycle * Math.PI * 2) * suppress;
+            // Local Z = -100 * world Y (verticale sprong tot +0.18m zonder accumulatie)
+            if (this.bones.root) this.bones.root.position.z = -Math.max(0, leap) * 18;
 
             // Kop omlaag en bokken met achterpoten
-            this._applyLocalRot('neck1', 0.28 + leap * 0.15, 0, 0);
-            this._applyLocalRot('head', -0.15, 0, 0);
+            this._applyLocalRot('neck1', (0.28 + leap * 0.15) * suppress, 0, 0);
+            this._applyLocalRot('head', -0.15 * suppress, 0, 0);
 
             // Achterhand schopt omhoog / bokt
-            const buck = Math.max(0, Math.sin(cycle * Math.PI * 2 + 1.0));
+            const buck = Math.max(0, Math.sin(cycle * Math.PI * 2 + 1.0)) * suppress;
             this._applyLocalRot('spine1', buck * 0.15, 0, 0);
             this._applyLocalRot('upperLegHL', buck * 0.45, 0, buck * 0.15);
             this._applyLocalRot('upperLegHR', buck * 0.45, 0, -buck * 0.15);
 
             // Staart vrolijk omhoog gekruld over de rug
-            this._applyLocalRot('tail0', 0.85, 0, 0);
-            this._applyLocalRot('tail1', 0.65, 0, 0);
+            this._applyLocalRot('tail0', 0.85 * suppress, 0, 0);
+            this._applyLocalRot('tail1', 0.65 * suppress, 0, 0);
             return;
         }
 
@@ -836,9 +1004,9 @@ export class CowBehavior {
         }
 
         // ── F. Lopen & Draven met Sprecher Kreupelheidsscores (1-5) ───────────
-        if (gait === 'walk' || gait === 'trot') {
+        if (gait === 'walk' || gait === 'walkSlow' || gait === 'trot') {
             this._applyLamenessModel(dt);
-        } else if (gait === 'idle') {
+        } else if (gait === 'idle' || gait === 'idleRest') {
             this._applyStandingLameness();
         }
     }
@@ -971,32 +1139,20 @@ export class CowBehavior {
 
         // Zwaartepunt verplaatsing (inzinken / hinken):
         if (this.bones.root) {
-            this.bones.root.position.y += bodyDip;
-            this.bones.root.position.x += lateralSwayX;
+            // Local Z = -100 * world Y (verticale inzinking)
+            // Local X = 100 * world X (laterale massa-uitwijking)
+            this.bones.root.position.z += -bodyDip * 100;
+            this.bones.root.position.x += lateralSwayX * 100;
         }
         this._applyLocalRot('pelvis', 0, 0, lateralRoll);
         this._applyLocalRot('chest',  0, 0, lateralRoll * 0.6);
         this.telemetry.headNodDeg = totalNod * (180 / Math.PI);
 
-        // ── 5. Standfase Ontlasting per Hoef & Stijve Koot ────────────────────
-        ['FL', 'FR', 'HL', 'HR'].forEach(leg => {
-            const s = sev[leg];
-            if (s <= 0.001) return;
-            const impactPhase = GAIT_STRIKE_PHASES[leg];
-            let stanceT = (cycle - impactPhase + 1.0) % 1.0;
-            if (stanceT < 0.45) {
-                const relief = Math.sin((stanceT / 0.45) * Math.PI) * s;
-                const isFront = (leg === 'FL' || leg === 'FR');
-                const upper = (leg === 'FL') ? 'upperLegFL' : (leg === 'FR' ? 'upperLegFR' : (leg === 'HL' ? 'upperLegHL' : 'upperLegHR'));
-                const lower = (leg === 'FL') ? 'lowerLegFL' : (leg === 'FR' ? 'lowerLegFR' : (leg === 'HL' ? 'lowerLegHL' : 'lowerLegHR'));
-                const pastern = (leg === 'FL') ? 'pasternFL' : (leg === 'FR' ? 'pasternFR' : (leg === 'HL' ? 'pasternHL' : 'pasternHR'));
-
-                this._applyLocalRot(upper, -relief * (isFront ? 0.26 : 0.22), 0, 0);
-                this._applyLocalRot(lower,  relief * (isFront ? 0.44 : 0.38), 0, 0);
-                // Stijve koot: vermindert pijnlijke hyperextensie van de kogel tijdens standfase
-                this._applyLocalRot(pastern, -relief * 0.36, 0, 0);
-            }
-        });
+        // ── 5. Standfase Ontlasting per Hoef (Flower & Weary 2006; Sprecher 1997) ──
+        // Biomechanisch correct: de ontlasting van een pijnlijke poot in standfase
+        // wordt primair uitgedrukt door verminderde contacttijd (duty cycle / cadence warp),
+        // opwaartse kopknik (front) en bekkenkanteling/coxitis hike (hind).
+        // De poot zelf blijft natuurgetrouw op de bodem staan en vouwt NOOIT naar binnen.
 
         // ── 6. Abductie Buitenklauw op de Achterpoten (van der Tol et al. 2003) ──
         let totalAbductDeg = 0;
@@ -1007,7 +1163,7 @@ export class CowBehavior {
             let stanceT = (cycle - impactPhase + 1.0) % 1.0;
             if (stanceT >= 0.38) {
                 const swingNorm = (stanceT - 0.38) / 0.62;
-                const abduct = Math.sin(swingNorm * Math.PI) * s * 0.40;
+                const abduct = Math.sin(swingNorm * Math.PI) * s * 0.22;
                 const sideSign = (leg === 'HL') ? 1 : -1;
                 const boneKey = (leg === 'HL') ? 'upperLegHL' : 'upperLegHR';
                 this._applyLocalRot(boneKey, 0, sideSign * abduct, 0);
@@ -1070,22 +1226,12 @@ export class CowBehavior {
             this._applyLocalRot('pelvis', arch * 0.20, 0, 0);
             this.telemetry.spineArchDeg = arch * (180 / Math.PI);
 
-            // Ontlasting van pijnlijk aangetaste poten in stand (poot opheffen / aantippen op de buitenklauw)
-            ['FL', 'FR', 'HL', 'HR'].forEach(leg => {
-                const s = hScores[leg];
-                if (s >= 2.5) {
-                    const reliefRot = (s - 2.0) * 0.08;
-                    const isLeft = (leg === 'FL' || leg === 'HL');
-                    const bone = (leg === 'FL') ? 'lowerLegFL' : (leg === 'FR' ? 'lowerLegFR' : (leg === 'HL' ? 'lowerLegHL' : 'lowerLegHR'));
-                    const pastern = (leg === 'FL') ? 'pasternFL' : (leg === 'FR' ? 'pasternFR' : (leg === 'HL' ? 'pasternHL' : 'pasternHR'));
-                    this._applyLocalRot(bone, reliefRot, 0, 0);
-                    this._applyLocalRot(pastern, -reliefRot * 0.7, 0, 0);
-
-                    // Bekken kantelt licht weg van de zere poot
-                    const sideSign = isLeft ? 1 : -1;
-                    this._applyLocalRot('pelvis', 0, 0, sideSign * reliefRot * 0.22);
-                }
-            });
+            // Bekken kantelt licht weg van de pijnlijkste poot om gewicht te verplaatsen
+            const rearDiff = (hScores.HL || 1) - (hScores.HR || 1);
+            if (Math.abs(rearDiff) > 0.4) {
+                const sideSign = rearDiff > 0 ? 1 : -1;
+                this._applyLocalRot('pelvis', 0, 0, sideSign * Math.abs(rearDiff) * 0.025);
+            }
         }
     }
 
@@ -1125,6 +1271,7 @@ export class CowBehavior {
         if (this.lyingModel) this.lyingModel.visible = false;
         if (this.eatingModel) this.eatingModel.visible = false;
 
+        // 1. Zijligging (lange rust)
         const isLateral = (this.state.gait === 'lyingLateral' || this.state.gait === 'lyingSleep');
         const targetLateral = isLateral ? 1.0 : 0.0;
         this.lateralLyingFactor += (targetLateral - this.lateralLyingFactor) * Math.min(1.0, dt * 3.5);
@@ -1140,6 +1287,43 @@ export class CowBehavior {
             if (this.bones.eyelidL) this.bones.eyelidL.scale.y = 1.0 - f * 0.9;
             if (this.bones.eyelidR) this.bones.eyelidR.scale.y = 1.0 - f * 0.9;
         }
+
+        // 2. REM-slaap: Borstligging met kop op de flank (Jan Hulsen Koesignalen: 30-45 min per dag)
+        const isFlankSleep = (this.state.gait === 'lyingSleepFlank');
+        const targetFlankSleep = isFlankSleep ? 1.0 : 0.0;
+        if (this.sleepFlankFactor === undefined) this.sleepFlankFactor = 0;
+        this.sleepFlankFactor += (targetFlankSleep - this.sleepFlankFactor) * Math.min(1.0, dt * 3.5);
+
+        if (this.sleepFlankFactor > 0.01) {
+            const sf = this.sleepFlankFactor;
+            this._applyLocalRot('spine1', 0, sf * 0.12, 0);
+            this._applyLocalRot('spine2', 0, sf * 0.22, 0);
+            this._applyLocalRot('chest',  0, sf * 0.28, 0);
+            this._applyLocalRot('neck1', sf * 0.10, sf * 0.72, sf * 0.32);
+            this._applyLocalRot('neck2', sf * 0.08, sf * 0.65, sf * 0.25);
+            this._applyLocalRot('head',  -sf * 0.12, sf * 0.52, -sf * 0.18);
+            this._applyLocalRot('earL',  0, 0, sf * 0.40);
+            this._applyLocalRot('earR',  0, 0, -sf * 0.40);
+            if (this.bones.eyelidL) this.bones.eyelidL.scale.y = 1.0 - sf * 0.95;
+            if (this.bones.eyelidR) this.bones.eyelidR.scale.y = 1.0 - sf * 0.95;
+        }
+
+        // 3. DeLaval Boxhangen / Wachtstand (Perching in cubicle: signaal van aarzeling, pijnlijke knieën of harde box)
+        const isBoxHanging = (this.state.gait === 'boxHanging');
+        const targetBoxHanging = isBoxHanging ? 1.0 : 0.0;
+        if (this.boxHangingFactor === undefined) this.boxHangingFactor = 0;
+        this.boxHangingFactor += (targetBoxHanging - this.boxHangingFactor) * Math.min(1.0, dt * 3.5);
+
+        if (this.boxHangingFactor > 0.01) {
+            const bf = this.boxHangingFactor;
+            // Voorpoten hoger op ligboxdrempel, kyfose in lendenwervels, kop voorwaarts gehouden, oren alert zijwaarts
+            this._applyLocalRot('spine1', 0, 0, bf * 0.06);
+            this._applyLocalRot('spine2', 0, 0, bf * 0.08);
+            this._applyLocalRot('neck1', -bf * 0.10, 0, 0);
+            this._applyLocalRot('head',   bf * 0.14, 0, 0);
+            this._applyLocalRot('earL',   0, -bf * 0.30, bf * 0.15);
+            this._applyLocalRot('earR',   0,  bf * 0.30, -bf * 0.15);
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -1149,11 +1333,14 @@ export class CowBehavior {
     _applyComprehensiveEthology(dt) {
         const t = this.time;
 
-        // ── A. Herkauwen (50-70 bpm + slokdarmslik) ──────────────────────────
+        // ── A. Herkauwen (50-70 bpm + slokdarmslik + Jan Hulsen Kauwslagenteller) ──
         if (this.state.ruminating) {
             this.ruminateCycle += dt;
             this.bolusChewTime += dt;
             const rate = (this.state.ruminateRate / 60) * Math.PI * 2;
+            const rateHz = (this.state.ruminateRate || 60) / 60;
+            const chews = Math.floor(this.bolusChewTime * rateHz);
+            this.telemetry.bolusChews = Math.min(75, chews);
             this.telemetry.chewingRateBpm = this.state.ruminateRate;
 
             if (this.ruminatePaused) {
@@ -1181,13 +1368,15 @@ export class CowBehavior {
                 if (this.bones.tongue2) this.bones.tongue2.rotation.set(0, 0, 0);
                 if (this.bones.tongue3) this.bones.tongue3.rotation.set(0, 0, 0);
 
-                if (this.bolusChewTime > 45.0) {
+                // Jan Hulsen norm: 55-65 slagen per brok
+                if (chews >= 58 || this.bolusChewTime > 48.0) {
                     this.ruminatePaused = true;
-                    this.ruminatePauseTimer = 3.8;
+                    this.ruminatePauseTimer = 4.0;
                 }
             }
         } else {
             this.telemetry.chewingRateBpm = 0;
+            this.telemetry.bolusChews = 0;
         }
 
         // ── B. Hittestress & Panting Score (0-4) ──────────────────────────────
@@ -1232,28 +1421,81 @@ export class CowBehavior {
         }
 
         // ── E. Dreighouding (Head-Butting Threat) ────────────────────────────
-        if (this.state.headButtThreat) {
-            this._applyLocalRot('neck1', 0.65, 0, 0); // Kop laag bij de grond
-            this._applyLocalRot('head',  0.45, 0, 0); // Hoorns/voorhoofd frontaal
-            this._applyLocalRot('earL',  0, 0, -0.45); // Oren naar achter gedraaid
-            this._applyLocalRot('earR',  0, 0,  0.45);
+        if (this._threatBlend === undefined) this._threatBlend = 0.0;
+        const targetThreat = this.state.headButtThreat ? 1.0 : 0.0;
+        this._threatBlend = THREE.MathUtils.damp(this._threatBlend, targetThreat, 4.0, dt);
+        const tb = this._threatBlend;
+        if (tb > 0.001) {
+            this._applyLocalRot('neck1', 0.48 * tb, 0, 0); // Kop laag bij de grond
+            this._applyLocalRot('head',  0.30 * tb, 0, 0); // Hoorns/voorhoofd frontaal
+            this._applyLocalRot('earL',  0, 0, -0.45 * tb); // Oren naar achter gedraaid
+            this._applyLocalRot('earR',  0, 0,  0.45 * tb);
         }
 
         // ── F. Bespringen / Rijden (Mounting Behavior) ───────────────────────
-        if (this.state.mounting) {
-            if (this.bones.root) this.bones.root.position.y += 0.45;
-            this._applyLocalRot('pelvis',     0.45, 0, 0);
-            this._applyLocalRot('upperLegHL', 0.35, 0, 0);
-            this._applyLocalRot('upperLegHR', 0.35, 0, 0);
-            this._applyLocalRot('upperLegFL', -1.1, 0, -0.2);
-            this._applyLocalRot('upperLegFR', -1.1, 0,  0.2);
+        if (this._mountBlend === undefined) this._mountBlend = 0.0;
+        const targetMount = this.state.mounting ? 1.0 : 0.0;
+        this._mountBlend = THREE.MathUtils.damp(this._mountBlend, targetMount, 3.5, dt);
+        const mb = this._mountBlend;
+
+        if (mb > 0.001) {
+            // Slerp voorbeenbotten naar baseQuat om de dynamische stapzwaai van loopgangen
+            // vloeiend te dempen naar de natuurlijke gedragen klemhouding
+            ['collarFL', 'collarFR', 'upperLegFL', 'upperLegFR', 'lowerLegFL', 'lowerLegFR', 'pasternFL', 'pasternFR'].forEach(k => {
+                const bone = this.bones[k];
+                if (bone && bone._baseQuat) {
+                    bone.quaternion.slerp(bone._baseQuat, mb * 0.85);
+                }
+            });
+
+            // 1. Bekken en Wervelkolom: Oprichting van de voorhand (Rearing / Upward pitch)
+            this._applyLocalRot('pelvis', -0.52 * mb, 0, 0);
+            this._applyLocalRot('spine1', -0.10 * mb, 0, 0);
+            this._applyLocalRot('spine2', -0.06 * mb, 0, 0);
+            this._applyLocalRot('spine3', -0.03 * mb, 0, 0);
+
+            // 2. Achterpoten: Grondcontact en dragende steunfunctie
+            this._applyLocalRot('upperLegHL', 0.46 * mb, 0,  0.05 * mb);
+            this._applyLocalRot('upperLegHR', 0.46 * mb, 0, -0.05 * mb);
+            this._applyLocalRot('lowerLegHL', -0.14 * mb, 0, 0);
+            this._applyLocalRot('lowerLegHR', -0.14 * mb, 0, 0);
+            this._applyLocalRot('pasternHL',   0.08 * mb, 0, 0);
+            this._applyLocalRot('pasternHR',   0.08 * mb, 0, 0);
+
+            // 3. Voorpoten: Klemhouding / Omhelzing (Clasping posture)
+            this._applyLocalRot('collarFL',   0.40 * mb, 0, -0.18 * mb);
+            this._applyLocalRot('collarFR',   0.40 * mb, 0,  0.18 * mb);
+            this._applyLocalRot('upperLegFL', -0.22 * mb, 0,  0.14 * mb);
+            this._applyLocalRot('upperLegFR', -0.22 * mb, 0, -0.14 * mb);
+            this._applyLocalRot('lowerLegFL', 0, 0, 0.48 * mb);
+            this._applyLocalRot('lowerLegFR', 0, 0, 0.48 * mb);
+            this._applyLocalRot('pasternFL',  0, 0, 0.22 * mb);
+            this._applyLocalRot('pasternFR',  0, 0, 0.22 * mb);
+
+            // 4. Hals en Kop: Voorwaarts gericht over de schoft van de partner
+            this._applyLocalRot('neck1', 0.26 * mb, 0, 0);
+            this._applyLocalRot('head',  0.18 * mb, 0, 0);
+
+            // 5. Staart: Opgewonden staartheffing
+            this._applyLocalRot('tail0', 0.38 * mb, 0, 0);
+            this._applyLocalRot('tail1', 0.22 * mb, 0, 0);
+
+            // 6. Ritmische dek-stoot / copulatoire puls (~1.3 Hz)
+            if (mb > 0.4) {
+                const thrust = Math.sin(t * 8.0) * 0.04 * mb;
+                this._applyLocalRot('pelvis', thrust, 0, 0);
+            }
         }
 
         // ── G. Flehmen Reukrespons ──────────────────────────────────────────
-        if (this.state.flehmen) {
-            this._applyLocalRot('neck1', -0.32, 0, 0);
-            this._applyLocalRot('head',  -0.40, 0, 0);
-            this._applyLocalRot('jaw',    0.22, 0, 0); // Bovenlip opgetrokken
+        if (this._flehmenBlend === undefined) this._flehmenBlend = 0.0;
+        const targetFlehmen = this.state.flehmen ? 1.0 : 0.0;
+        this._flehmenBlend = THREE.MathUtils.damp(this._flehmenBlend, targetFlehmen, 4.0, dt);
+        const fb = this._flehmenBlend;
+        if (fb > 0.001) {
+            this._applyLocalRot('neck1', -0.28 * fb, 0, 0);
+            this._applyLocalRot('head',  -0.35 * fb, 0, 0);
+            this._applyLocalRot('jaw',    0.22 * fb, 0, 0); // Bovenlip opgetrokken
         }
 
         // ── Sociale Kudde-Interacties (research Broom & Fraser 2015 / Bouissou 2001) ──
@@ -1289,10 +1531,25 @@ export class CowBehavior {
             this._applyLocalRot('head',   0.24, 0, 0);
         }
 
-        // ── H. Tochtigheid (Sta-Tocht Lordose) ───────────────────────────────
-        if (this.state.estrus) {
-            this._applyLocalRot('spine1', -0.06, 0, 0);
-            this._applyLocalRot('tail0',   0.26, 0.14, 0);
+        // ── H. Tochtigheid (Sta-Tocht & Lordose) ───────────────────────────────
+        if (this._estrusBlend === undefined) this._estrusBlend = 0.0;
+        const targetEstrus = this.state.estrus ? 1.0 : 0.0;
+        this._estrusBlend = THREE.MathUtils.damp(this._estrusBlend, targetEstrus, 4.0, dt);
+        const eb = this._estrusBlend;
+        if (eb > 0.001) {
+            // Lordose: lendenrug hol getrokken om dekking toe te staan
+            this._applyLocalRot('spine1', -0.07 * eb, 0, 0);
+            this._applyLocalRot('spine2', -0.04 * eb, 0, 0);
+            // Staartbasis opgetild en lateraal afgewend (vulva-presentatie)
+            this._applyLocalRot('tail0',   0.24 * eb, 0.16 * eb, 0);
+            this._applyLocalRot('tail1',   0.12 * eb, 0.10 * eb, 0);
+
+            // Sta-tocht reflex (bij stilstaan): achterpoten breed en onwrikbaar geplant
+            if (this.state.gait === 'idle' || this.state.gait === 'idleRest') {
+                this._applyLocalRot('upperLegHL', 0, 0,  0.06 * eb);
+                this._applyLocalRot('upperLegHR', 0, 0, -0.06 * eb);
+                this._applyLocalRot('head', -0.08 * eb, 0, 0);
+            }
         }
 
         // ── I. Pijngezicht & Buikpijn / Zaagbokshouding ──────────────────────
@@ -1320,10 +1577,16 @@ export class CowBehavior {
         }
 
         // ── J. Loeien ───────────────────────────────────────────────────────
-        if (this.state.bellowing) {
-            this._applyLocalRot('neck1', -0.34, 0, 0);
-            this._applyLocalRot('head',  -0.38, 0, 0);
-            this._applyLocalRot('jaw',    0.58 + Math.sin(t * 3.5) * 0.05, 0, 0);
+        if (this._bellowBlend === undefined) this._bellowBlend = 0.0;
+        const targetBellow = this.state.bellowing ? 1.0 : 0.0;
+        this._bellowBlend = THREE.MathUtils.damp(this._bellowBlend, targetBellow, 4.0, dt);
+        const bb = this._bellowBlend;
+        if (bb > 0.001) {
+            const yellPulse = Math.sin(t * 8.0);
+            this._applyLocalRot('neck1', -0.32 * bb, 0, 0);
+            this._applyLocalRot('head',  -0.25 * bb, 0, 0);
+            this._applyLocalRot('jaw',   (0.40 + yellPulse * 0.08) * bb, 0, 0);
+            this._applyLocalRot('tail0',  0.22 * bb, 0, 0);
         }
 
         // ── K. Mesten & Plassen ─────────────────────────────────────────────
@@ -1381,7 +1644,9 @@ export class CowBehavior {
         const bcs = this.state.bcs !== undefined ? this.state.bcs : 3.0;
         const parity = this.state.parity !== undefined ? this.state.parity : 2;
         const gestDays = this.state.gestationDays !== undefined ? this.state.gestationDays : 0;
-        const rumenFill = this.state.rumenFill !== undefined ? this.state.rumenFill : 0.65;
+        const rumenFill = (this.state.rumenScore !== undefined)
+            ? Math.max(0.0, Math.min(1.0, (this.state.rumenScore - 1.0) / 4.0))
+            : (this.state.rumenFill !== undefined ? this.state.rumenFill : 0.65);
         const gestProg = Math.max(0, Math.min(1.0, gestDays / 280.0));
         const fetalVolume = Math.pow(gestProg, 2.8); // Exponentiële foetale groei in trimester 3
 
@@ -1391,19 +1656,72 @@ export class CowBehavior {
         // exponentiële schaalvermenigvuldiging (compounding in Spine1 -> Spine2 -> Spine3 -> Chest).
         this._applyAnatomicalConformation(bcs, gestDays, parity, rumenFill);
 
-        // ── 1b. Fokkerij Verervings-effecten (CRV / NVI) ─────────────────────
+        // ── 1b. CRV Lineair Exterieur Effecten (Schaal 88 - 112) ──
+        let baseChestW = 1.0;
+        let baseChestD = 1.0;
+        let bt = null;
         if (this.breedingManager) {
-            const bt = this.breedingManager.getTraits();
-            // Hoogtemaat (Stature: 96 compact .. 108 groot)
+            bt = this.breedingManager.getTraits();
+            // Hoogtemaat (Stature: 88 compact .. 112 groot frame)
             if (bt.stature && this.model) {
-                const statScale = 1.0 + (bt.stature - 100) * 0.007;
+                const statScale = 1.0 + (bt.stature - 100) * 0.015;
                 this.model.scale.set(statScale, statScale, statScale);
             }
-            // Stand achterbenen (96 steil .. 108 sabelbenig/krom)
+            // Voorhand & Borstbreedte (88 smal .. 112 breed)
+            if (bt.chestWidth) {
+                baseChestW = 1.0 + (bt.chestWidth - 100) * 0.012;
+                const chestDelta = (bt.chestWidth - 100) * 0.0075;
+                if (this.bones.collarFL && this.bones.collarFL._basePos) {
+                    this.bones.collarFL.position.x = this.bones.collarFL._basePos.x + chestDelta;
+                }
+                if (this.bones.collarFR && this.bones.collarFR._basePos) {
+                    this.bones.collarFR.position.x = this.bones.collarFR._basePos.x - chestDelta;
+                }
+            }
+            // Inhoud & Rompdiepte (88 ondiep .. 112 diep)
+            if (bt.bodyDepth) {
+                baseChestD = 1.0 + (bt.bodyDepth - 100) * 0.012;
+            }
+            // Kruisligging (88 overbouwd/oplopend .. 100 ideaal .. 112 steil/dakvormig)
+            if (bt.rumpAngle) {
+                const rumpTilt = (bt.rumpAngle - 100) * 0.022;
+                this._applyLocalRot('pelvis', rumpTilt, 0, 0);
+            }
+            // Kruisbreedte (88 smal .. 112 breed tussen zitbeenderen)
+            if (bt.rumpWidth) {
+                const rumpDelta = (bt.rumpWidth - 100) * 0.0075;
+                if (this.bones.upperLegHL && this.bones.upperLegHL._basePos) {
+                    this.bones.upperLegHL.position.x = this.bones.upperLegHL._basePos.x + rumpDelta;
+                }
+                if (this.bones.upperLegHR && this.bones.upperLegHR._basePos) {
+                    this.bones.upperLegHR.position.x = this.bones.upperLegHR._basePos.x - rumpDelta;
+                }
+            }
+            // Stand achterbenen achter (88 koehakkig/naar binnen .. 100 parallel .. 112 wijd)
+            if (bt.rearLegRear) {
+                const hockSpread = (bt.rearLegRear - 100) * 0.020;
+                this._applyLocalRot('lowerLegHL', 0, 0, -hockSpread);
+                this._applyLocalRot('lowerLegHR', 0, 0, hockSpread);
+            }
+            // Stand achterbenen zij (88 steil .. 100 normaal .. 112 sabelbenig/krom)
             if (bt.rearLegSide) {
-                const hockTilt = (bt.rearLegSide - 100) * 0.012;
+                const hockTilt = (bt.rearLegSide - 100) * 0.025;
                 this._applyLocalRot('lowerLegHL', hockTilt, 0, 0);
                 this._applyLocalRot('lowerLegHR', hockTilt, 0, 0);
+            }
+            // Klauwhoek (88 plat/lage verzenen .. 100 normaal .. 112 steil)
+            if (bt.clawAngle) {
+                const clawTilt = (bt.clawAngle - 100) * 0.025;
+                this._applyLocalRot('pasternHL', clawTilt, 0, 0);
+                this._applyLocalRot('pasternHR', clawTilt, 0, 0);
+                this._applyLocalRot('pasternFL', clawTilt, 0, 0);
+                this._applyLocalRot('pasternFR', clawTilt, 0, 0);
+            }
+            // Voorbeenstand (88 frans/naar buiten .. 100 recht .. 112 recht/parallel)
+            if (bt.frontLegStance) {
+                const frontLegYaw = (bt.frontLegStance - 100) * 0.018;
+                this._applyLocalRot('lowerLegFL', 0, frontLegYaw, 0);
+                this._applyLocalRot('lowerLegFR', 0, -frontLegYaw, 0);
             }
         }
 
@@ -1412,8 +1730,8 @@ export class CowBehavior {
         if (this.bones.spine2) this.bones.spine2.scale.set(1.0, 1.0, 1.0);
         if (this.bones.spine3) this.bones.spine3.scale.set(1.0, 1.0, 1.0);
         if (this.bones.pelvis) this.bones.pelvis.scale.set(1.0, 1.0, 1.0);
-        this._baseChestWidth = 1.0;
-        this._baseChestDepth = 1.0;
+        this._baseChestWidth = baseChestW;
+        this._baseChestDepth = baseChestD;
 
         // Verslapping bekkenbanden in laatste 14 dagen van dracht (relaxine & oestrogeen)
         // Klinisch afkalfkenmerk: wegzakken van de sacrosciatische banden naast de staartinplant
@@ -1445,6 +1763,19 @@ export class CowBehavior {
                 udderScaleY = 1.35;
                 udderScaleXZ = 1.15;
                 udderOffsetY = -0.065;
+            }
+
+            // CRV Uierdiepte fokwaarde invloed (88 diep .. 112 ondiep)
+            if (bt && bt.udderDepth) {
+                const udderDepthMod = (bt.udderDepth - 100) * 0.012;
+                udderOffsetY += udderDepthMod;
+                udderScaleY -= udderDepthMod * 1.5;
+            }
+
+            // CRV Speenlengte fokwaarde invloed (88 kort .. 112 lang)
+            if (bt && bt.teatLength && this.bones.udder2) {
+                const teatScale = 1.0 + (bt.teatLength - 100) * 0.025;
+                this.bones.udder2.scale.set(teatScale, teatScale, teatScale);
             }
 
             // Pre-partum uierstuwing en oedeem in de laatste 40 dagen
@@ -1562,41 +1893,16 @@ export class CowBehavior {
     // ═══════════════════════════════════════════════════════════════════════════
 
     _applyGroundContactGuard(dt) {
-        if (!this.model || !this.model.visible) return;
-        const gait = this.state.gait;
-        const isStandingOrWalking = (
-            gait === 'walk' || gait === 'trot' || gait === 'gallopPlay' ||
-            gait === 'idle' || gait === 'idleRest' || gait === 'backingUp'
-        );
-        if (!isStandingOrWalking) return;
-
-        const b = this.bones;
-        if (!b.hoofHL) return;
-
-        // Update wereldmatrix van het model zodat botposities actueel zijn
-        this.model.updateMatrixWorld(true);
-
-        const guards = [
-            { bone: b.hoofHL, minWorldY: 0.072 },
-            { bone: b.hoofHR, minWorldY: 0.072 },
-            { bone: b.hoofFL, minWorldY: 0.062 },
-            { bone: b.hoofFR, minWorldY: 0.062 },
-        ];
-
-        for (const g of guards) {
-            const bone = g.bone;
-            if (!bone || !bone.parent) continue;
-            bone.getWorldPosition(_tempVecGuard);
-            if (_tempVecGuard.y < g.minWorldY) {
-                const diffY = g.minWorldY - _tempVecGuard.y;
-                _tempMatGuard.copy(bone.parent.matrixWorld).invert();
-                // Exacte delta in lokale ouderruimte (zonder foute normalisatie door transformDirection):
-                const pOrigin = new THREE.Vector3(0, 0, 0).applyMatrix4(_tempMatGuard);
-                const pShift  = new THREE.Vector3(0, diffY, 0).applyMatrix4(_tempMatGuard);
-                _tempDeltaGuard.subVectors(pShift, pOrigin);
-                bone.position.add(_tempDeltaGuard);
-                bone.updateMatrix();
-                bone.updateMatrixWorld(true);
+        // Biomechanische grondzekering:
+        // Voorkomt dat de snuit of kop onder het maaiveld zakt bij samenvallende halsbuiging (grazen, dreighouding, kreupelheid)
+        if (this.bones.jaw) {
+            const jawPos = _tempVecGuard.copy(this.bones.jaw.position);
+            this.bones.jaw.getWorldPosition(jawPos);
+            if (jawPos.y < 0.12) {
+                const pen = 0.12 - jawPos.y;
+                const corr = Math.min(0.50, pen * 2.5);
+                this._applyLocalRot('neck1', -corr * 0.6, 0, 0);
+                this._applyLocalRot('head',  -corr * 0.4, 0, 0);
             }
         }
     }
@@ -1604,12 +1910,14 @@ export class CowBehavior {
     _updateStatusUI() {
         if (!this.isSelected) return;
         const gaitNames = {
-            walk: 'Lopen (4-takt)', trot: 'Draven', gallopPlay: 'Koeiendans / Bokken',
+            walk: 'Lopen (4-takt)', walkSlow: 'Loom stappen (Traag)', trot: 'Draven', gallopPlay: 'Koeiendans / Bokken',
             idle: 'Stilstaan', idleRest: 'Ruststand (3-poten)', grazing: 'Grazen',
-            eatingBunk: 'Voerhek vreten', drinking: 'Drinken',
+            eatingBunk: 'Voerhek vreten', eating: 'Vreten', drinking: 'Drinken',
             lieDown: 'Gaan liggen', standUp: 'Opstaan',
-            lyingSternal: 'Borstligging', lyingLateral: 'Zijligging (diepe slaap)',
-            backingUp: 'Achteruitlopen',
+            lying: 'Borstligging', lyingSternal: 'Borstligging', lyingLateral: 'Zijligging (diepe slaap)',
+            lyingSleep: 'Zijligging (diepe slaap)', lyingSleepFlank: '💤 Kop op Flank (REM-slaap)',
+            boxHanging: '⚠️ Boxhangen (Wachtstand)', backingUp: 'Achteruitlopen',
+            downerCow: '🚨 Downer Koe (Melkziekte / Borstligging)',
         };
         const statusEl = document.getElementById('behavior-status');
         if (statusEl) {

@@ -32,445 +32,870 @@
     <!-- Control Panel -->
     <div id="control-panel">
         <div id="panel-header">
-            <span>🐄 Koe Simulator — Alle Gedragingen</span>
+            <span>🐄 Koe Simulator — Gedrag & Exterieur</span>
             <button id="panel-toggle" title="Klap paneel in/uit">◀</button>
         </div>
+
+        <!-- Tab Navigatie Header (5 Tabs: Fenotype, Productie, Gangwerk, Welzijn, Kudde) -->
+        <div class="tab-navigation">
+            <button class="tab-nav-btn active" data-tab="tab-fenotype" title="Lineair Exterieur, CRV Standaard (88-112), Hoornstatus & Vachten">🧬 Fenotype</button>
+            <button class="tab-nav-btn" data-tab="tab-productie" title="Melkproductie, Gehalten, NVI, INET, Robot & Speenconditie">🥛 Productie</button>
+            <button class="tab-nav-btn" data-tab="tab-gedrag" title="Gangwerk, Locomotie & 4-Hoeven Kreupelheid">🏃 Gangwerk</button>
+            <button class="tab-nav-btn" data-tab="tab-welzijn" title="Lichaamsconditie (BCS), Dracht, Pens, Mest, Ligcomfort & Koesignalen">❤️ Welzijn & Fysiologie</button>
+            <button class="tab-nav-btn" data-tab="tab-kudde" title="Kudde, Scène, Camera & Telemetrie">🌿 Kudde</button>
+        </div>
+
         <div id="panel-body">
-            
-            <!-- 0. Kies je Koe (Focus op 1 Koe) -->
-            <div class="section cow-focus-section">
-                <div class="section-title">🐄 Kies je Koe (1 Dier in Focus)</div>
-                
-                <div class="cow-selector-buttons" style="display:grid; grid-template-columns: repeat(2, 1fr); gap: 5px; margin-bottom: 8px;">
-                    <button class="cow-select-btn active" data-cow="0" title="Bertha — Volwassen Holstein-Friesian melkkoe (3e kalfs, All-round NVI)">
-                        <div style="font-weight:700; font-size:11px;">1. Bertha</div>
-                        <div style="font-size:8.5px; opacity:0.85;">Zwartbont (3e kalfs)</div>
-                    </button>
-                    <button class="cow-select-btn" data-cow="1" title="Clara — MRIJ Roodbont koe (2e kalfs, Show / Keuring)">
-                        <div style="font-weight:700; font-size:11px;">2. Clara</div>
-                        <div style="font-size:8.5px; opacity:0.85;">Roodbont (2e kalfs)</div>
-                    </button>
-                    <button class="cow-select-btn" data-cow="2" title="Mina — Groninger Blaarkop (4e kalfs, Robuuste Weidekoe)">
-                        <div style="font-weight:700; font-size:11px;">3. Mina</div>
-                        <div style="font-size:8.5px; opacity:0.85;">Blaarkop (4e kalfs)</div>
-                    </button>
-                    <button class="cow-select-btn" data-cow="3" title="Emma — Jonge Vaars (1e kalfs, Strak Vaarzenuier)">
-                        <div style="font-weight:700; font-size:11px;">4. Emma</div>
-                        <div style="font-size:8.5px; opacity:0.85;">Vaars (1e kalfs)</div>
-                    </button>
-                </div>
 
-                <!-- Actieve Koe Paspoort Badge -->
-                <div id="cowPassportCard" style="font-size:10.5px; line-height:1.45; color:#f1f5f9; background:rgba(15,23,42,0.8); padding:7px 9px; border-radius:5px; border-left:3px solid #3b82f6;">
-                    <div style="font-weight:700; color:#60a5fa; margin-bottom:2px;" id="passportName">🐄 Bertha — Holstein-Friesian Zwartbont</div>
-                    <div style="color:#94a3b8; font-size:10px;" id="passportDetails">
-                        Pariteit: <strong style="color:#f8fafc;" id="passportParity">3e kalfs</strong> | Dracht: <strong style="color:#f8fafc;" id="passportGestation">140 d</strong> | Conditie: <strong style="color:#f8fafc;" id="passportBcs">BCS 3.00</strong><br>
-                        Fokkerij: <span style="color:#38bdf8;" id="passportBreeding">⚖️ All-Round (+335 NVI)</span>
-                    </div>
-                </div>
-            </div>
+            <!-- ═══════════════════════════════════════════════════════════════════
+                 TAB 1: FENOTYPE, EXTERIEUR & LICHAAMSBOUW
+                 ═══════════════════════════════════════════════════════════════════ -->
+            <div id="tab-fenotype" class="tab-content-pane active">
 
-            <!-- 1. Locomotion & Posture Section -->
-            <div class="section">
-                <div class="section-title">🏃 1. Locomotie & Gangwerk</div>
-                <div class="gait-buttons">
-                    <button class="gait-btn active" data-gait="walk">Lopen (4-takt)</button>
-                    <button class="gait-btn" data-gait="trot">Draven</button>
-                    <button class="gait-btn" data-gait="gallopPlay" title="Weidegang bokken / koeiendans">🐮 Bokken / Dans</button>
-                    <button class="gait-btn" data-gait="idle">Stilstaan</button>
-                    <button class="gait-btn" data-gait="idleRest" title="Rusten op 3 poten (aangetipte hak)">3-Potenstand</button>
-                    <button class="gait-btn" data-gait="backingUp">Achteruit</button>
-                </div>
-                <div class="slider-row">
-                    <label>Snelheid</label>
-                    <input type="range" id="walkSpeed" min="0.3" max="2.0" step="0.05" value="1.0">
-                    <span class="val" id="walkSpeedVal">1.0 m/s</span>
-                </div>
-            </div>
-
-            <!-- 2. Lameness Section: Alle 4 Hoeven Multilateraal -->
-            <div class="section">
-                <div class="section-title">🦶 2. Kreupelheid per Hoef (Alle 4 Hoeven)</div>
-                
-                <!-- Presets -->
-                <div class="hoof-preset-buttons">
-                    <button class="hoof-preset-btn active" data-preset="healthy">Gezond</button>
-                    <button class="hoof-preset-btn" data-preset="single_fl" title="Enkelvoudig Linksvoor Score 3.5">LV 3.5</button>
-                    <button class="hoof-preset-btn" data-preset="single_hl" title="Enkelvoudig Linksachter Score 4 (Abductie)">LA 4.0</button>
-                    <button class="hoof-preset-btn" data-preset="bilateral_hind" title="Bilateraal Achterpoten (Wittelijn)">LA+RA 3.5</button>
-                    <button class="hoof-preset-btn" data-preset="bilateral_front" title="Bilateraal Voorpoten (Eierenlopen)">LV+RV 3.5</button>
-                    <button class="hoof-preset-btn" data-preset="all_four" title="Alle 4 Hoeven Aangedaan (Laminitis)">Alle 4 (4.0)</button>
-                </div>
-
-                <!-- 4-Hoof Sliders -->
-                <div class="hoof-sliders-matrix">
-                    <div class="slider-row hoof-row">
-                        <label title="Linksvoor (FL)">LV (Voor L)</label>
-                        <input type="range" id="scoreFL" class="hoof-slider" data-leg="FL" min="1" max="5" step="0.5" value="1">
-                        <span class="val" id="scoreValFL">1.0</span>
-                    </div>
-                    <div class="slider-row hoof-row">
-                        <label title="Rechtsvoor (FR)">RV (Voor R)</label>
-                        <input type="range" id="scoreFR" class="hoof-slider" data-leg="FR" min="1" max="5" step="0.5" value="1">
-                        <span class="val" id="scoreValFR">1.0</span>
-                    </div>
-                    <div class="slider-row hoof-row">
-                        <label title="Linksachter (HL)">LA (Achter L)</label>
-                        <input type="range" id="scoreHL" class="hoof-slider" data-leg="HL" min="1" max="5" step="0.5" value="1">
-                        <span class="val" id="scoreValHL">1.0</span>
-                    </div>
-                    <div class="slider-row hoof-row">
-                        <label title="Rechtsachter (HR)">RA (Achter R)</label>
-                        <input type="range" id="scoreHR" class="hoof-slider" data-leg="HR" min="1" max="5" step="0.5" value="1">
-                        <span class="val" id="scoreValHR">1.0</span>
-                    </div>
-                </div>
-
-                <div id="loco-score-label" class="score-label">Score 1: Normaal (vlakke rug, symmetrisch 4-takt)</div>
-            </div>
-
-            <!-- 3. Lying & Transitions -->
-            <div class="section">
-                <div class="section-title">🛋️ 3. Lighoudingen & Transities</div>
-                <div class="gait-buttons">
-                    <button class="gait-btn" data-gait="lieDown">Gaan liggen ▼</button>
-                    <button class="gait-btn" data-gait="standUp">Opstaan ▲</button>
-                    <button class="gait-btn" data-gait="lyingSternal">Borstligging</button>
-                    <button class="gait-btn" data-gait="lyingLateral">Zijligging (slaap)</button>
-                </div>
-                <div class="check-row" style="margin-top:4px;">
-                    <label title="Hondenzit pathologie (n. obturatorius paralyse: achterhand blijft liggen)"><input type="checkbox" id="chkDogSitting"> 🐕 Hondenzit Pathologie</label>
-                </div>
-            </div>
-
-            <!-- 4. Feeding & Digestion -->
-            <div class="section">
-                <div class="section-title">🌿 4. Voeding & Vertering</div>
-                <div class="gait-buttons">
-                    <button class="gait-btn" data-gait="grazing">Grazen</button>
-                    <button class="gait-btn" data-gait="eatingBunk">Voerhek vreten</button>
-                    <button class="gait-btn" data-gait="drinking">Drinken</button>
-                </div>
-                <div class="micro-grid" style="margin-top:4px;">
-                    <button class="micro-btn" data-state="ruminating" title="Circulair kauwen met slokdarmslikgolf">🌿 Herkauwen</button>
-                </div>
-                <div class="slider-row" style="margin-top:4px;">
-                    <label>Kauwfrequentie</label>
-                    <input type="range" id="ruminateRate" min="50" max="70" step="1" value="60">
-                    <span class="val" id="ruminateRateVal">60 bpm</span>
-                </div>
-            </div>
-
-            <!-- 5. Social & Reproductive -->
-            <div class="section">
-                <div class="section-title">❤️ 5. Sociaal & Voortplanting</div>
-                <div class="micro-grid">
-                    <button class="micro-btn" data-state="estrus" title="Sta-tocht reflex & gefixeerd bekken">❤️ Tochtigheid</button>
-                    <button class="micro-btn" data-state="flehmen" title="Flehmen reukrespons (lipkrul feromonen)">👃 Flehmen</button>
-                    <button class="micro-btn" data-state="bellowing" title="Kop omhoog, bek wijd open loeien">📢 Loeien</button>
-                    <button class="micro-btn" data-state="headButtThreat" title="Kop laag, hoorns voorwaarts gericht">💥 Dreighouding</button>
-                    <button class="micro-btn" data-state="mounting" title="Bespringen / rijden op groepsgenoot">🐂 Rijden / Dekken</button>
-                </div>
-            </div>
-
-            <!-- 6. Grooming & Comfort -->
-            <div class="section">
-                <div class="section-title">🧼 6. Verzorging & Vliegen</div>
-                <div class="micro-grid">
-                    <button class="micro-btn" data-state="flankLicking" title="Zelfverzorging: eigen flank likken">👅 Flanklikken</button>
-                    <button class="micro-btn" data-state="headShake" title="Snelle reflexieve kopschudding">🪰 Kopschudden</button>
-                    <button class="micro-btn" data-state="footStamping" title="Pootstampen tegen stalvliegen">🦶 Pootstampen</button>
-                    <button class="micro-btn" data-state="earFlickL" title="Linkeroor onafhankelijk richten/flikkeren">👂 Oor Links</button>
-                    <button class="micro-btn" data-state="earFlickR" title="Rechteroor onafhankelijk richten/flikkeren">👂 Oor Rechts</button>
-                </div>
-                <div class="slider-row" style="margin-top:6px;">
-                    <label>Staartgezwaai</label>
-                    <input type="range" id="tailSwish" min="0" max="1" step="0.05" value="0.25">
-                    <span class="val" id="tailSwishVal">25%</span>
-                </div>
-            </div>
-
-            <!-- 7. Health, Stress & Pain -->
-            <div class="section">
-                <div class="section-title">🌡️ 7. Gezondheid, Pijn & Stress</div>
-                <div class="micro-grid">
-                    <button class="micro-btn" data-state="heatStress" title="Hittestress hijgen & tong uitsteken">🌡️ Hittestress</button>
-                    <button class="micro-btn" data-state="bovinePainFace" title="Bovine Pain Face: geknepen ogen, oren achteruit">😣 Pijngezicht</button>
-                    <button class="micro-btn" data-state="sawhorseStance" title="Zaagbokshouding: poten wijd bij buikpijn">🪵 Zaagbokshouding</button>
-                    <button class="micro-btn" data-state="lethargic" title="Lethargisch / ziek (hangende kop & oren)">📉 Ziek / Lusteloos</button>
-                </div>
-                <div class="slider-row" style="margin-top:6px;">
-                    <label>Panting Score</label>
-                    <input type="range" id="pantingScore" min="0" max="4" step="1" value="0">
-                    <span class="val" id="pantingScoreVal">Score 0</span>
-                </div>
-            </div>
-
-            <!-- 8. Elimination -->
-            <div class="section">
-                <div class="section-title">💩 8. Uitscheiding</div>
-                <div class="micro-grid">
-                    <button class="micro-btn" data-state="defecation" title="Mesten: opgerichte staartbasis">💩 Mesten</button>
-                    <button class="micro-btn" data-state="urination" title="Plassen: gespreide achterpoten">💧 Plassen</button>
-                </div>
-            </div>
-
-            <!-- 9. Zoötechniek, Dracht & Lichaamsconditie (Ferguson / Edmonson) -->
-            <div class="section">
-                <div class="section-title">📋 9. Zoötechniek, Dracht & Conditie (BCS)</div>
-                
-                <!-- Zoötechnische Presets -->
-                <div class="hoof-preset-buttons" style="margin-bottom:6px; grid-template-columns: repeat(2, 1fr);">
-                    <button class="zt-preset-btn" data-zt="fresh_heifer" title="Pariteit 1, 0d dracht, BCS 3.25">Verse Vaars</button>
-                    <button class="zt-preset-btn" data-zt="peak_lactation" title="Pariteit 3, 60d dracht, BCS 2.25 (schraal)">Pieklactatie</button>
-                    <button class="zt-preset-btn" data-zt="late_gestation" title="Pariteit 4, 275d dracht, BCS 3.50, kalf zichtbaar rechts">Hoogdrachtig</button>
-                    <button class="zt-preset-btn" data-zt="pregnant_heifer" title="Pariteit 0, 210d dracht, BCS 3.25">Drachtige Pink</button>
-                </div>
-
-                <!-- Body Condition Score (Ferguson et al. 1994 / Edmonson et al. 1989 / Penn State) -->
-                <div class="slider-row">
-                    <label title="Body Condition Score (1.0 = uitgemergeld, 3.0 = optimaal, 5.0 = vet)">BCS Conditie</label>
-                    <input type="range" id="bcsScore" min="1.0" max="5.0" step="0.25" value="3.0">
-                    <span class="val" id="bcsScoreVal">3.00 (Optimaal)</span>
-                </div>
-                <div id="bcsDiagCard" style="font-size:10px; line-height:1.35; color:#94a3b8; background:rgba(15,23,42,0.65); padding:6px 9px; border-radius:4px; margin:-3px 0 7px 0; border-left:3px solid #38bdf8;">
-                    <strong>⚖️ Diagnostiek:</strong> Vloeiende U-hoek hooks-pins, afgeronde heupknobbels, lichte weefselbedekking ribben/lendenen.
-                </div>
-
-                <!-- Dagen in Dracht (Gestation days 0-282) -->
-                <div class="slider-row">
-                    <label title="Dagen in dracht (280d a terme, kalf-buik bolt uit naar rechtsonder)">Drachtduur</label>
-                    <input type="range" id="gestationDays" min="0" max="282" step="1" value="0">
-                    <span class="val" id="gestationDaysVal">0 d (Niet drachtig)</span>
-                </div>
-
-                <!-- Pariteit (Lactatienummer 0-5) -->
-                <div class="slider-row">
-                    <label title="Pariteit: 0 = Vaars (compact hoog uier), 4+ = Meerkalfs (diep hangend uier)">Pariteit</label>
-                    <input type="range" id="parityScore" min="0" max="5" step="1" value="2">
-                    <span class="val" id="parityScoreVal">2e kalfs</span>
-                </div>
-
-                <!-- Pens, Uier en Ademhaling -->
-                <div class="slider-row">
-                    <label title="Pensvulling links (fossa paralumbalis)">Pensvulling (L)</label>
-                    <input type="range" id="rumenFill" min="0" max="1" step="0.05" value="0.65">
-                    <span class="val" id="rumenFillVal">65%</span>
-                </div>
-                <div class="slider-row">
-                    <label title="Uierinhoud en slingertraagheid">Uiervulling</label>
-                    <input type="range" id="udderFill" min="0" max="1" step="0.05" value="0.5">
-                    <span class="val" id="udderFillVal">50%</span>
-                </div>
-                <div class="slider-row">
-                    <label>Ademhaling</label>
-                    <input type="range" id="breathRate" min="15" max="95" step="1" value="26">
-                    <span class="val" id="breathRateVal">26 bpm</span>
-                </div>
-
-                <!-- Biomechanische Kinetica Toggles (research.md) -->
-                <div class="check-row" style="margin-top:6px;">
-                    <label title="Vrije dorsale scapula translatie via synsarcosis"><input type="checkbox" id="chkSynsarcosis" checked> Vrije Scapula</label>
-                    <label title="Gekoppelde knie-hak buiging via m. fibularis tertius"><input type="checkbox" id="chkReciprocal" checked> Reciproque Apparaat</label>
-                    <label title="Kogelgewricht doorvering & sesambeenveer"><input type="checkbox" id="chkFetlock" checked> Kootveer</label>
-                    <label title="Natuurlijk knipperen met oogleden"><input type="checkbox" id="chkEyelids" checked> Oogleden</label>
-                </div>
-            </div>
-
-            <!-- 10. Fokkerij & Fokwaarden (CRV / NVI / Exterieur) -->
-            <div class="section">
-                <div class="section-title">🧬 10. Fokkerij & Fokwaarden (CRV / NVI)</div>
-
-                <!-- Fokkerij Stier- en Doelprofielen -->
-                <div class="hoof-preset-buttons" style="margin-bottom:8px; grid-template-columns: repeat(2, 1fr);">
-                    <button class="bv-preset-btn active" data-bv="balanced_nvi" title="NVI +335, all-round gebalanceerde topstier">⚖️ All-Round (+335)</button>
-                    <button class="bv-preset-btn" data-bv="show_conformation" title="Keuringskampioen: hoog ondiep uier (108), diepe ophangband (109), statig frame">🏆 Show / Keuring</button>
-                    <button class="bv-preset-btn" data-bv="high_production" title="Extreme melkproductie (+1650 kg melk), dieper uier, scherpe melkkoe">🥛 Melkproductie</button>
-                    <button class="bv-preset-btn" data-bv="pasture_health" title="Robuuste weidekoe: klauwgezondheid 109, celgetal 108, sterk beenwerk">🌿 Weide & Gezondheid</button>
-                </div>
-
-                <!-- Genetische Index Samenvatting Badge -->
-                <div id="bvSummaryCard" style="font-size:10.5px; line-height:1.4; color:#38bdf8; background:rgba(15,23,42,0.75); padding:6px 9px; border-radius:5px; margin-bottom:8px; border-left:3px solid #0284c7;">
-                    <strong>🧬 Genetisch Profiel:</strong> <span id="bvProfileName" style="color:#f8fafc;">⚖️ Gebalanceerde NVI Topper</span><br>
-                    <span style="color:#94a3b8;">NVI: <strong id="bvNviVal" style="color:#38bdf8;">+335</strong> | INET: <strong id="bvInetVal" style="color:#38bdf8;">€285</strong> | Uiergezondheid: <strong id="bvUdderHealthVal" style="color:#4ade80;">105</strong> | Klauwgezondheid: <strong id="bvClawHealthVal" style="color:#4ade80;">106</strong></span>
-                </div>
-
-                <!-- Uiervererving Sliders (CRV schaal: 96 - 108, 100 = Gemiddeld) -->
-                <div class="slider-row">
-                    <label title="Uierdiepte: 96 = diep uier; 108 = hoog/ondiep uier (ruim boven hak)">Uierdiepte</label>
-                    <input type="range" id="bvUdderDepth" min="96" max="108" step="1" value="105">
-                    <span class="val" id="bvUdderDepthVal">105 (Ondiep)</span>
-                </div>
-                <div class="slider-row">
-                    <label title="Ophangband: 96 = slap/vlak; 108 = diepe groeve en sterke ondersteuning">Ophangband</label>
-                    <input type="range" id="bvCleft" min="96" max="108" step="1" value="104">
-                    <span class="val" id="bvCleftVal">104 (Sterk)</span>
-                </div>
-                <div class="slider-row">
-                    <label title="Speenplaatsing voor: 96 = wijd; 108 = centraal onder kwartieren">Speenplaatsing</label>
-                    <input type="range" id="bvTeatPlacement" min="96" max="108" step="1" value="102">
-                    <span class="val" id="bvTeatPlacementVal">102 (Centraal)</span>
-                </div>
-                <div class="slider-row">
-                    <label title="Speenlengte: 96 = kort (3.8 cm); 108 = lang (6.2 cm)">Speenlengte</label>
-                    <input type="range" id="bvTeatLength" min="96" max="108" step="1" value="100">
-                    <span class="val" id="bvTeatLengthVal">100 (5.0 cm)</span>
-                </div>
-
-                <!-- Beenwerk & Frame Vererving -->
-                <div class="slider-row">
-                    <label title="Stand achterbenen zijgezicht: 96 = steil; 108 = krom/sabelbenig">Stand Achterbenen</label>
-                    <input type="range" id="bvRearLegSide" min="96" max="108" step="1" value="100">
-                    <span class="val" id="bvRearLegSideVal">100 (Ideaal)</span>
-                </div>
-                <div class="slider-row">
-                    <label title="Klauwgezondheid fokwaarde (weerstand tegen Mortellaro en zoolzweren)">Klauwgezondheid</label>
-                    <input type="range" id="bvClawHealth" min="96" max="108" step="1" value="106">
-                    <span class="val" id="bvClawHealthVal">106 (Resistent)</span>
-                </div>
-                <div class="slider-row">
-                    <label title="Hoogtemaat: 96 = compact; 108 = groot frame">Hoogtemaat</label>
-                    <input type="range" id="bvStature" min="96" max="108" step="1" value="102">
-                    <span class="val" id="bvStatureVal">102 (1.48 m)</span>
-                </div>
-            </div>
-
-            <!-- 11. Vacht & Textuur -->
-            <div class="section">
-                <div class="section-title">🎨 11. Vacht & Fotorealisme</div>
-                <div class="texture-buttons">
-                    <button class="tex-btn active" data-tex="blackwhite">Zwartbont (4K PBR)</button>
-                    <button class="tex-btn" data-tex="redwhite">Roodbont (MRIJ)</button>
-                    <button class="tex-btn" data-tex="blaarkop">Blaarkop</button>
-                    <button class="tex-btn" data-tex="black">Effen Zwart</button>
-                </div>
-            </div>
-
-            <!-- 12. Camera & Weergave -->
-            <div class="section">
-                <div class="section-title">👁️ 12. Camera & Weergave</div>
-                
-                <!-- Omgeving: Weiland (Buiten) vs Studio (Binnen) -->
-                <div class="env-mode-selector">
-                    <span class="sub-label">Scène-omgeving:</span>
-                    <div class="env-mode-buttons">
-                        <button class="env-btn active" data-env="pasture" id="btnEnvPasture" title="Realistisch Hollands weiland met poldergras, zonlicht en stapelwolken">🌿 Weiland (Polder)</button>
-                        <button class="env-btn" data-env="studio" id="btnEnvStudio" title="Donkere klinische studio voor ganganalyse en isolatie">🎬 Studio (Donker)</button>
-                    </div>
-                </div>
-
-                <div class="check-row">
-                    <label><input type="checkbox" id="showSkeleton"> Skelet</label>
-                    <label><input type="checkbox" id="showGrid"> Grid</label>
-                    <label><input type="checkbox" id="showIKTargets"> IK-targets</label>
-                    <label><input type="checkbox" id="wireframe"> Draadmodel</label>
-                </div>
-                <div class="camera-buttons">
-                    <button class="cam-btn active" data-cam="orbit" title="Vrije 3D Orbit navigatie">🔄 Vrij</button>
-                    <button class="cam-btn" data-cam="herd" title="Totaaloverzicht van alle 4 de koeien">👥 Kudde</button>
-                    <button class="cam-btn" data-cam="focus" title="Focus op actuele geselecteerde koe">🎯 Focus</button>
-                    <button class="cam-btn" data-cam="interaction" title="Close-up van sociale interacties">🤝 Interactie</button>
-                    <button class="cam-btn" data-cam="side" title="Ganganalyse zij-aanzicht">◀ Zij</button>
-                    <button class="cam-btn" data-cam="front" title="Kopknik & abductie aanzicht">⬆ Voor</button>
-                    <button class="cam-btn" data-cam="head" title="Kop close-up: herkauwen, tong & oogleden">🔍 Kop</button>
-                    <button class="cam-btn" data-cam="top" title="Wervelkolom & bekkeninslag bovenaanzicht">⬇ Boven</button>
-                </div>
-            </div>
-
-            <!-- 12. Live Research Telemetry Drawer -->
-            <div class="section research-section">
-                <div class="section-title" id="research-toggle" style="cursor:pointer; display:flex; justify-content:space-between;">
-                    <span>🔬 12. Live Research Telemetrie</span>
-                    <span id="research-arrow">▼</span>
-                </div>
-                <div id="research-content">
-                    <div class="telemetry-grid">
-                        <div class="telemetry-item">
-                            <span class="telemetry-label">Kopknik Uitslag:</span>
-                            <span class="telemetry-val" id="telHeadNod">0.0°</span>
-                        </div>
-                        <div class="telemetry-item">
-                            <span class="telemetry-label">Rugboog (Kyfose):</span>
-                            <span class="telemetry-val" id="telSpineArch">0.0°</span>
-                        </div>
-                        <div class="telemetry-item">
-                            <span class="telemetry-label">Abductie Buitenklauw:</span>
-                            <span class="telemetry-val" id="telAbduction">0.0°</span>
-                        </div>
-                        <div class="telemetry-item">
-                            <span class="telemetry-label">Bekkeninvalshoek:</span>
-                            <span class="telemetry-val" id="telPelvicTilt">0.0°</span>
+                <!-- Focus Koe Paspoort Badge -->
+                <div class="section cow-focus-section" style="padding:6px 12px 8px 12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                        <span class="sub-label" style="margin:0;">Actieve Koe Focus:</span>
+                        <div class="cow-mini-buttons" style="display:flex; gap:3px;">
+                            <button class="cow-select-btn active" data-cow="0" style="padding:2px 6px; font-size:9.5px; border-radius:3px;">1. Bertha</button>
+                            <button class="cow-select-btn" data-cow="1" style="padding:2px 6px; font-size:9.5px; border-radius:3px;">2. Clara</button>
+                            <button class="cow-select-btn" data-cow="2" style="padding:2px 6px; font-size:9.5px; border-radius:3px;">3. Mina</button>
+                            <button class="cow-select-btn" data-cow="3" style="padding:2px 6px; font-size:9.5px; border-radius:3px;">4. Emma</button>
                         </div>
                     </div>
+                    <div id="cowPassportCard" style="font-size:10px; line-height:1.45; color:#f1f5f9; background:rgba(15,23,42,0.85); padding:6px 8px; border-radius:5px; border-left:3px solid #38bdf8;">
+                        <div style="font-weight:700; color:#38bdf8;" id="passportName">🐄 Bertha — Holstein-Friesian Zwartbont</div>
+                        <div style="color:#94a3b8; font-size:9.5px;" id="passportDetails">
+                            Pariteit: <strong style="color:#f8fafc;" id="passportParity">3e kalfs</strong> | Dracht: <strong style="color:#f8fafc;" id="passportGestation">140 d</strong> | Conditie: <strong style="color:#f8fafc;" id="passportBcs">BCS 3.00</strong><br>
+                            Exterieur: <strong style="color:#38bdf8;" id="passportBreeding">Totaal 108</strong> | Hoorns: <strong style="color:#38bdf8;" id="passportHorns">✨ Onthoorn</strong>
+                        </div>
+                    </div>
+                </div>
 
-                    <div class="duty-cycle-container">
-                        <div class="duty-title">Standfase Duty Cycle & Bodemreactiekracht (GRF) per Hoef:</div>
-                        <div class="duty-bars">
-                            <div class="duty-bar-col">
-                                <span class="duty-leg-label">LV</span>
-                                <div class="duty-bar-bg"><div id="dutyBarFL" class="duty-bar-fill" style="height:62%;"></div></div>
-                                <span id="dutyValFL" class="duty-leg-pct">62%</span>
-                                <span id="grfValFL" class="duty-grf-pct" title="Relatieve bodemreactiekracht vs van der Tol">100% Fz</span>
+                <!-- 1. CRV Lineair Exterieur (Keuring) -->
+                <div class="section">
+                    <div class="section-title">🧬 CRV Lineair Exterieur (Keuring)</div>
+
+                    <!-- Exterieur Presets -->
+                    <div class="hoof-preset-buttons" style="margin-bottom:6px; grid-template-columns: repeat(2, 1fr);">
+                        <button class="bv-preset-btn active" data-bv="delta_framework_red" title="Optimaal Exterieur: Totaal 108, Frame 106, Uier 104, Benen 107">⭐ Optimaal (108)</button>
+                        <button class="bv-preset-btn" data-bv="standard_neutral" title="Standaard melkkoe: Basis 100 voor alle lineaire kenmerken">⚪ Standaard (100)</button>
+                        <button class="bv-preset-btn" data-bv="show_conformation" title="Exterieurkampioen: Totaal 112, Uier 112, Frame 110">🏆 Keuring (112)</button>
+                        <button class="bv-preset-btn" data-bv="pasture_health" title="Robuuste weidekoe: Klauwgezondheid 109, Conditie 106">🌿 Weidekoe</button>
+                    </div>
+
+                    <!-- CRV Bovenbalk Scorekaart -->
+                    <div class="crv-bovenbalk-card">
+                        <div style="display:flex; justify-content:space-between; font-size:9px; font-weight:700; color:#94a3b8; text-transform:uppercase;">
+                            <span>CRV Exterieur Bovenbalk:</span>
+                            <span style="color:#38bdf8;">Betrouwbaarheid 96%</span>
+                        </div>
+                        <div class="crv-bovenbalk-grid">
+                            <div class="crv-bovenbalk-item">
+                                <div class="crv-bovenbalk-label">Frame</div>
+                                <div class="crv-bovenbalk-val" id="crvBvFrame">106</div>
                             </div>
-                            <div class="duty-bar-col">
-                                <span class="duty-leg-label">RV</span>
-                                <div class="duty-bar-bg"><div id="dutyBarFR" class="duty-bar-fill" style="height:62%;"></div></div>
-                                <span id="dutyValFR" class="duty-leg-pct">62%</span>
-                                <span id="grfValFR" class="duty-grf-pct" title="Relatieve bodemreactiekracht vs van der Tol">100% Fz</span>
+                            <div class="crv-bovenbalk-item">
+                                <div class="crv-bovenbalk-label">Type</div>
+                                <div class="crv-bovenbalk-val" id="crvBvType">104</div>
                             </div>
-                            <div class="duty-bar-col">
-                                <span class="duty-leg-label">LA</span>
-                                <div class="duty-bar-bg"><div id="dutyBarHL" class="duty-bar-fill" style="height:62%;"></div></div>
-                                <span id="dutyValHL" class="duty-leg-pct">62%</span>
-                                <span id="grfValHL" class="duty-grf-pct" title="Relatieve bodemreactiekracht vs van der Tol">100% Fz</span>
+                            <div class="crv-bovenbalk-item">
+                                <div class="crv-bovenbalk-label">Uier</div>
+                                <div class="crv-bovenbalk-val" id="crvBvUdder">104</div>
                             </div>
-                            <div class="duty-bar-col">
-                                <span class="duty-leg-label">RA</span>
-                                <div class="duty-bar-bg"><div id="dutyBarHR" class="duty-bar-fill" style="height:62%;"></div></div>
-                                <span id="dutyValHR" class="duty-leg-pct">62%</span>
-                                <span id="grfValHR" class="duty-grf-pct" title="Relatieve bodemreactiekracht vs van der Tol">100% Fz</span>
+                            <div class="crv-bovenbalk-item">
+                                <div class="crv-bovenbalk-label">Benen</div>
+                                <div class="crv-bovenbalk-val" id="crvBvFeetLegs">107</div>
+                            </div>
+                            <div class="crv-bovenbalk-item total">
+                                <div class="crv-bovenbalk-label" style="color:#38bdf8;">Totaal</div>
+                                <div class="crv-bovenbalk-val" id="crvBvTotal" style="color:#f8fafc;">108</div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Toetsing met de Paper Benchmarks -->
-                    <div class="benchmark-table-box">
-                        <div class="cit-header">📊 Toetsing met de Literatuur (Paper Benchmark):</div>
-                        <div class="benchmark-row">
-                            <span class="bm-param">Duty Cycle Asymmetrie:</span>
-                            <span class="bm-norm">Norm: 62% → 25% (Flower & Weary 2006)</span>
-                            <span class="bm-status" id="bmDutyStatus">✅ Conform</span>
+                    <!-- CRV Lineaire Onderbalk Sliders (88 - 112) -->
+                    <!-- Groep A: Frame & Inhoud -->
+                    <div class="crv-subgroup">
+                        <div class="crv-subgroup-title">
+                            <span>📐 Frame & Inhoud</span>
+                            <span style="font-size:8.5px; opacity:0.8;">88 - 112</span>
                         </div>
-                        <div class="benchmark-row">
-                            <span class="bm-param">Lumbale Kyfosehoek:</span>
-                            <span class="bm-norm">Norm: 0° → 11° (Sprecher et al. 1997)</span>
-                            <span class="bm-status" id="bmSpineStatus">✅ Conform</span>
+                        <div class="slider-row">
+                            <label title="Hoogtemaat: 88 klein frame .. 112 groot frame (100 = 1.45m)">Hoogtemaat</label>
+                            <input type="range" id="bvStature" min="88" max="112" step="1" value="104">
+                            <span class="val" id="bvStatureVal">104</span>
                         </div>
-                        <div class="benchmark-row">
-                            <span class="bm-param">Bodemreactiekracht Fz:</span>
-                            <span class="bm-norm">Norm: -15% tot -48% (van der Tol 2002)</span>
-                            <span class="bm-status" id="bmGrfStatus">✅ Conform</span>
+                        <div class="slider-row">
+                            <label title="Voorhand: 88 smal .. 112 breed en ruim">Voorhand</label>
+                            <input type="range" id="bvChestWidth" min="88" max="112" step="1" value="105">
+                            <span class="val" id="bvChestWidthVal">105</span>
                         </div>
-                        <div class="benchmark-row">
-                            <span class="bm-param">Buitenklauw Abductie:</span>
-                            <span class="bm-norm">Norm: 8° tot 20° (research.md / v.d. Tol)</span>
-                            <span class="bm-status" id="bmAbductStatus">✅ Conform</span>
+                        <div class="slider-row">
+                            <label title="Inhoud: 88 ondiep .. 112 veel ribdiepte">Inhoud</label>
+                            <input type="range" id="bvBodyDepth" min="88" max="112" step="1" value="106">
+                            <span class="val" id="bvBodyDepthVal">106</span>
                         </div>
-                        <div class="benchmark-row">
-                            <span class="bm-param">Scapula Synsarcosis:</span>
-                            <span class="bm-norm">Norm: 3 - 5 cm dorsaal (research.md)</span>
-                            <span class="bm-status">✅ Actief</span>
+                        <div class="slider-row">
+                            <label title="Ribvorm / Melktype: 88 vlak .. 112 open gewelfde ribben">Ribvorm</label>
+                            <input type="range" id="bvAngularity" min="88" max="112" step="1" value="105">
+                            <span class="val" id="bvAngularityVal">105</span>
+                        </div>
+                        <div class="slider-row">
+                            <label title="Kruisligging: 88 overbouwd/oplopend .. 100 optimaal .. 112 steil afhangend">Kruisligging</label>
+                            <input type="range" id="bvRumpAngle" min="88" max="112" step="1" value="101">
+                            <span class="val" id="bvRumpAngleVal">101</span>
+                        </div>
+                        <div class="slider-row">
+                            <label title="Kruisbreedte: 88 smal .. 112 breed tussen zitbeenderen">Kruisbreedte</label>
+                            <input type="range" id="bvRumpWidth" min="88" max="112" step="1" value="101">
+                            <span class="val" id="bvRumpWidthVal">101</span>
                         </div>
                     </div>
 
-                    <div class="citations-box">
-                        <div class="cit-header">📚 Wetenschappelijke Bronnen:</div>
-                        <div class="cit-text">• <em>Sprecher et al. (1997)</em>: Theriogenology 47:1179-1187.</div>
-                        <div class="cit-text">• <em>Flower & Weary (2006)</em>: J. Dairy Sci. 89:2084-2093.</div>
-                        <div class="cit-text">• <em>van der Tol et al. (2002, 2003)</em>: J. Dairy Sci. 85:1476 & 86:2875.</div>
-                        <div class="cit-text">• <em>research.md</em>: Gewrichtsgetrouwheid, Reciproque apparaat & Kootveer.</div>
+                    <!-- Groep B: Benen & Klauwen -->
+                    <div class="crv-subgroup">
+                        <div class="crv-subgroup-title">
+                            <span>🦶 Benen & Klauwen</span>
+                            <span style="font-size:8.5px; opacity:0.8;">88 - 112</span>
+                        </div>
+                        <div class="slider-row">
+                            <label title="Beenstand achter: 88 koehakkig .. 112 parallel/recht">Beenst. Achter</label>
+                            <input type="range" id="bvRearLegRear" min="88" max="112" step="1" value="107">
+                            <span class="val" id="bvRearLegRearVal">107</span>
+                        </div>
+                        <div class="slider-row">
+                            <label title="Beenstand zij: 88 steil .. 100 optimaal .. 112 sabelbenig">Beenst. Zij</label>
+                            <input type="range" id="bvRearLegSide" min="88" max="112" step="1" value="103">
+                            <span class="val" id="bvRearLegSideVal">103</span>
+                        </div>
+                        <div class="slider-row">
+                            <label title="Klauwhoek: 88 lage verzenen/plat .. 112 steile klauw">Klauwhoek</label>
+                            <input type="range" id="bvClawAngle" min="88" max="112" step="1" value="102">
+                            <span class="val" id="bvClawAngleVal">102</span>
+                        </div>
+                        <div class="slider-row">
+                            <label title="Voorbeenstand: 88 frans/buitenwaarts .. 112 recht">Voorbeenstand</label>
+                            <input type="range" id="bvFrontLegStance" min="88" max="112" step="1" value="102">
+                            <span class="val" id="bvFrontLegStanceVal">102</span>
+                        </div>
+                        <div class="slider-row">
+                            <label title="Beengebruik: 88 stug .. 112 krachtig en soepel sporend">Beengebruik</label>
+                            <input type="range" id="bvLocomotion" min="88" max="112" step="1" value="106">
+                            <span class="val" id="bvLocomotionVal">106</span>
+                        </div>
+                        <div class="slider-row">
+                            <label title="Klauwgezondheid (weerstand tegen Mortellaro en zoolzweren)">Klauwgezondh.</label>
+                            <input type="range" id="bvClawHealth" min="88" max="112" step="1" value="106">
+                            <span class="val" id="bvClawHealthVal">106</span>
+                        </div>
+                    </div>
+
+                    <!-- Groep C: Uier & Spenen -->
+                    <div class="crv-subgroup">
+                        <div class="crv-subgroup-title">
+                            <span>🥛 Uier & Spenen</span>
+                            <span style="font-size:8.5px; opacity:0.8;">88 - 112</span>
+                        </div>
+                        <div class="slider-row">
+                            <label title="Uierdiepte: 88 diep onder hakken .. 112 ondiep/ruim boven hak">Uierdiepte</label>
+                            <input type="range" id="bvUdderDepth" min="88" max="112" step="1" value="105">
+                            <span class="val" id="bvUdderDepthVal">105</span>
+                        </div>
+                        <div class="slider-row">
+                            <label title="Vooruieraanhechting: 88 los/steil .. 112 strak en vloeiend">Vooruieraanh.</label>
+                            <input type="range" id="bvForeUdder" min="88" max="112" step="1" value="105">
+                            <span class="val" id="bvForeUdderVal">105</span>
+                        </div>
+                        <div class="slider-row">
+                            <label title="Ophangband: 88 slap .. 112 diepe centrale steungroef">Ophangband</label>
+                            <input type="range" id="bvCleft" min="88" max="112" step="1" value="101">
+                            <span class="val" id="bvCleftVal">101</span>
+                        </div>
+                        <div class="slider-row">
+                            <label title="Voorspeenplaatsing: 88 wijd .. 112 centraal onder kwartieren">Voorspeenpl.</label>
+                            <input type="range" id="bvFrontTeatPlacement" min="88" max="112" step="1" value="105">
+                            <span class="val" id="bvFrontTeatPlacementVal">105</span>
+                        </div>
+                        <div class="slider-row">
+                            <label title="Achterspeenplaatsing: 88 wijd .. 112 centraal">Achterspeenpl.</label>
+                            <input type="range" id="bvRearTeatPlacement" min="88" max="112" step="1" value="102">
+                            <span class="val" id="bvRearTeatPlacementVal">102</span>
+                        </div>
+                        <div class="slider-row">
+                            <label title="Speenlengte: 88 kort (3.8 cm) .. 103 ideaal .. 112 lang (6.5 cm)">Speenlengte</label>
+                            <input type="range" id="bvTeatLength" min="88" max="112" step="1" value="103">
+                            <span class="val" id="bvTeatLengthVal">103</span>
+                        </div>
+                        <div class="slider-row">
+                            <label title="Achteruierhoogte: 88 laag .. 112 hoog aangehecht">Achteruierh.</label>
+                            <input type="range" id="bvRearUdderHeight" min="88" max="112" step="1" value="102">
+                            <span class="val" id="bvRearUdderHeightVal">102</span>
+                        </div>
                     </div>
                 </div>
+
+                <!-- 2. Hoornstatus & Vaste Exterieurkenmerken -->
+                <div class="section">
+                    <div class="section-title">🐂 Hoornstatus & Vaste Exterieurkenmerken</div>
+
+                    <div class="horn-control-group" style="background:rgba(15,23,42,0.65); padding:6px 8px; border-radius:5px; border:1px solid #334155;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                            <span style="font-size:10px; font-weight:600; color:#f8fafc;">🐂 Hoornstatus:</span>
+                            <span id="hornStatusBadge" style="font-size:9.5px; color:#38bdf8; font-weight:bold;">✨ Onthoorn</span>
+                        </div>
+                        <div class="hoof-preset-buttons" style="grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:5px;">
+                            <button class="horn-btn active" data-horn="polled">✨ Onthoorn</button>
+                            <button class="horn-btn" data-horn="scurs">🔹 Stompjes</button>
+                            <button class="horn-btn" data-horn="horned">🐂 Gehoornd</button>
+                        </div>
+                        <div class="slider-row" style="margin:0;">
+                            <label>Hoornlengte</label>
+                            <input type="range" id="hornLengthSlider" min="0" max="1.3" step="0.05" value="0">
+                            <span class="val" id="hornLengthVal">0%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Vacht & Procedurale Huidgenerator -->
+                <div class="section skin-generator-section">
+                    <div class="section-title">🎨 Vacht, Rassen & Huidgenerator</div>
+                    
+                    <div class="texture-buttons" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:7px;">
+                        <button class="tex-btn active" data-tex="blackwhite">Zwartbont</button>
+                        <button class="tex-btn" data-tex="redwhite">Roodbont</button>
+                        <button class="tex-btn" data-tex="blaarkop">Blaarkop</button>
+                        <button class="tex-btn" data-tex="lakenvelder">Lakenvelder</button>
+                        <button class="tex-btn" data-tex="witrug">Witrug</button>
+                        <button class="tex-btn" data-tex="jersey">Jersey</button>
+                        <button class="tex-btn" data-tex="simmentaler">Simmental</button>
+                        <button class="tex-btn" data-tex="angus">Angus</button>
+                        <button class="tex-btn" data-tex="charolais">Charolais</button>
+                    </div>
+
+                    <div style="display:flex; gap:5px; margin-bottom:7px;">
+                        <button id="btnGenRandomSkin" class="action-btn" style="flex:1; background:#0284c7; color:#fff; font-weight:bold; padding:6px 4px; font-size:9.5px; border:none; border-radius:4px; cursor:pointer;" title="Genereer uniek biologisch vlekkenpatroon">
+                            🎲 Willekeurige Huid
+                        </button>
+                        <button id="btnRandomizeHerd" class="action-btn" style="flex:1; background:#0d9488; color:#fff; font-weight:bold; padding:6px 4px; font-size:9.5px; border:none; border-radius:4px; cursor:pointer;" title="Kudde randomizen">
+                            🐄 Kudde Randomizen
+                        </button>
+                    </div>
+
+                    <!-- Domain Randomization Tints -->
+                    <div style="display:flex; gap:4px; margin-bottom:7px;">
+                        <button class="tint-btn" data-tint="random" style="flex:1; font-size:9px; padding:3px; background:#334155; color:#f8fafc; border:1px solid #475569; border-radius:3px; cursor:pointer;">🌈 Tint</button>
+                        <button class="tint-btn" data-tint="red" style="flex:1; font-size:9px; padding:3px; background:#334155; color:#f8fafc; border:1px solid #475569; border-radius:3px; cursor:pointer;">Vos</button>
+                        <button class="tint-btn" data-tint="jersey" style="flex:1; font-size:9px; padding:3px; background:#334155; color:#f8fafc; border:1px solid #475569; border-radius:3px; cursor:pointer;">Karamel</button>
+                        <button class="tint-btn" data-tint="angus" style="flex:1; font-size:9px; padding:3px; background:#334155; color:#f8fafc; border:1px solid #475569; border-radius:3px; cursor:pointer;">Houtskool</button>
+                    </div>
+
+                    <div class="slider-row">
+                        <label>Vlekdekking</label>
+                        <input type="range" id="skinDensity" min="0.10" max="0.90" step="0.05" value="0.50">
+                        <span class="val" id="skinDensityVal">50%</span>
+                    </div>
+                    <div class="slider-row">
+                        <label>Vlekgrootte</label>
+                        <input type="range" id="skinSpotSize" min="0.5" max="2.0" step="0.1" value="1.0">
+                        <span class="val" id="skinSpotSizeVal">1.0x</span>
+                    </div>
+
+                    <div class="check-row" style="margin-top:5px; font-size:10.5px;">
+                        <label><input type="checkbox" id="chkPbrEnabled" checked> 💎 PBR Reliëf (Normals & Glans)</label>
+                    </div>
+                    <div style="margin-top:5px;">
+                        <button id="btnRandomMorphology" class="action-btn" style="width:100%; font-size:9.5px; padding:5px; background:rgba(30,41,59,0.9); color:#93c5fd; border:1px solid #3b82f6; border-radius:4px; cursor:pointer;">
+                            ⚖️ Randomizeer Lichaamsbouw (Girth & Lengte)
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+
+            <!-- ═══════════════════════════════════════════════════════════════════
+                 TAB 2: PRODUCTIE & FOKWAARDEN (NVI / INET / MELKAANLEG)
+                 ═══════════════════════════════════════════════════════════════════ -->
+            <div id="tab-productie" class="tab-content-pane">
+
+                <!-- 1. Economische Indexen & Duurzaamheid -->
+                <div class="section">
+                    <div class="section-title">📊 Economische Indexen & Duurzaamheid</div>
+
+                    <!-- Productie Presets -->
+                    <div class="hoof-preset-buttons" style="margin-bottom:8px; grid-template-columns: repeat(2, 1fr);">
+                        <button class="prod-preset-btn active" data-prodpreset="delta_framework_red" title="Gebalanceerde Melkproductie: +738 kg melk, hoge gehalten (+0,19%V, +0,17%E), INET 331">🥛 Gebalanceerd (+738 kg)</button>
+                        <button class="prod-preset-btn" data-prodpreset="balanced_nvi" title="NVI Topper: +1150 kg melk, NVI 335, INET 285">⚖️ NVI Topper (+335)</button>
+                        <button class="prod-preset-btn" data-prodpreset="high_components" title="Hoge Gehalten: +0,45% Vet, +0,28% Eiwit, INET 310">🧀 Hoge Gehalten</button>
+                        <button class="prod-preset-btn" data-prodpreset="pasture_robust" title="Robuust & Weide: +450 kg melk, levensduur (+550 d), klauwgezondheid 109">🌿 Robuuste Weide</button>
+                    </div>
+
+                    <div class="prod-metric-grid">
+                        <div class="prod-metric-item highlight">
+                            <div class="prod-metric-label">NVI Index</div>
+                            <div class="prod-metric-val" id="prodNviVal">+181</div>
+                        </div>
+                        <div class="prod-metric-item highlight">
+                            <div class="prod-metric-label">INET Opbrengst</div>
+                            <div class="prod-metric-val" id="prodInetVal">€331</div>
+                        </div>
+                        <div class="prod-metric-item">
+                            <div class="prod-metric-label">Levensduur</div>
+                            <div class="prod-metric-val" id="prodLongevityVal">+212 d</div>
+                        </div>
+                    </div>
+
+                    <div class="slider-row" style="margin-top:8px;">
+                        <label title="Levensduur fokwaarde in productiedagen">Levensduur</label>
+                        <input type="range" id="prodLongevity" min="-400" max="1000" step="25" value="212">
+                        <span class="val" id="prodLongevitySliderVal">+212 d</span>
+                    </div>
+                    <div class="slider-row">
+                        <label title="Voerefficiëntie fokwaarde (100 = gemiddeld, >104 = zeer efficiënt)">Voerefficiëntie</label>
+                        <input type="range" id="prodFeedEfficiency" min="88" max="112" step="1" value="101">
+                        <span class="val" id="prodFeedEfficiencyVal">101</span>
+                    </div>
+                </div>
+
+                <!-- 3. Melkproductie & Gehalten -->
+                <div class="section">
+                    <div class="section-title">🥛 Melkproductie & Gehalten (Fokwaarde)</div>
+
+                    <!-- Berekende Vet kg & Eiwit kg Banner -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(30,41,59,0.7); padding:5px 8px; border-radius:5px; margin-bottom:7px; border:1px solid #334155; font-size:10px;">
+                        <span>Berekende kg Vet & Eiwit:</span>
+                        <div style="font-weight:700;">
+                            <span style="color:#fbbf24;" id="prodFatKgBadge">+50 kg V</span> | 
+                            <span style="color:#60a5fa;" id="prodProteinKgBadge">+42 kg E</span>
+                        </div>
+                    </div>
+
+                    <div class="slider-row">
+                        <label title="Melkproductie vererving in kg melk per lactatie">kg Melk</label>
+                        <input type="range" id="prodKgMilk" min="-1000" max="2500" step="25" value="738">
+                        <span class="val" id="prodKgMilkVal">+738 kg</span>
+                    </div>
+                    <div class="slider-row">
+                        <label title="Vetgehalte afwijking in % vet">Vet %</label>
+                        <input type="range" id="prodPctFat" min="-0.60" max="0.80" step="0.01" value="0.19">
+                        <span class="val" id="prodPctFatVal">+0.19%</span>
+                    </div>
+                    <div class="slider-row">
+                        <label title="Eiwitgehalte afwijking in % eiwit">Eiwit %</label>
+                        <input type="range" id="prodPctProtein" min="-0.40" max="0.50" step="0.01" value="0.17">
+                        <span class="val" id="prodPctProteinVal">+0.17%</span>
+                    </div>
+                </div>
+
+                <!-- 4. Melkrobot & Functionele Kenmerken -->
+                <div class="section">
+                    <div class="section-title">🤖 Melkrobot & Gezondheidskenmerken</div>
+
+                    <div class="slider-row">
+                        <label title="Robotindex: geschiktheid voor automatische melksystemen (speenplaatsing, melksnelheid)">Robotindex</label>
+                        <input type="range" id="prodRobotIndex" min="88" max="112" step="1" value="107">
+                        <span class="val" id="prodRobotIndexVal">107</span>
+                    </div>
+                    <div class="slider-row">
+                        <label title="Melksnelheid (kg melk per minuut): 88 traag .. 112 snel melkend">Melksnelheid</label>
+                        <input type="range" id="prodMilkingSpeed" min="88" max="112" step="1" value="99">
+                        <span class="val" id="prodMilkingSpeedVal">99</span>
+                    </div>
+                    <div class="slider-row">
+                        <label title="Celgetal / Uiergezondheid: >100 is lager celgetal en minder uierontsteking">Uiergezondheid</label>
+                        <input type="range" id="prodSomaticCell" min="88" max="112" step="1" value="104">
+                        <span class="val" id="prodSomaticCellVal">104</span>
+                    </div>
+                    <div class="slider-row">
+                        <label title="Klauwgezondheid: resistentie tegen Mortellaro, zoolzweren en wittelijndefecten">Klauwgezondheid</label>
+                        <input type="range" id="prodClawHealth" min="88" max="112" step="1" value="106">
+                        <span class="val" id="prodClawHealthVal">106</span>
+                    </div>
+                    <div class="slider-row">
+                        <label title="Ketoseresistentie: minder risico op slepend melkvee in vroege lactatie">Ketoseresistentie</label>
+                        <input type="range" id="prodKetosis" min="88" max="112" step="1" value="103">
+                        <span class="val" id="prodKetosisVal">103</span>
+                    </div>
+                    <div class="slider-row">
+                        <label title="Dochtervruchtbaarheid: tussenkalftijd en inseminatiegetal">Vruchtbaarheid</label>
+                        <input type="range" id="prodFertility" min="88" max="112" step="1" value="99">
+                        <span class="val" id="prodFertilityVal">99</span>
+                    </div>
+                    <div class="slider-row">
+                        <label title="Afkalfgemak / Geboorteverloop van de koe">Afkalfgemak</label>
+                        <input type="range" id="prodCalvingEase" min="88" max="112" step="1" value="107">
+                        <span class="val" id="prodCalvingEaseVal">107</span>
+                    </div>
+                    <div class="slider-row">
+                        <label title="Melkbaarheid & Karakter van de koe">Temperament</label>
+                        <input type="range" id="prodTemperament" min="88" max="112" step="1" value="100">
+                        <span class="val" id="prodTemperamentVal">100</span>
+                    </div>
+                    <div class="slider-row">
+                        <label title="Methaanreductie fokwaarde: lagere emissie per kg meetmelk">Methaanreductie</label>
+                        <input type="range" id="prodMethane" min="88" max="112" step="1" value="99">
+                        <span class="val" id="prodMethaneVal">99</span>
+                    </div>
+
+                    <!-- Uiervulling & Speenconditiescore (Koesignalen Melkwinning) -->
+                    <div style="margin-top:8px; padding-top:6px; border-top:1px solid #334155;">
+                        <div class="slider-row">
+                            <label title="Uiervulling: 100% strak voor melken .. 10% leeg en ontspannen na melken">Uiervulling</label>
+                            <input type="range" id="udderFill" min="0" max="1" step="0.05" value="0.5">
+                            <span class="val" id="udderFillVal">50%</span>
+                        </div>
+                        <div class="slider-row">
+                            <label title="Speenconditie Hyperkeratose (1=glad .. 4=bloemkool eeltkraag)">Speenconditie</label>
+                            <input type="range" id="teatConditionScore" min="1" max="4" step="1" value="1">
+                            <span class="val" id="teatConditionScoreVal">Score 1 (Glad)</span>
+                        </div>
+                        <div id="teatDiagCard" style="font-size:9.5px; line-height:1.35; color:#94a3b8; background:rgba(15,23,42,0.65); padding:5px 8px; border-radius:4px; margin:2px 0 0 0; border-left:3px solid #38bdf8;">
+                            <strong>✨ Speenpunt:</strong> Gave, gladde speenpunt (N). Perfecte vacuümbalans en melkduur van de robot.
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+
+            <!-- ═══════════════════════════════════════════════════════════════════
+                 TAB 3: GANGWERK & LOCOMOTIE
+                 ═══════════════════════════════════════════════════════════════════ -->
+            <div id="tab-gedrag" class="tab-content-pane">
+
+                <!-- 1. Locomotie & Gangwerk -->
+                <div class="section">
+                    <div class="section-title">🏃 Gangwerk & Locomotie</div>
+                    <div class="gait-buttons">
+                        <button class="gait-btn active" data-gait="walk">Lopen (4-takt)</button>
+                        <button class="gait-btn" data-gait="walkSlow" title="Loom / traag stappen">Loom Stappen</button>
+                        <button class="gait-btn" data-gait="trot">Draven</button>
+                        <button class="gait-btn" data-gait="gallopPlay" title="Weidegang bokken / koeiendans">🐮 Bokken / Dans</button>
+                        <button class="gait-btn" data-gait="idle">Stilstaan</button>
+                        <button class="gait-btn" data-gait="idleRest" title="Rusten op 3 poten">3-Potenstand</button>
+                        <button class="gait-btn" data-gait="backingUp">Achteruit</button>
+                        <button class="action-btn" id="btnTurnL90" style="background:#334155; color:#93c5fd;" title="90° draai linksom">↶ 90° L</button>
+                        <button class="action-btn" id="btnTurnR90" style="background:#334155; color:#93c5fd;" title="90° draai rechtsom">↷ 90° R</button>
+                        <button class="gait-btn" data-gait="downerCow" style="background:#7f1d1d; color:#fca5a5; font-weight:bold;" title="Downer koe (instorting)">🚨 Downer Koe</button>
+                    </div>
+                    <div class="slider-row" style="margin-top:6px;">
+                        <label>Snelheid</label>
+                        <input type="range" id="walkSpeed" min="0.3" max="2.0" step="0.05" value="1.0">
+                        <span class="val" id="walkSpeedVal">1.0 m/s</span>
+                    </div>
+                </div>
+
+                <!-- 2. Kreupelheid per Hoef (Alle 4 Hoeven Multilateraal) -->
+                <div class="section">
+                    <div class="section-title">🦶 Kreupelheid per Hoef (Alle 4 Hoeven)</div>
+                    
+                    <div class="hoof-preset-buttons">
+                        <button class="hoof-preset-btn active" data-preset="healthy">Gezond</button>
+                        <button class="hoof-preset-btn" data-preset="single_fl" title="Linksvoor Score 3.5">LV 3.5</button>
+                        <button class="hoof-preset-btn" data-preset="single_hl" title="Linksachter Score 4 (Abductie)">LA 4.0</button>
+                        <button class="hoof-preset-btn" data-preset="bilateral_hind" title="Bilateraal Achterpoten">LA+RA 3.5</button>
+                        <button class="hoof-preset-btn" data-preset="bilateral_front" title="Bilateraal Voorpoten">LV+RV 3.5</button>
+                        <button class="hoof-preset-btn" data-preset="all_four" title="Alle 4 Hoeven (Laminitis)">Alle 4 (4.0)</button>
+                    </div>
+
+                    <div class="hoof-sliders-matrix">
+                        <div class="slider-row hoof-row">
+                            <label title="Linksvoor (FL)">LV (Voor L)</label>
+                            <input type="range" id="scoreFL" class="hoof-slider" data-leg="FL" min="1" max="5" step="0.5" value="1">
+                            <span class="val" id="scoreValFL">1.0</span>
+                        </div>
+                        <div class="slider-row hoof-row">
+                            <label title="Rechtsvoor (FR)">RV (Voor R)</label>
+                            <input type="range" id="scoreFR" class="hoof-slider" data-leg="FR" min="1" max="5" step="0.5" value="1">
+                            <span class="val" id="scoreValFR">1.0</span>
+                        </div>
+                        <div class="slider-row hoof-row">
+                            <label title="Linksachter (HL)">LA (Achter L)</label>
+                            <input type="range" id="scoreHL" class="hoof-slider" data-leg="HL" min="1" max="5" step="0.5" value="1">
+                            <span class="val" id="scoreValHL">1.0</span>
+                        </div>
+                        <div class="slider-row hoof-row">
+                            <label title="Rechtsachter (HR)">RA (Achter R)</label>
+                            <input type="range" id="scoreHR" class="hoof-slider" data-leg="HR" min="1" max="5" step="0.5" value="1">
+                            <span class="val" id="scoreValHR">1.0</span>
+                        </div>
+                    </div>
+
+                    <div id="loco-score-label" class="score-label">Score 1: Normaal (vlakke rug, symmetrisch 4-takt)</div>
+                </div>
+
+                <!-- 3. Lighoudingen & Transities -->
+                <div class="section">
+                    <div class="section-title">🛋️ Lighoudingen & Transities</div>
+                    <div class="gait-buttons">
+                        <button class="gait-btn" data-gait="lieDown">Gaan liggen ▼</button>
+                        <button class="gait-btn" data-gait="standUp">Opstaan ▲</button>
+                        <button class="gait-btn" data-gait="lyingSternal">Borstligging</button>
+                        <button class="gait-btn" data-gait="lyingSleepFlank" style="background:#1e3a8a; color:#93c5fd;" title="Diepe REM-slaap (kop op de flank) - Jan Hulsen">💤 Kop op Flank</button>
+                        <button class="gait-btn" data-gait="boxHanging" style="background:#854d0e; color:#fef08a;" title="Boxhangen: twee voorpoten in box, dralen op rooster">⚠️ Boxhangen</button>
+                        <button class="gait-btn" data-gait="lyingLateral">Zijligging</button>
+                    </div>
+                    <div class="check-row" style="margin-top:5px;">
+                        <label title="Hondenzit pathologie (n. obturatorius paralyse)"><input type="checkbox" id="chkDogSitting"> 🐕 Hondenzit Pathologie</label>
+                    </div>
+                </div>
+
+                <!-- 4. Biomechanische Kinetica & Fysiologie -->
+                <div class="section">
+                    <div class="section-title">⚙️ Biomechanische Kinetica</div>
+                    <div class="check-row">
+                        <label title="Vrije dorsale scapula translatie via synsarcosis"><input type="checkbox" id="chkSynsarcosis" checked> Scapula Synsarcosis</label>
+                        <label title="Gekoppelde knie-hak buiging via m. fibularis tertius"><input type="checkbox" id="chkReciprocal" checked> Reciproque Apparaat</label>
+                    </div>
+                    <div class="check-row" style="margin-top:4px;">
+                        <label title="Kogelgewricht doorvering & sesambeenveer"><input type="checkbox" id="chkFetlock" checked> Kootveer</label>
+                        <label title="Natuurlijk knipperen met oogleden"><input type="checkbox" id="chkEyelids" checked> Oogleden</label>
+                    </div>
+                    <div class="slider-row" style="margin-top:6px;">
+                        <label>Ademhaling</label>
+                        <input type="range" id="breathRate" min="15" max="95" step="1" value="26">
+                        <span class="val" id="breathRateVal">26 bpm</span>
+                    </div>
+                </div>
+
+            </div>
+
+
+            <!-- ═══════════════════════════════════════════════════════════════════
+                 TAB 4: ETHOLOGIE, FYSIOLOGIE & WELZIJN (KOESIGNALEN JAN HULSEN)
+                 ═══════════════════════════════════════════════════════════════════ -->
+            <div id="tab-welzijn" class="tab-content-pane">
+
+                <!-- 1. Lichaamsconditie, Dracht & Fysiologie (Koesignalen Jan Hulsen) -->
+                <div class="section">
+                    <div class="section-title">📋 Lichaamsconditie, Dracht & Vertering (Koesignalen)</div>
+                    
+                    <!-- Presets Lichaamsconditie & Lactatiestadium -->
+                    <div class="hoof-preset-buttons" style="margin-bottom:6px; grid-template-columns: repeat(2, 1fr);">
+                        <button class="zt-preset-btn" data-zt="fresh_heifer" title="Pariteit 1, 0d dracht, BCS 3.25, Pensscore 2.5">Verse Vaars</button>
+                        <button class="zt-preset-btn" data-zt="peak_lactation" title="Pariteit 3, 60d dracht, BCS 2.25 (schraal/NEB), Pensscore 3.0">Pieklactatie (NEB)</button>
+                        <button class="zt-preset-btn" data-zt="mid_lactation" title="Pariteit 2, 150d dracht, BCS 2.75, Pensscore 3.5">Middenlactatie</button>
+                        <button class="zt-preset-btn" data-zt="late_gestation" title="Pariteit 4, 275d dracht, BCS 3.50, Pensscore 4.0">Hoogdrachtig</button>
+                    </div>
+
+                    <!-- BCS Conditie Score (Ferguson / Edmonson 1.00 - 5.00) -->
+                    <div class="slider-row">
+                        <label title="Body Condition Score (1.0 = uitgemergeld, 3.0 = optimaal, 5.0 = vet)">BCS Conditie</label>
+                        <input type="range" id="bcsScore" min="1.0" max="5.0" step="0.25" value="3.0">
+                        <span class="val" id="bcsScoreVal">3.00 (Optimaal)</span>
+                    </div>
+                    <div id="bcsDiagCard" style="font-size:9.5px; line-height:1.35; color:#94a3b8; background:rgba(15,23,42,0.65); padding:5px 8px; border-radius:4px; margin:-2px 0 6px 0; border-left:3px solid #38bdf8;">
+                        <strong>⚖️ Diagnostiek:</strong> Vloeiende U-hoek hooks-pins, afgeronde heupknobbels, lichte weefselbedekking lendenen.
+                    </div>
+
+                    <!-- Dagen in Dracht (0 - 282 dagen) -->
+                    <div class="slider-row">
+                        <label title="Dagen in dracht (280d a terme, asymmetrische kalfbuik rechts & relaxine)">Drachtduur</label>
+                        <input type="range" id="gestationDays" min="0" max="282" step="1" value="0">
+                        <span class="val" id="gestationDaysVal">0 d (Niet drachtig)</span>
+                    </div>
+                    <div id="gestationDiagCard" style="font-size:9.5px; line-height:1.35; color:#94a3b8; background:rgba(15,23,42,0.65); padding:5px 8px; border-radius:4px; margin:-2px 0 6px 0; border-left:3px solid #10b981;">
+                        <strong>🍼 Drachtstatus:</strong> Niet drachtig (cyclisch / inseminatiewaardig).
+                    </div>
+
+                    <!-- Pariteit -->
+                    <div class="slider-row">
+                        <label title="Pariteit: 0 = Vaars, 4+ = Meerkalfs">Pariteit</label>
+                        <input type="range" id="parityScore" min="0" max="5" step="1" value="2">
+                        <span class="val" id="parityScoreVal">2e kalfs</span>
+                    </div>
+
+                    <!-- Pensscore (Jan Hulsen Zaagmethode 1 - 5) -->
+                    <div class="slider-row">
+                        <label title="Pensscore Zaagmethode Jan Hulsen (1=diep hol, 3=optimaal 0.5 handbreedte, 5=bol)">Pensscore (L)</label>
+                        <input type="range" id="rumenScoreSlider" min="1" max="5" step="0.5" value="3">
+                        <span class="val" id="rumenScoreVal">Score 3</span>
+                    </div>
+                    <div id="rumenDiagCard" style="font-size:9.5px; line-height:1.35; color:#94a3b8; background:rgba(15,23,42,0.65); padding:5px 8px; border-radius:4px; margin:-2px 0 6px 0; border-left:3px solid #38bdf8;">
+                        <strong>🌿 Pensvulling:</strong> Kuiltje van 0.5 handbreedte onder dwarsuitsteeksels. Ideaal voor koeien in volle productie!
+                    </div>
+
+                    <!-- Mestscore (Dung Consistency 1 - 5) -->
+                    <div class="slider-row">
+                        <label title="Mestscore (1=waterdun/acidose, 3=optimaal met ringen en kuiltje, 5=paardenvijgen)">Mestscore</label>
+                        <input type="range" id="dungScoreSlider" min="1" max="5" step="1" value="3">
+                        <span class="val" id="dungScoreVal">Score 3 (Optimaal)</span>
+                    </div>
+                    <div id="dungDiagCard" style="font-size:9.5px; line-height:1.35; color:#94a3b8; background:rgba(15,23,42,0.65); padding:5px 8px; border-radius:4px; margin:-2px 0 2px 0; border-left:3px solid #eab308;">
+                        <strong>💩 Consistentie:</strong> Vlaai van 3-4 cm dik met concentrische ringen en kuiltje in het midden. Optimale pensfermentatie.
+                    </div>
+                </div>
+
+                <!-- 2. Voeding, Herkauwen & Kauwslagen (Koesignalen) -->
+                <div class="section">
+                    <div class="section-title">🌿 Voeding & Kauwslagen (Koesignalen)</div>
+                    <div class="gait-buttons">
+                        <button class="gait-btn" data-gait="grazing">Grazen</button>
+                        <button class="gait-btn" data-gait="eatingBunk">Voerhek vreten</button>
+                        <button class="gait-btn" data-gait="drinking">Drinken</button>
+                    </div>
+                    <div class="micro-grid" style="margin-top:5px;">
+                        <button class="micro-btn" data-state="ruminating" title="Circulair herkauwen met laterale maalgang en slokdarmslikgolf">🌿 Herkauwen</button>
+                    </div>
+                    <div class="slider-row" style="margin-top:5px;">
+                        <label>Kauwfrequentie</label>
+                        <input type="range" id="ruminateRate" min="50" max="70" step="1" value="60">
+                        <span class="val" id="ruminateRateVal">60 bpm</span>
+                    </div>
+                    <!-- Kauwslagenteller per brok (45-70) -->
+                    <div id="chewCounterCard" style="font-size:9.5px; line-height:1.4; color:#f8fafc; background:rgba(15,23,42,0.75); padding:6px 9px; border-radius:5px; margin-top:5px; border-left:3px solid #10b981;">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span>Kauwslagen per herkauwbrok:</span>
+                            <strong id="chewCounterLiveVal" style="color:#10b981; font-size:11px;">58 slagen</strong>
+                        </div>
+                        <div style="font-size:9px; color:#94a3b8; margin-top:2px;">
+                            Norm: <strong style="color:#38bdf8;">50 – 65 slagen</strong> per brok (Jan Hulsen). &lt;45 = pensverzuring risico, &gt;70 = ruwe celstof overmaat.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Ligcomfort, Boxgedrag & Hakken (DeLaval & Koesignalen) -->
+                <div class="section">
+                    <div class="section-title">🛋️ Rust-, Box- & Hakconditie (DeLaval)</div>
+                    <div class="gait-buttons">
+                        <button class="gait-btn" data-gait="lyingSternal" title="Normale borstligging (herkauwen in box)">Borstligging</button>
+                        <button class="gait-btn" data-gait="lyingSleepFlank" style="background:#1e3a8a; color:#93c5fd;" title="Diepe REM-slaap (kop op de flank) - 30-45 min per dag">💤 Kop op Flank</button>
+                        <button class="gait-btn" data-gait="boxHanging" style="background:#854d0e; color:#fef08a;" title="Boxhangen: twee voorpoten in box, achterpoten op rooster (signaal van krapte/pijn)">⚠️ Boxhangen</button>
+                        <button class="gait-btn" data-gait="lyingLateral" title="Volledige zijligging op de flank">Zijligging</button>
+                        <button class="gait-btn" data-gait="lieDown">Gaan liggen ▼</button>
+                        <button class="gait-btn" data-gait="standUp">Opstaan ▲</button>
+                    </div>
+
+                    <!-- Hak- en kniescore (1 - 4) -->
+                    <div class="slider-row" style="margin-top:6px;">
+                        <label title="Hak- en kniescore (Hock lesion score): 1=gaaf .. 4=bursitis/wond">Hakbeschadiging</label>
+                        <input type="range" id="hockLesionScore" min="1" max="4" step="1" value="1">
+                        <span class="val" id="hockLesionScoreVal">Score 1 (Gaaf)</span>
+                    </div>
+                    <div id="hockDiagCard" style="font-size:9.5px; line-height:1.35; color:#94a3b8; background:rgba(15,23,42,0.65); padding:5px 8px; border-radius:4px; margin:-2px 0 6px 0; border-left:3px solid #38bdf8;">
+                        <strong>🦵 Hakstatus:</strong> Volledig behaard, gezonde huid zonder schuurplekken. Goed boxbed!
+                    </div>
+
+                    <div class="check-row" style="margin-top:5px;">
+                        <label title="Hondenzit pathologie (n. obturatorius paralyse)"><input type="checkbox" id="chkDogSittingWelzijn"> 🐕 Hondenzit Pathologie</label>
+                    </div>
+                </div>
+
+                <!-- 4. Sociaal & Voortplanting -->
+                <div class="section">
+                    <div class="section-title">❤️ Voortplanting & Sociaal Gedrag</div>
+                    <div class="micro-grid">
+                        <button class="micro-btn" data-state="estrus" title="Sta-tocht reflex & gefixeerd bekken">❤️ Tochtigheid</button>
+                        <button class="micro-btn" data-state="flehmen" title="Flehmen reukrespons (lipkrul feromonen)">👃 Flehmen</button>
+                        <button class="micro-btn" data-state="bellowing" title="Kop omhoog, bek wijd open loeien">📢 Loeien</button>
+                        <button class="micro-btn" data-state="headButtThreat" title="Kop laag, dreighouding">💥 Dreighouding</button>
+                        <button class="micro-btn" data-state="mounting" title="Bespringen / rijden op groepsgenoot">🐂 Rijden / Dekken</button>
+                    </div>
+                </div>
+
+                <!-- 5. Verzorging & Comfort -->
+                <div class="section">
+                    <div class="section-title">🧼 Verzorging, Vliegen & Comfort</div>
+                    <div class="micro-grid">
+                        <button class="micro-btn" data-state="flankLicking" title="Eigen flank likken">👅 Flanklikken</button>
+                        <button class="micro-btn" data-state="headShake" title="Kopschudden tegen vliegen">🪰 Kopschudden</button>
+                        <button class="micro-btn" data-state="footStamping" title="Pootstampen tegen stalvliegen">🦶 Pootstampen</button>
+                        <button class="micro-btn" data-state="earFlickL" title="Linkeroor richten">👂 Oor Links</button>
+                        <button class="micro-btn" data-state="earFlickR" title="Rechteroor richten">👂 Oor Rechts</button>
+                    </div>
+                    <div class="slider-row" style="margin-top:6px;">
+                        <label>Staartgezwaai</label>
+                        <input type="range" id="tailSwish" min="0" max="1" step="0.05" value="0.25">
+                        <span class="val" id="tailSwishVal">25%</span>
+                    </div>
+                </div>
+
+                <!-- 6. Gezondheid, Pijn & Stress -->
+                <div class="section">
+                    <div class="section-title">🌡️ Gezondheid, Pijn & Stress</div>
+                    <div class="micro-grid">
+                        <button class="micro-btn" data-state="heatStress" title="Hittestress hijgen & tong uitsteken">🌡️ Hittestress</button>
+                        <button class="micro-btn" data-state="bovinePainFace" title="Bovine Pain Face: geknepen ogen, gespannen neus">😣 Pijngezicht</button>
+                        <button class="micro-btn" data-state="sawhorseStance" title="Zaagbokshouding: poten wijd bij buikpijn">🪵 Zaagbokshouding</button>
+                        <button class="micro-btn" data-state="lethargic" title="Lethargisch / ziek (hangende kop & oren)">📉 Ziek / Lusteloos</button>
+                    </div>
+                    <div class="slider-row" style="margin-top:6px;">
+                        <label>Panting Score</label>
+                        <input type="range" id="pantingScore" min="0" max="4" step="1" value="0">
+                        <span class="val" id="pantingScoreVal">Score 0</span>
+                    </div>
+                </div>
+
+                <!-- 7. Uitscheiding -->
+                <div class="section">
+                    <div class="section-title">💩 Uitscheiding</div>
+                    <div class="micro-grid">
+                        <button class="micro-btn" data-state="defecation" title="Mesten: opgerichte staartbasis">💩 Mesten</button>
+                        <button class="micro-btn" data-state="urination" title="Plassen: gespreide achterpoten">💧 Plassen</button>
+                    </div>
+                </div>
+
+            </div>
+
+
+            <!-- ═══════════════════════════════════════════════════════════════════
+                 TAB 4: KUDDE, WEERGAVE & TELEMETRIE
+                 ═══════════════════════════════════════════════════════════════════ -->
+            <div id="tab-kudde" class="tab-content-pane">
+
+                <!-- Kudde & Focus Koe -->
+                <div class="section cow-focus-section">
+                    <div class="section-title">👥 Kudde Beheer & Focus</div>
+                    
+                    <div class="cow-selector-buttons" style="display:grid; grid-template-columns: repeat(2, 1fr); gap: 5px; margin-bottom: 7px;">
+                        <button class="cow-select-btn active" data-cow="0" title="Bertha — Volwassen Holstein melkkoe (3e kalfs)">
+                            <div style="font-weight:700; font-size:10.5px;">1. Bertha</div>
+                            <div style="font-size:8.5px; opacity:0.85;">Zwartbont (3e kalfs)</div>
+                        </button>
+                        <button class="cow-select-btn" data-cow="1" title="Clara — MRIJ Roodbont koe (2e kalfs)">
+                            <div style="font-weight:700; font-size:10.5px;">2. Clara</div>
+                            <div style="font-size:8.5px; opacity:0.85;">Roodbont (2e kalfs)</div>
+                        </button>
+                        <button class="cow-select-btn" data-cow="2" title="Mina — Groninger Blaarkop (4e kalfs, Weidekoe)">
+                            <div style="font-weight:700; font-size:10.5px;">3. Mina</div>
+                            <div style="font-size:8.5px; opacity:0.85;">Blaarkop (4e kalfs)</div>
+                        </button>
+                        <button class="cow-select-btn" data-cow="3" title="Emma — Jonge Vaars (1e kalfs)">
+                            <div style="font-weight:700; font-size:10.5px;">4. Emma</div>
+                            <div style="font-size:8.5px; opacity:0.85;">Vaars (1e kalfs)</div>
+                        </button>
+                    </div>
+
+                    <!-- Sociale Kudde Interacties -->
+                    <div class="sub-label">Sociale Interacties:</div>
+                    <div class="interaction-buttons" style="display:grid; grid-template-columns: repeat(2, 1fr); gap:4px; margin-bottom:6px;">
+                        <button class="interaction-btn active" data-interaction="graze" title="Kudde graast synchroon in formatie">🌱 Synchroon Weiden</button>
+                        <button class="interaction-btn" data-interaction="groom" title="Sociaal likken (allogrooming)">👅 Social Licking</button>
+                        <button class="interaction-btn" data-interaction="mount" title="Bespringen tijdens tocht">🐂 Rijden / Dekken</button>
+                        <button class="interaction-btn" data-interaction="rest" title="Kudde ligt vredig te herkauwen">💤 Kudde Rust</button>
+                    </div>
+                </div>
+
+                <!-- Camera & Weergave -->
+                <div class="section">
+                    <div class="section-title">👁️ Camera & Scène-omgeving</div>
+                    
+                    <div class="env-mode-selector">
+                        <span class="sub-label">Scène-omgeving:</span>
+                        <div class="env-mode-buttons">
+                            <button class="env-btn active" data-env="pasture" id="btnEnvPasture" title="Hollands weiland met poldergras en zonlicht">🌿 Weiland (Polder)</button>
+                            <button class="env-btn" data-env="studio" id="btnEnvStudio" title="Donkere studio voor ganganalyse">🎬 Studio (Donker)</button>
+                        </div>
+                    </div>
+
+                    <div class="check-row" style="margin-top:6px;">
+                        <label><input type="checkbox" id="showSkeleton"> Skelet</label>
+                        <label><input type="checkbox" id="showGrid"> Grid</label>
+                        <label><input type="checkbox" id="showIKTargets"> IK-targets</label>
+                        <label><input type="checkbox" id="wireframe"> Draadmodel</label>
+                    </div>
+                    <div class="camera-buttons" style="margin-top:6px;">
+                        <button class="cam-btn active" data-cam="orbit" title="Vrije 3D Orbit">🔄 Vrij</button>
+                        <button class="cam-btn" data-cam="herd" title="Totaaloverzicht kudde">👥 Kudde</button>
+                        <button class="cam-btn" data-cam="focus" title="Focus actieve koe">🎯 Focus</button>
+                        <button class="cam-btn" data-cam="interaction" title="Interactie close-up">🤝 Interactie</button>
+                        <button class="cam-btn" data-cam="side" title="Ganganalyse zij-aanzicht">◀ Zij</button>
+                        <button class="cam-btn" data-cam="front" title="Kopknik frontaal">⬆ Voor</button>
+                        <button class="cam-btn" data-cam="head" title="Kop detail">🔍 Kop</button>
+                        <button class="cam-btn" data-cam="top" title="Bovenaanzicht">⬇ Boven</button>
+                    </div>
+                </div>
+
+                <!-- Live Research Telemetrie -->
+                <div class="section research-section">
+                    <div class="section-title" id="research-toggle" style="cursor:pointer; display:flex; justify-content:space-between;">
+                        <span>🔬 Live Research Telemetrie</span>
+                        <span id="research-arrow">▼</span>
+                    </div>
+                    <div id="research-content">
+                        <div class="telemetry-grid">
+                            <div class="telemetry-item">
+                                <span class="telemetry-label">Kopknik:</span>
+                                <span class="telemetry-val" id="telHeadNod">0.0°</span>
+                            </div>
+                            <div class="telemetry-item">
+                                <span class="telemetry-label">Rugboog (Kyfose):</span>
+                                <span class="telemetry-val" id="telSpineArch">0.0°</span>
+                            </div>
+                            <div class="telemetry-item">
+                                <span class="telemetry-label">Abductie Buitenklauw:</span>
+                                <span class="telemetry-val" id="telAbduction">0.0°</span>
+                            </div>
+                            <div class="telemetry-item">
+                                <span class="telemetry-label">Bekkeninvalshoek:</span>
+                                <span class="telemetry-val" id="telPelvicTilt">0.0°</span>
+                            </div>
+                        </div>
+
+                        <div class="duty-cycle-container">
+                            <div class="duty-title">Standfase Duty Cycle & GRF Bodemreactiekracht:</div>
+                            <div class="duty-bars">
+                                <div class="duty-bar-col">
+                                    <span class="duty-leg-label">LV</span>
+                                    <div class="duty-bar-bg"><div id="dutyBarFL" class="duty-bar-fill" style="height:62%;"></div></div>
+                                    <span id="dutyValFL" class="duty-leg-pct">62%</span>
+                                    <span id="grfValFL" class="duty-grf-pct">100% Fz</span>
+                                </div>
+                                <div class="duty-bar-col">
+                                    <span class="duty-leg-label">RV</span>
+                                    <div class="duty-bar-bg"><div id="dutyBarFR" class="duty-bar-fill" style="height:62%;"></div></div>
+                                    <span id="dutyValFR" class="duty-leg-pct">62%</span>
+                                    <span id="grfValFR" class="duty-grf-pct">100% Fz</span>
+                                </div>
+                                <div class="duty-bar-col">
+                                    <span class="duty-leg-label">LA</span>
+                                    <div class="duty-bar-bg"><div id="dutyBarHL" class="duty-bar-fill" style="height:62%;"></div></div>
+                                    <span id="dutyValHL" class="duty-leg-pct">62%</span>
+                                    <span id="grfValHL" class="duty-grf-pct">100% Fz</span>
+                                </div>
+                                <div class="duty-bar-col">
+                                    <span class="duty-leg-label">RA</span>
+                                    <div class="duty-bar-bg"><div id="dutyBarHR" class="duty-bar-fill" style="height:62%;"></div></div>
+                                    <span id="dutyValHR" class="duty-leg-pct">62%</span>
+                                    <span id="grfValHR" class="duty-grf-pct">100% Fz</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="benchmark-table-box">
+                            <div class="cit-header">📊 Toetsing met de Literatuur:</div>
+                            <div class="benchmark-row">
+                                <span class="bm-param">Duty Cycle Asymmetrie:</span>
+                                <span class="bm-norm">Norm: 62% → 25% (Flower 2006)</span>
+                                <span class="bm-status" id="bmDutyStatus">✅ Conform</span>
+                            </div>
+                            <div class="benchmark-row">
+                                <span class="bm-param">Lumbale Kyfosehoek:</span>
+                                <span class="bm-norm">Norm: 0° → 11° (Sprecher 1997)</span>
+                                <span class="bm-status" id="bmSpineStatus">✅ Conform</span>
+                            </div>
+                            <div class="benchmark-row">
+                                <span class="bm-param">Bodemreactiekracht Fz:</span>
+                                <span class="bm-norm">Norm: -15% tot -48% (v.d. Tol)</span>
+                                <span class="bm-status" id="bmGrfStatus">✅ Conform</span>
+                            </div>
+                            <div class="benchmark-row">
+                                <span class="bm-param">Buitenklauw Abductie:</span>
+                                <span class="bm-norm">Norm: 8° tot 20° (research.md)</span>
+                                <span class="bm-status" id="bmAbductStatus">✅ Conform</span>
+                            </div>
+                        </div>
+
+                        <div class="citations-box">
+                            <div class="cit-header">📚 Wetenschappelijke Bronnen:</div>
+                            <div class="cit-text">• <em>Sprecher et al. (1997)</em>: Theriogenology 47:1179-1187.</div>
+                            <div class="cit-text">• <em>Flower & Weary (2006)</em>: J. Dairy Sci. 89:2084-2093.</div>
+                            <div class="cit-text">• <em>van der Tol et al. (2002, 2003)</em>: J. Dairy Sci. 85:1476 & 86:2875.</div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
             <!-- Status Bar -->
