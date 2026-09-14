@@ -1008,6 +1008,15 @@ export class CowBehavior {
 
         // ── F. Lopen & Draven met Sprecher Kreupelheidsscores (1-5) ───────────
         if (gait === 'walk' || gait === 'walkSlow' || gait === 'trot') {
+            // Symmetriseer paslengte voorpoten zuiver op de sagittale Z-as (pitch).
+            // In de bronclip reikte links verder dan rechts; deze subtiele trim
+            // harmoniseert beide paslengtes zonder de benen naar binnen te knikken (geen X-benen).
+            const cycle = this.walkCyclePhase;
+            const flSwing = Math.sin((cycle - 0.08) * Math.PI * 2);
+            const frSwing = Math.sin((cycle - 0.58) * Math.PI * 2);
+            this._applyLocalRot('upperLegFL', 0, 0,  flSwing * 0.18);
+            this._applyLocalRot('upperLegFR', 0, 0, -frSwing * 0.18);
+
             this._applyLamenessModel(dt);
         } else if (gait === 'idle' || gait === 'idleRest') {
             this._applyStandingLameness();
@@ -1731,9 +1740,9 @@ export class CowBehavior {
             }
             // Voorbeenstand (88 frans/naar buiten .. 100 recht .. 112 recht/parallel)
             if (bt.frontLegStance) {
-                const frontLegYaw = (bt.frontLegStance - 100) * 0.018;
-                this._applyLocalRot('lowerLegFL', 0, frontLegYaw, 0);
-                this._applyLocalRot('lowerLegFR', 0, -frontLegYaw, 0);
+                const frontLegYaw = (bt.frontLegStance - 100) * 0.015;
+                this._applyLocalRot('hoofFL', 0, frontLegYaw, 0);
+                this._applyLocalRot('hoofFR', 0, -frontLegYaw, 0);
             }
         }
 
@@ -1746,16 +1755,12 @@ export class CowBehavior {
         const modBD = bt ? Math.max(0, ((bt.bodyDepth || 100) - 100) / 12.0) : 0;
         const modRW = bt ? Math.max(0, ((bt.rumpWidth || 100) - 100) / 12.0) : 0;
 
-        const frontClearance = 0.018 + fatBCS * 0.12 + modCW * 0.08 + modBD * 0.04 + fetalVolume * 0.04;
+        const frontClearance = fatBCS * 0.12 + modCW * 0.08 + modBD * 0.04 + fetalVolume * 0.04;
         if (frontClearance > 0.001) {
-            // Laterale abductie op schouder/bovenbeen (Y-as) houdt het been buiten de verbrede ribbenwand
+            // Laterale abductie op schouder/bovenbeen (Y-as) houdt het been buiten de verbrede ribbenwand.
+            // Runder-voorbenen vormen een anatomisch rechte pilaar; het gehele been zwaait als rechte kolom (geen X-benen).
             this._applyLocalRot('upperLegFL', 0, frontClearance, 0);
             this._applyLocalRot('upperLegFR', 0, -frontClearance, 0);
-            // Koot en onderbeen compenseren zodat de klauwzool vlak op de vloer landt
-            this._applyLocalRot('lowerLegFL', 0, -frontClearance * 0.60, 0);
-            this._applyLocalRot('lowerLegFR', 0, frontClearance * 0.60, 0);
-            this._applyLocalRot('pasternFL',  0, -frontClearance * 0.40, 0);
-            this._applyLocalRot('pasternFR',  0, frontClearance * 0.40, 0);
         }
 
         const hindClearance = 0.012 + fatBCS * 0.08 + modRW * 0.06 + fetalVolume * 0.08;
