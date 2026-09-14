@@ -220,29 +220,31 @@ De 5-punts schaal van Sprecher is de veterinaire gouden standaard voor kreupelhe
 De Body Condition Score volgens het 5-punts Penn State systeem (*Ferguson et al., 1994*) wordt **rechtstreeks gemodelleerd op de hoekpunten (vertices)** van de 3D-mesh. Hierdoor is er nul sprake van schaalstapeling in de wervelkolombotten:
 
 1. **Ribben (Costae)**:
-   * *Mager (BCS $\le 2.5$)*: Scherpe ribgolven zichtbaar onder de huid (`ribWave * thin * 0.040`).
+   * *Mager (BCS $\le 2.5$)*: Scherpe ribgolven waarbij de intercostale tussenruimtes diep invallen (`ribProfile * thin * 0.035`). De toppen van de ribben overschrijden het skeletvlak niet.
    * *Vet (BCS $\ge 3.5$)*: Een glad vetdek strijkt alle tussenribruimtes volledig af.
-2. **Hongergroeve (Fossa paralumbalis)**:
+2. **Algemene Rompversmalling & Opgetrokken Buik**:
+   * *Mager*: Verlies van subcutaan en omentaal vet leidt tot een slankere rompbreedte (-3.8 cm per zijde) en een strakke, opgetrokken buiklijn.
+3. **Hongergroeve (Fossa paralumbalis)**:
    * *Mager*: Diepe driehoekige uitholling aan de dorsolaterale flank (`x -= signX * thin * 0.085`).
    * *Vet*: Vlak tot bol gevuld met vetweefsel.
-3. **Korte ribben (Processus transversi / Loin Shelf)**:
-   * *Mager*: Steken als een horizontale richel (boekenplank) uit onder de lendenwervels.
-4. **Heupknobbels (Tuber coxae / Hooks)**:
-   * *Mager*: Scherpe, hoekige botpunten die subcutaan uitsteken.
+4. **Korte ribben (Processus transversi / Loin Shelf)**:
+   * *Mager*: Scherpe richel (boekenplank) direct boven de ingevallen flankholte.
+5. **Heupknobbels (Tuber coxae / Hooks)**:
+   * *Mager*: Scherpe botpunten die scherp aftekenen doordat het omringende zachte weefsel invalt (skelethoogte blijft exact constant).
    * *Vet*: Zacht afgerond door een dik vetkussen.
-5. **Zitbeenknobbels (Tuber ischiadica / Pins)**:
-   * *Mager*: Geprononceerde pinnen naar caudaal-lateraal.
+6. **Zitbeenknobbels (Tuber ischiadica / Pins)**:
+   * *Mager*: Geprononceerde botpinnen naar caudaal-lateraal zonder oneigenlijke skeletverlenging.
    * *Vet*: Begraven onder vetkussens.
-6. **V-lijn versus U-lijn tussen Hook en Pin**:
+7. **V-lijn versus U-lijn tussen Hook en Pin**:
    * *Mager*: Diepe V-vormige groeve.
    * *Vet*: U-vormige, zachte uitholling.
-7. **Sacrale holte & Staartinplant (Cavitas sacralis)**:
+8. **Sacrale holte & Staartinplant (Cavitas sacralis)**:
    * *Mager*: Diepe holtes aan weerszijden van de staartbasis.
    * *Vet*: Geprononceerde vetbulten (*fat patches*).
-8. **Rugkam (Processus spinosi)**:
-   * *Mager*: Dakvormige, scherpe zaagrug.
-   * *Vet*: Brede, vlakke rug met vetkammen.
-9. **Borstkwab (Dewlap / Brisket)**:
+9. **Rugkam (Processus spinosi & Zaagrug)**:
+   * *Mager*: Dakvormige, scherpe zaagrug. **Belangrijke anatomische correctie**: de rugkam zelf groeit *niet* omhoog (bot verandert immers niet van hoogte); het dakeffect ontstaat doordat de flankerende rugspieren (*m. longissimus dorsi*) ter weerszijden invallen (-Y en -X). Hierdoor blijft de absolute schofthoogte en ruglijn van de koe constant!
+   * *Vet*: Brede, vlakke rug met vetkammen en centrale ruggeul (*dorsal furrow*).
+10. **Borstkwab (Dewlap / Brisket)**:
    * *Vet*: Zware, afhangende vetkwab tussen de voorpoten.
 
 ### 5.2 Laterale Pootvrijwaring (Anti-Clipping Systeem voor Vette Koeien)

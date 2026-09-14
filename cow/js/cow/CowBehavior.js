@@ -351,13 +351,29 @@ export class CowBehavior {
                     const ribFreq = 38.0;
                     const ribWave = Math.sin((z - -0.65) * ribFreq);
                     const ribWeight = Math.sin(((z - -0.65) / 0.60) * Math.PI) * Math.sin(((y - 0.70) / 0.60) * Math.PI);
-                    const ribTotalAmp = thin * 0.040 + Math.max(0, modAngularity) * 0.024;
+                    const ribTotalAmp = thin * 0.035 + Math.max(0, modAngularity) * 0.024;
                     if (ribTotalAmp > 0) {
-                        x += signX * ribWave * ribTotalAmp * ribWeight;
+                        // Ribtoppen blijven op het skeletvlak (max +0.008m), intercostale ruimtes vallen diep in (-X)
+                        const ribProfile = Math.min(0.20, ribWave);
+                        x += signX * ribProfile * ribTotalAmp * ribWeight;
                     }
                     if (fat > 0) {
                         // Vette koe: gladstrijkend vetdek over ribben
                         x += signX * fat * 0.035 * ribWeight;
+                    }
+                }
+
+                // 1b. ALGEMENE ROMPVERSMALLING EN OPGETROKKEN BUIK BIJ MAGERTE (Subcutaan vetverlies):
+                if (thin > 0) {
+                    // Flank- en ribkastexpandering neemt af (slanke torso)
+                    if (z > -0.80 && z < 0.18 && y > 0.55 && y < 1.22 && absX > 0.12) {
+                        const barrelWeight = Math.sin(((z - -0.80) / 0.98) * Math.PI) * Math.sin(((y - 0.55) / 0.67) * Math.PI);
+                        x -= signX * thin * 0.038 * barrelWeight;
+                    }
+                    // Opgetrokken buiklijn (ventrale uitholling bij afwezigheid van buikvet)
+                    if (z > -0.70 && z < 0.05 && y > 0.45 && y < 0.82) {
+                        const tuckWeight = Math.sin(((z - -0.70) / 0.75) * Math.PI) * Math.sin(((y - 0.45) / 0.37) * Math.PI);
+                        y += thin * 0.028 * tuckWeight;
                     }
                 }
 
@@ -370,8 +386,8 @@ export class CowBehavior {
                             // Diep ingevallen driehoekige hongergroeve
                             x -= signX * thin * 0.085 * fossaWeight;
                         } else {
-                            // Korte ribben (lumbar shelf) steken als horizontale richel uit
-                            x += signX * thin * 0.045 * fossaWeight;
+                            // Korte ribben (lumbar shelf) vormen een scherpe richel boven de holte
+                            x += signX * thin * 0.015 * fossaWeight;
                         }
                     } else if (fat > 0) {
                         // Vette koe: hongergroeve is strak/bol gevuld met vetweefsel
@@ -386,12 +402,12 @@ export class CowBehavior {
                     if (distHook < 0.22) {
                         const hookWeight = Math.cos(distHook * Math.PI / 0.22 * 0.5);
                         if (thin > 0) {
-                            // Hoekige, scherp uitstekende botknobbel
-                            x += signX * thin * 0.080 * hookWeight;
-                            y += thin * 0.035 * hookWeight;
+                            // Botknobbel tekent scherp af tegen ingevallen omliggend weefsel
+                            x += signX * thin * 0.018 * hookWeight;
                         } else if (fat > 0) {
-                            // Zacht afgerond door vetkussen
-                            x -= signX * fat * 0.030 * hookWeight;
+                            // Zacht afgerond en ingebed in vetkussen
+                            x += signX * fat * 0.025 * hookWeight;
+                            y += fat * 0.015 * hookWeight;
                         }
                     }
                 }
@@ -403,14 +419,13 @@ export class CowBehavior {
                     if (distPin < 0.22) {
                         const pinWeight = Math.cos(distPin * Math.PI / 0.22 * 0.5);
                         if (thin > 0) {
-                            // Scherpe hoekige pinnen naar caudaal-lateraal
-                            z -= thin * 0.075 * pinWeight;
-                            x += signX * thin * 0.055 * pinWeight;
-                            y += thin * 0.030 * pinWeight;
+                            // Scherpe hoekige botpinnen zonder extra hoogte-expansie
+                            z -= thin * 0.020 * pinWeight;
+                            x += signX * thin * 0.015 * pinWeight;
                         } else if (fat > 0) {
                             // Begraven onder vetkussens
-                            z += fat * 0.045 * pinWeight;
-                            x += signX * fat * 0.050 * pinWeight;
+                            z += fat * 0.035 * pinWeight;
+                            x += signX * fat * 0.040 * pinWeight;
                         }
                         // Pariteit: bredere bekkenpinnen bij meerkalfskoeien vs vaarzen
                         x += signX * (parity === 0 ? -0.025 : (parity >= 4 ? 0.035 : 0.0)) * pinWeight;
@@ -448,16 +463,26 @@ export class CowBehavior {
                 }
 
                 // 7. RUGKAM & ZAAGRUG (Processus spinosi):
-                // Z = -0.95 tot 0.15, Y = 1.20 tot 1.45, absX < 0.08
-                if (z > -0.95 && z < 0.15 && y > 1.20 && absX < 0.08) {
-                    const spineDist = absX / 0.08;
+                // Z = -0.95 tot 0.15, Y = 1.15 tot 1.45, absX < 0.14
+                if (z > -0.95 && z < 0.15 && y > 1.15 && absX < 0.14) {
+                    const spineDist = absX / 0.14;
                     if (thin > 0) {
-                        // Dakvormige scherpe kam (zaagrug)
-                        y += thin * 0.055 * (1.0 - spineDist);
+                        // Zaagrug anatomie (Ferguson 1994):
+                        // De botkam groeit nooit omhoog (geen hoogte-toename van het skelet).
+                        // Het scherpe dakeffect ontstaat doordat de parasagittale rugspieren (m. longissimus dorsi)
+                        // ter weerszijden van de kam invallen (-Y en -X).
+                        if (absX >= 0.02) {
+                            const paraWeight = Math.sin(((absX - 0.02) / 0.12) * Math.PI);
+                            y -= thin * 0.035 * paraWeight;
+                            x -= signX * thin * 0.015 * paraWeight;
+                        }
                     } else if (fat > 0) {
-                        // Brede, vlakke rug met vetkammen
-                        y -= fat * 0.020 * (1.0 - spineDist);
-                        x += signX * fat * 0.025 * Math.sin(spineDist * Math.PI);
+                        // Vlakke rug met vetkammen / ruggeul (vetkussens ter weerszijden)
+                        if (absX >= 0.02) {
+                            const paraWeight = Math.sin(((absX - 0.02) / 0.12) * Math.PI);
+                            y += fat * 0.020 * paraWeight;
+                            x += signX * fat * 0.025 * paraWeight;
+                        }
                     }
                 }
 
