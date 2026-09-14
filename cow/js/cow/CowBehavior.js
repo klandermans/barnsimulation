@@ -95,6 +95,7 @@ export class CowBehavior {
             earFlickL:          false,       // Oorlinks richten
             earFlickR:          false,       // Oorrechts richten
             tailSwish:          0.25,        // Staartzwaai-intensiteit
+            tailSwishIntensity: 0.25,
 
             // Micro-gedragingen: Pathologie, Gezondheid & Stress
             heatStress:         false,       // Hittestress (hijgen)
@@ -1863,10 +1864,11 @@ export class CowBehavior {
             this._applyLocalRot('udder1', uz * 0.07, 0, ux * 0.07);
         }
 
-        const swish = Math.sin(this.time * 4) * this.state.tailSwishIntensity * 0.90;
+        const intensity = (this.state.tailSwishIntensity !== undefined ? this.state.tailSwishIntensity : (this.state.tailSwish ?? 0.25));
+        const swish = Math.sin(this.time * 4) * (Number.isFinite(intensity) ? intensity : 0.25) * 0.90;
         this.springs.tailX.setTarget(swish);
-        const tx = this.springs.tailX.update(dt);
-        const tz = this.springs.tailZ.update(dt);
+        const tx = this.springs.tailX.update(dt) || 0;
+        const tz = this.springs.tailZ.update(dt) || 0;
         ['tail0','tail1','tail2','tail3','tail4','tail5'].forEach((k, i) => {
             const dec = 1.0 + i * 0.35;
             this._applyLocalRot(k, tz * 0.10 * dec, 0, tx * 0.16 * dec);
@@ -1881,6 +1883,7 @@ export class CowBehavior {
     _applyLocalRot(key, rx = 0, ry = 0, rz = 0) {
         const b = this.bones[key];
         if (!b) return;
+        if (!Number.isFinite(rx) || !Number.isFinite(ry) || !Number.isFinite(rz)) return;
         if (rx === 0 && ry === 0 && rz === 0) return;
 
         _tempEuler.set(rx, ry, rz, 'XYZ');

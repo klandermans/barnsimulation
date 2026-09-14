@@ -37,11 +37,13 @@ export class PhysicsSpring {
     }
 
     setTarget(target) {
+        if (!Number.isFinite(target)) return;
         this.targetValue = target;
     }
 
     /** Voegt een impuls toe (instantane snelheidsverandering) */
     addImpulse(impulse) {
+        if (!Number.isFinite(impulse)) return;
         this.velocity += impulse / this.mass;
     }
 
@@ -51,6 +53,11 @@ export class PhysicsSpring {
      * @returns {number}    huidige waarde
      */
     update(dt) {
+        if (!Number.isFinite(this.currentValue) || !Number.isFinite(this.velocity)) {
+            this.currentValue = Number.isFinite(this.targetValue) ? this.targetValue : 0;
+            this.velocity = 0;
+            return this.currentValue;
+        }
         if (dt <= 0 || dt > 0.1) return this.currentValue; // sla vreemde dt's over
 
         // Halve-stap Euler integratie (stabiele dan gewone forward Euler)
@@ -58,6 +65,11 @@ export class PhysicsSpring {
         const springForce  = -this.stiffness * displacement;
         const dampForce    = -this.damping * this.velocity;
         const acceleration = (springForce + dampForce) / this.mass;
+
+        if (!Number.isFinite(acceleration)) {
+            this.velocity = 0;
+            return this.currentValue;
+        }
 
         this.velocity     += acceleration * dt;
         this.currentValue += this.velocity * dt;

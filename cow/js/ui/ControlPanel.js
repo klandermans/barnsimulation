@@ -312,7 +312,12 @@ export class ControlPanel {
 
         // ── Staartgezwaai intensiteit ─────────────────────────────────────────
         this._bindSlider('tailSwish', v => {
+            this.state.tailSwish = v;
             this.state.tailSwishIntensity = v;
+            if (this.behavior && this.behavior.state) {
+                this.behavior.state.tailSwish = v;
+                this.behavior.state.tailSwishIntensity = v;
+            }
             const el = document.getElementById('tailSwishVal');
             if (el) el.textContent = Math.round(v * 100) + '%';
         });
