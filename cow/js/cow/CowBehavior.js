@@ -580,7 +580,48 @@ export class CowBehavior {
         }
     }
 
+    _createReversedClip(clip, newName) {
+        const dur = clip.duration;
+        const reversedTracks = [];
+        for (const track of clip.tracks) {
+            const times = track.times;
+            const values = track.values;
+            const n = times.length;
+            const itemSize = values.length / n;
+
+            const newTimes = new Float32Array(n);
+            const newValues = new Float32Array(values.length);
+
+            for (let i = 0; i < n; i++) {
+                const srcIdx = n - 1 - i;
+                newTimes[i] = Math.max(0, dur - times[srcIdx]);
+                for (let k = 0; k < itemSize; k++) {
+                    newValues[i * itemSize + k] = values[srcIdx * itemSize + k];
+                }
+            }
+            reversedTracks.push(new track.constructor(track.name, newTimes, newValues));
+        }
+        return new THREE.AnimationClip(newName, dur, reversedTracks);
+    }
+
     _buildActions() {
+        // 1. Zorg voor een perfecte, stabiele stationaire borstligging clip (subclip van lieDown t=4.75s)
+        if (this.clips['lieDown'] && !this.clips['lyingSternal']) {
+            this.clips['lyingSternal'] = THREE.AnimationUtils.subclip(
+                this.clips['lieDown'],
+                'lyingSternal',
+                280,
+                286,
+                60
+            );
+        }
+
+        // 2. Zorg dat standUp een zuiver omgekeerde lieDown cyclus volgt:
+        // Runder-biomechanica: achterhand eerst hoog omhoog, voorhand volgt!
+        if (this.clips['lieDown'] && !this.clips['standUpBio']) {
+            this.clips['standUpBio'] = this._createReversedClip(this.clips['lieDown'], 'standUpBio');
+        }
+
         const map = {
             walk:        ['walk', 'Loco_Walk', 'Armature.001|Loco_Walk|BaseLayer'],
             walkSlow:    ['walk', 'Loco_Walk'],
@@ -592,12 +633,13 @@ export class CowBehavior {
             grazing:     ['grazing', 'eating0', 'eating1', 'Eating_01-IP'],
             eating:      ['eating', 'Eating_02-IP'],
             drinking:    ['drinking', 'Drinking_01-IP'],
-            lying:       ['lying', 'sitting0', 'sitting1', 'Sitting_00-IP'],
+            lying:       ['lyingSternal', 'lying', 'sitting0', 'Sitting_00-IP'],
+            lyingSternal:['lyingSternal', 'lying', 'Sitting_00-IP'],
             sittingLook: ['sittingLook', 'Sitting_01-IP'],
-            lyingSleep:  ['lyingSleep', 'Sitting_02-IP'],
+            lyingSleep:  ['lyingSternal', 'lyingSleep', 'Sitting_02-IP'],
             lieDown:     ['lieDown', 'lyingDown', 'Trans_Stand_To_Sitting-IP'],
-            standUp:     ['standUp', 'standingUp', 'Trans_Sitting_To_Stand-IP'],
-            downerCow:   ['lying', 'sitting0', 'Sitting_00-IP', 'lieDown'],
+            standUp:     ['standUpBio', 'standUp', 'standingUp', 'Trans_Sitting_To_Stand-IP'],
+            downerCow:   ['lyingSternal', 'lying', 'Sitting_00-IP'],
         };
 
         for (const [key, candidates] of Object.entries(map)) {
@@ -615,7 +657,7 @@ export class CowBehavior {
             if (this.actions['standUp'] && e.action === this.actions['standUp']) {
                 this.setGait('idle');
             } else if (this.actions['lieDown'] && e.action === this.actions['lieDown']) {
-                this.setGait(this.state.gait === 'downerCow' ? 'downerCow' : 'lying');
+                this.setGait(this.state.gait === 'downerCow' ? 'downerCow' : 'lyingSternal');
             }
         });
     }
@@ -648,10 +690,10 @@ export class CowBehavior {
         else if (gait === 'grazing') targetKey = 'grazing';
         else if (gait === 'eatingBunk' || gait === 'eating') targetKey = 'eating';
         else if (gait === 'drinking') targetKey = 'drinking';
-        else if (gait === 'lyingSternal' || gait === 'lying') targetKey = 'lying';
-        else if (gait === 'lyingSleepFlank') targetKey = 'lying';
+        else if (gait === 'lyingSternal' || gait === 'lying') targetKey = 'lyingSternal';
+        else if (gait === 'lyingSleepFlank') targetKey = 'lyingSternal';
         else if (gait === 'boxHanging') targetKey = 'idle';
-        else if (gait === 'lyingLateral' || gait === 'lyingSleep') targetKey = 'lyingSleep';
+        else if (gait === 'lyingLateral' || gait === 'lyingSleep') targetKey = 'lyingSternal';
         else if (gait === 'lieDown') targetKey = 'lieDown';
         else if (gait === 'standUp') targetKey = 'standUp';
         else if (gait === 'downerCow' || gait === 'downer' || gait === 'fallen') targetKey = 'downerCow';
@@ -675,14 +717,14 @@ export class CowBehavior {
         if (gait === 'lieDown') {
             const lieAction = this.actions['lieDown'];
             if (lieAction) {
-                if (prevAction && prevAction !== lieAction) prevAction.fadeOut(0.35);
+                if (prevAction && prevAction !== lieAction) prevAction.fadeOut(0.25);
                 lieAction.reset();
                 lieAction.setLoop(THREE.LoopOnce, 1);
                 lieAction.clampWhenFinished = true;
                 lieAction.paused = false;
                 lieAction.time = 0;
                 lieAction.setEffectiveWeight(1.0);
-                lieAction.fadeIn(0.35);
+                lieAction.fadeIn(0.25);
                 lieAction.play();
                 this.currentAction = lieAction;
                 this._updateStatusUI();
@@ -693,14 +735,14 @@ export class CowBehavior {
         if (gait === 'standUp') {
             const upAction = this.actions['standUp'];
             if (upAction) {
-                if (prevAction && prevAction !== upAction) prevAction.fadeOut(0.35);
+                if (prevAction && prevAction !== upAction) prevAction.fadeOut(0.25);
                 upAction.reset();
                 upAction.setLoop(THREE.LoopOnce, 1);
                 upAction.clampWhenFinished = true;
                 upAction.paused = false;
                 upAction.time = 0;
                 upAction.setEffectiveWeight(1.0);
-                upAction.fadeIn(0.35);
+                upAction.fadeIn(0.25);
                 upAction.play();
                 this.currentAction = upAction;
                 this._updateStatusUI();
@@ -709,19 +751,16 @@ export class CowBehavior {
         }
 
         if (gait === 'lyingSternal' || gait === 'lying' || gait === 'lyingLateral' || gait === 'lyingSleep' || gait === 'downerCow' || gait === 'lyingSleepFlank') {
-            const lieAction = this.actions['lieDown'];
-            if (lieAction) {
-                if (prevAction && prevAction !== lieAction) prevAction.fadeOut(0.35);
-                lieAction.reset();
-                lieAction.setLoop(THREE.LoopOnce, 1);
-                lieAction.clampWhenFinished = true;
-                // De definitieve borstligging houding (sternal recumbency) bevindt zich op het einde van de lieDown cyclus
-                lieAction.time = Math.max(0, lieAction.getClip().duration - 0.02);
-                lieAction.paused = true;
-                lieAction.setEffectiveWeight(1.0);
-                lieAction.fadeIn(0.35);
-                lieAction.play();
-                this.currentAction = lieAction;
+            const sternalAction = this.actions['lyingSternal'] || this.actions['lying'] || this.actions['downerCow'];
+            if (sternalAction) {
+                if (prevAction && prevAction !== sternalAction) prevAction.fadeOut(0.35);
+                sternalAction.reset();
+                sternalAction.setLoop(THREE.LoopRepeat, Infinity);
+                sternalAction.paused = false;
+                sternalAction.setEffectiveWeight(1.0);
+                sternalAction.fadeIn(0.35);
+                sternalAction.play();
+                this.currentAction = sternalAction;
                 this._updateStatusUI();
                 return;
             }
@@ -1281,52 +1320,110 @@ export class CowBehavior {
     // ═══════════════════════════════════════════════════════════════════════════
 
     _applyTransitionsAndPostures(dt) {
-        // In alle gevallen blijft de echte Melkkoe (Cow_F) behouden en zichtbaar
         if (!this.model) return;
         this.model.position.set(0, 0.005, 0);
         this.model.visible = true;
         if (this.lyingModel) this.lyingModel.visible = false;
         if (this.eatingModel) this.eatingModel.visible = false;
 
-        // 1. Zijligging (lange rust)
-        const isLateral = (this.state.gait === 'lyingLateral' || this.state.gait === 'lyingSleep');
-        const targetLateral = isLateral ? 1.0 : 0.0;
-        this.lateralLyingFactor += (targetLateral - this.lateralLyingFactor) * Math.min(1.0, dt * 3.5);
+        const gait = this.state.gait;
 
-        if (this.lateralLyingFactor > 0.01) {
-            const f = this.lateralLyingFactor;
-            // Rust & diepe slaap: romp blijft rotsvast op de wei, hals en kop rusten ontspannen naar de flank, ogen gesloten
-            this._applyLocalRot('neck1', f * 0.18, 0, f * 0.25);
-            this._applyLocalRot('neck2', f * 0.15, 0, f * 0.20);
-            this._applyLocalRot('head',  f * 0.12, f * 0.18, 0);
-            this._applyLocalRot('earL',  0, 0, f * 0.35);
-            this._applyLocalRot('earR',  0, 0, -f * 0.35);
-            if (this.bones.eyelidL) this.bones.eyelidL.scale.y = 1.0 - f * 0.9;
-            if (this.bones.eyelidR) this.bones.eyelidR.scale.y = 1.0 - f * 0.9;
+        // 1. Borstligging (Sternal Recumbency): Ritmische borstademhaling
+        const isSternal = (gait === 'lyingSternal' || gait === 'lying');
+        if (isSternal) {
+            const breath = Math.sin(this.time * 2.2) * 0.012;
+            this._applyLocalRot('chest', breath, 0, 0);
         }
 
         // 2. REM-slaap: Borstligging met kop op de flank (Jan Hulsen Koesignalen: 30-45 min per dag)
-        const isFlankSleep = (this.state.gait === 'lyingSleepFlank');
+        const isFlankSleep = (gait === 'lyingSleepFlank');
         const targetFlankSleep = isFlankSleep ? 1.0 : 0.0;
         if (this.sleepFlankFactor === undefined) this.sleepFlankFactor = 0;
         this.sleepFlankFactor += (targetFlankSleep - this.sleepFlankFactor) * Math.min(1.0, dt * 3.5);
 
-        if (this.sleepFlankFactor > 0.01) {
+        if (this.sleepFlankFactor > 0.005) {
             const sf = this.sleepFlankFactor;
-            this._applyLocalRot('spine1', 0, sf * 0.12, 0);
-            this._applyLocalRot('spine2', 0, sf * 0.22, 0);
-            this._applyLocalRot('chest',  0, sf * 0.28, 0);
-            this._applyLocalRot('neck1', sf * 0.10, sf * 0.72, sf * 0.32);
-            this._applyLocalRot('neck2', sf * 0.08, sf * 0.65, sf * 0.25);
-            this._applyLocalRot('head',  -sf * 0.12, sf * 0.52, -sf * 0.18);
+            // Spines & borstkas buigen subtiel mee naar de linkerflank
+            this._applyLocalRot('spine1', 0, sf * 0.06, 0);
+            this._applyLocalRot('spine2', 0, sf * 0.12, 0);
+            this._applyLocalRot('chest',  0, sf * 0.16, 0);
+
+            // Cervicale wervels krullen natuurlijk naar de linkerflank
+            this._applyLocalRot('neck1', sf * 0.08, sf * 0.38, sf * 0.12);
+            this._applyLocalRot('neck2', sf * 0.06, sf * 0.36, sf * 0.10);
+            this._applyLocalRot('neck3', sf * 0.04, sf * 0.28, sf * 0.06);
+            this._applyLocalRot('head',  sf * 0.10, sf * 0.42, sf * 0.05);
+
+            // Slappe oren in diepe REM-atonia
             this._applyLocalRot('earL',  0, 0, sf * 0.40);
             this._applyLocalRot('earR',  0, 0, -sf * 0.40);
+
+            // Ogen volledig gesloten tijdens REM-slaap
             if (this.bones.eyelidL) this.bones.eyelidL.scale.y = 1.0 - sf * 0.95;
             if (this.bones.eyelidR) this.bones.eyelidR.scale.y = 1.0 - sf * 0.95;
         }
 
-        // 3. DeLaval Boxhangen / Wachtstand (Perching in cubicle: signaal van aarzeling, pijnlijke knieën of harde box)
-        const isBoxHanging = (this.state.gait === 'boxHanging');
+        // 3. Downer Koe (Melkziekte / Paresis Puerperalis / Hypocalcemia Stadium 2)
+        const isDowner = (gait === 'downerCow' || gait === 'downer' || gait === 'fallen');
+        const targetDowner = isDowner ? 1.0 : 0.0;
+        if (this.downerFactor === undefined) this.downerFactor = 0;
+        this.downerFactor += (targetDowner - this.downerFactor) * Math.min(1.0, dt * 3.5);
+
+        if (this.downerFactor > 0.005) {
+            const df = this.downerFactor;
+            // Slappe paretische bekkentilt (spierzwakte en verminderde tonus in achterhand)
+            this._applyLocalRot('pelvis', 0, 0, df * 0.06);
+
+            // Pathognomonische S-bocht van de cervicale wervelkolom bij melkziekte (Radostits & Blowey)
+            // Nek knikt zijwaarts en zakt omlaag; kop rust zwaar en apathisch op de schouder/borstwand
+            this._applyLocalRot('neck1', df * 0.16, df * 0.34, -df * 0.12);
+            this._applyLocalRot('neck2', df * 0.14, df * 0.36, -df * 0.10);
+            this._applyLocalRot('neck3', df * 0.08, df * 0.26, -df * 0.06);
+            this._applyLocalRot('head',  df * 0.20, df * 0.26,  df * 0.20);
+
+            // Bilaterale oorparalyse: koude, slappe afhangende oren
+            this._applyLocalRot('earL', df * 0.35, 0, df * 0.45);
+            this._applyLocalRot('earR', df * 0.35, 0, -df * 0.45);
+
+            // Doffe, halfgesloten comateuze ogen
+            if (this.bones.eyelidL) this.bones.eyelidL.scale.y = 1.0 - df * 0.65;
+            if (this.bones.eyelidR) this.bones.eyelidR.scale.y = 1.0 - df * 0.65;
+        }
+
+        // 4. Echte Zijligging (Lateral Recumbency)
+        const isLateral = (gait === 'lyingLateral' || gait === 'lyingSleep');
+        const targetLateral = isLateral ? 1.0 : 0.0;
+        this.lateralLyingFactor += (targetLateral - this.lateralLyingFactor) * Math.min(1.0, dt * 3.5);
+
+        if (this.lateralLyingFactor > 0.005) {
+            const lf = this.lateralLyingFactor;
+            // Kanteling van de gehele romp plat op de ribbenwand (80 graden roll)
+            this.model.rotation.z = -lf * (Math.PI * 0.44);
+            this.model.position.y = 0.005 + lf * 0.12;
+
+            // Poten ontspannen los uitgestrekt over de vloer
+            this._applyLocalRot('upperLegFL', 0, 0, lf * 0.25);
+            this._applyLocalRot('upperLegFR', 0, 0, lf * 0.18);
+            this._applyLocalRot('upperLegHL', 0, 0, lf * 0.30);
+            this._applyLocalRot('upperLegHR', 0, 0, lf * 0.20);
+
+            // Hals en kop plat op het strooilagbed
+            this._applyLocalRot('neck1', lf * 0.10, 0, lf * 0.15);
+            this._applyLocalRot('head',  lf * 0.08, lf * 0.12, 0);
+
+            // Oren ontspannen op de vloer
+            this._applyLocalRot('earL', 0, 0, lf * 0.35);
+            this._applyLocalRot('earR', 0, 0, -lf * 0.35);
+
+            // Ogen gesloten in diepe zijligging
+            if (this.bones.eyelidL) this.bones.eyelidL.scale.y = 1.0 - lf * 0.90;
+            if (this.bones.eyelidR) this.bones.eyelidR.scale.y = 1.0 - lf * 0.90;
+        } else if (!isLateral && this.model.rotation.z !== 0) {
+            this.model.rotation.z = 0;
+        }
+
+        // 5. DeLaval Boxhangen / Wachtstand (Perching in cubicle: signaal van aarzeling, pijnlijke knieën of harde box)
+        const isBoxHanging = (gait === 'boxHanging');
         const targetBoxHanging = isBoxHanging ? 1.0 : 0.0;
         if (this.boxHangingFactor === undefined) this.boxHangingFactor = 0;
         this.boxHangingFactor += (targetBoxHanging - this.boxHangingFactor) * Math.min(1.0, dt * 3.5);
@@ -1351,7 +1448,9 @@ export class CowBehavior {
         const t = this.time;
 
         // ── A. Herkauwen (50-70 bpm + slokdarmslik + Jan Hulsen Kauwslagenteller) ──
-        if (this.state.ruminating) {
+        const isComatoseOrAsleep = (this.state.gait === 'downerCow' || this.state.gait === 'downer' ||
+                                    this.state.gait === 'lyingSleepFlank' || this.state.gait === 'lyingLateral');
+        if (this.state.ruminating && !isComatoseOrAsleep) {
             this.ruminateCycle += dt;
             this.bolusChewTime += dt;
             const rate = (this.state.ruminateRate / 60) * Math.PI * 2;
@@ -1714,66 +1813,79 @@ export class CowBehavior {
                     this.bones.upperLegHR.position.x = this.bones.upperLegHR._basePos.x - rumpDelta;
                 }
             }
-            // Stand achterbenen achter (88 koehakkig/naar binnen .. 100 parallel .. 112 wijd)
-            if (bt.rearLegRear) {
-                const hockSpread = (bt.rearLegRear - 100) * 0.020;
-                this._applyLocalRot('lowerLegHL', 0, 0, -hockSpread);
-                this._applyLocalRot('lowerLegHR', 0, 0, hockSpread);
-            }
-            // Stand achterbenen zij (88 steil .. 100 normaal .. 112 sabelbenig/krom)
-            if (bt.rearLegSide) {
-                const hockTilt = (bt.rearLegSide - 100) * 0.025;
-                this._applyLocalRot('lowerLegHL', hockTilt, 0, 0);
-                this._applyLocalRot('lowerLegHR', hockTilt, 0, 0);
-                // Kinematische ketencompensatie (WHFF & Sprecher validatie):
-                // koot en bovenbeen compenseren zodat zool horizontaal en op de grond blijft (P_hoof,y == 0)
-                this._applyLocalRot('pasternHL', -hockTilt * 0.65, 0, 0);
-                this._applyLocalRot('pasternHR', -hockTilt * 0.65, 0, 0);
-                this._applyLocalRot('upperLegHL', -hockTilt * 0.35, 0, 0);
-                this._applyLocalRot('upperLegHR', -hockTilt * 0.35, 0, 0);
-            }
-            // Klauwhoek (88 plat/lage verzenen .. 100 normaal .. 112 steil)
-            if (bt.clawAngle) {
-                const clawTilt = (bt.clawAngle - 100) * 0.025;
-                this._applyLocalRot('pasternHL', clawTilt, 0, 0);
-                this._applyLocalRot('pasternHR', clawTilt, 0, 0);
-                this._applyLocalRot('pasternFL', clawTilt, 0, 0);
-                this._applyLocalRot('pasternFR', clawTilt, 0, 0);
-            }
-            // Voorbeenstand (88 frans/naar buiten .. 100 recht .. 112 recht/parallel)
-            if (bt.frontLegStance) {
-                const frontLegYaw = (bt.frontLegStance - 100) * 0.015;
-                this._applyLocalRot('hoofFL', 0, frontLegYaw, 0);
-                this._applyLocalRot('hoofFR', 0, -frontLegYaw, 0);
+            // Stand achterbenen & pootvrijwaring alleen toepassen in staande/lopende houding.
+            // In liggende toestand (borstligging, downer, zijligging) zijn poten reeds anatomisch opgevouwen.
+            const isRecumbent = (this.state.gait === 'lyingSternal' || this.state.gait === 'lying' ||
+                                 this.state.gait === 'lyingSleepFlank' || this.state.gait === 'downerCow' ||
+                                 this.state.gait === 'downer' || this.state.gait === 'fallen' ||
+                                 this.state.gait === 'lyingLateral' || this.state.gait === 'lyingSleep' ||
+                                 this.state.gait === 'lieDown');
+
+            if (!isRecumbent) {
+                // Stand achterbenen achter (88 koehakkig/naar binnen .. 100 parallel .. 112 wijd)
+                if (bt.rearLegRear) {
+                    const hockSpread = (bt.rearLegRear - 100) * 0.020;
+                    this._applyLocalRot('lowerLegHL', 0, 0, -hockSpread);
+                    this._applyLocalRot('lowerLegHR', 0, 0, hockSpread);
+                }
+                // Stand achterbenen zij (88 steil .. 100 normaal .. 112 sabelbenig/krom)
+                if (bt.rearLegSide) {
+                    const hockTilt = (bt.rearLegSide - 100) * 0.025;
+                    this._applyLocalRot('lowerLegHL', hockTilt, 0, 0);
+                    this._applyLocalRot('lowerLegHR', hockTilt, 0, 0);
+                    // Kinematische ketencompensatie (WHFF & Sprecher validatie):
+                    // koot en bovenbeen compenseren zodat zool horizontaal en op de grond blijft (P_hoof,y == 0)
+                    this._applyLocalRot('pasternHL', -hockTilt * 0.65, 0, 0);
+                    this._applyLocalRot('pasternHR', -hockTilt * 0.65, 0, 0);
+                    this._applyLocalRot('upperLegHL', -hockTilt * 0.35, 0, 0);
+                    this._applyLocalRot('upperLegHR', -hockTilt * 0.35, 0, 0);
+                }
+                // Klauwhoek (88 plat/lage verzenen .. 100 normaal .. 112 steil)
+                if (bt.clawAngle) {
+                    const clawTilt = (bt.clawAngle - 100) * 0.025;
+                    this._applyLocalRot('pasternHL', clawTilt, 0, 0);
+                    this._applyLocalRot('pasternHR', clawTilt, 0, 0);
+                    this._applyLocalRot('pasternFL', clawTilt, 0, 0);
+                    this._applyLocalRot('pasternFR', clawTilt, 0, 0);
+                }
+                // Voorbeenstand (88 frans/naar buiten .. 100 recht .. 112 recht/parallel)
+                if (bt.frontLegStance) {
+                    const frontLegYaw = (bt.frontLegStance - 100) * 0.015;
+                    this._applyLocalRot('hoofFL', 0, frontLegYaw, 0);
+                    this._applyLocalRot('hoofFR', 0, -frontLegYaw, 0);
+                }
             }
         }
 
         // ── 1c. Vetzucht, Inhoud & Dracht: Laterale Pootvrijwaring (Anti-Clipping) ──
-        // Wanneer de koe dikker of hoogdrachtig wordt (BCS > 3.0, diepe inhoud/voorhand, kalfbuik),
-        // zwaaien en staan de voorbenen en achterbenen natuurlijk wijder uit om de romp en uier vrij te houden.
-        // Dit voorkomt dat de voorbenen dwars door de ribben/buikwand snijden bij zware koeien.
-        const fatBCS = Math.max(0, (bcs - 3.0) / 2.0); // 0 .. 1
-        const modCW = bt ? Math.max(0, ((bt.chestWidth || 100) - 100) / 12.0) : 0;
-        const modBD = bt ? Math.max(0, ((bt.bodyDepth || 100) - 100) / 12.0) : 0;
-        const modRW = bt ? Math.max(0, ((bt.rumpWidth || 100) - 100) / 12.0) : 0;
+        // Alleen actief in stand/gangwerk; bij ligging zijn benen rustig gevouwen
+        const isRecumbentForClearance = (this.state.gait === 'lyingSternal' || this.state.gait === 'lying' ||
+                                        this.state.gait === 'lyingSleepFlank' || this.state.gait === 'downerCow' ||
+                                        this.state.gait === 'downer' || this.state.gait === 'fallen' ||
+                                        this.state.gait === 'lyingLateral' || this.state.gait === 'lyingSleep' ||
+                                        this.state.gait === 'lieDown');
 
-        const frontClearance = fatBCS * 0.12 + modCW * 0.08 + modBD * 0.04 + fetalVolume * 0.04;
-        if (frontClearance > 0.001) {
-            // Laterale abductie op schouder/bovenbeen (Y-as) houdt het been buiten de verbrede ribbenwand.
-            // Runder-voorbenen vormen een anatomisch rechte pilaar; het gehele been zwaait als rechte kolom (geen X-benen).
-            this._applyLocalRot('upperLegFL', 0, frontClearance, 0);
-            this._applyLocalRot('upperLegFR', 0, -frontClearance, 0);
-        }
+        if (!isRecumbentForClearance) {
+            const fatBCS = Math.max(0, (bcs - 3.0) / 2.0); // 0 .. 1
+            const modCW = bt ? Math.max(0, ((bt.chestWidth || 100) - 100) / 12.0) : 0;
+            const modBD = bt ? Math.max(0, ((bt.bodyDepth || 100) - 100) / 12.0) : 0;
+            const modRW = bt ? Math.max(0, ((bt.rumpWidth || 100) - 100) / 12.0) : 0;
 
-        const hindClearance = 0.012 + fatBCS * 0.08 + modRW * 0.06 + fetalVolume * 0.08;
-        if (hindClearance > 0.001) {
-            // Laterale abductie op heup/bovenbeen achter (Y-as) houdt achterbeen vrij van uier en flank
-            this._applyLocalRot('upperLegHL', 0, hindClearance, 0);
-            this._applyLocalRot('upperLegHR', 0, -hindClearance, 0);
-            this._applyLocalRot('lowerLegHL', 0, -hindClearance * 0.60, 0);
-            this._applyLocalRot('lowerLegHR', 0, hindClearance * 0.60, 0);
-            this._applyLocalRot('pasternHL',  0, -hindClearance * 0.40, 0);
-            this._applyLocalRot('pasternHR',  0, hindClearance * 0.40, 0);
+            const frontClearance = fatBCS * 0.12 + modCW * 0.08 + modBD * 0.04 + fetalVolume * 0.04;
+            if (frontClearance > 0.001) {
+                this._applyLocalRot('upperLegFL', 0, frontClearance, 0);
+                this._applyLocalRot('upperLegFR', 0, -frontClearance, 0);
+            }
+
+            const hindClearance = 0.012 + fatBCS * 0.08 + modRW * 0.06 + fetalVolume * 0.08;
+            if (hindClearance > 0.001) {
+                this._applyLocalRot('upperLegHL', 0, hindClearance, 0);
+                this._applyLocalRot('upperLegHR', 0, -hindClearance, 0);
+                this._applyLocalRot('lowerLegHL', 0, -hindClearance * 0.60, 0);
+                this._applyLocalRot('lowerLegHR', 0, hindClearance * 0.60, 0);
+                this._applyLocalRot('pasternHL',  0, -hindClearance * 0.40, 0);
+                this._applyLocalRot('pasternHR',  0, hindClearance * 0.40, 0);
+            }
         }
 
         // Vergrendel alle wervelkolom- en bekkenbotten permanent op 1.0 (schaalvermenigvuldiging uitgesloten)
@@ -1946,6 +2058,14 @@ export class CowBehavior {
     // ═══════════════════════════════════════════════════════════════════════════
 
     _applyGroundContactGuard(dt) {
+        // Liggen, downer en zijligging hebben hun eigen gekalibreerde rusthoogte
+        const isRecumbent = (this.state.gait === 'lyingSternal' || this.state.gait === 'lying' ||
+                             this.state.gait === 'lyingSleepFlank' || this.state.gait === 'downerCow' ||
+                             this.state.gait === 'downer' || this.state.gait === 'fallen' ||
+                             this.state.gait === 'lyingLateral' || this.state.gait === 'lyingSleep' ||
+                             this.state.gait === 'lieDown');
+        if (isRecumbent) return;
+
         // 1. Biomechanische grondzekering voor de snuit & kop:
         // Voorkomt dat de snuit of kop onder het maaiveld zakt bij samenvallende halsbuiging (grazen, dreighouding, kreupelheid)
         if (this.bones.jaw) {
