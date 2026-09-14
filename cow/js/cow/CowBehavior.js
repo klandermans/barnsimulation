@@ -947,23 +947,25 @@ export class CowBehavior {
         if (gait === 'gallopPlay') {
             const suppress = this._mountBlend ? (1.0 - this._mountBlend) : 1.0;
             const leap = Math.sin(cycle * Math.PI * 2) * suppress;
-            // Local Z = -100 * world Y (verticale sprong tot +0.18m zonder accumulatie)
-            if (this.bones.root) this.bones.root.position.z = -Math.max(0, leap) * 18;
+            // Basis-lift (-4.0) neutraliseert de ruwe FBX-clip dip; verticale sprong tot +0.18m
+            if (this.bones.root) this.bones.root.position.z = -4.0 - Math.max(0, leap) * 16;
 
             // Kop omlaag en bokken met achterpoten
             this._applyLocalRot('neck1', (0.28 + leap * 0.15) * suppress, 0, 0);
             this._applyLocalRot('head', -0.15 * suppress, 0, 0);
 
-            // Achterhand schopt omhoog / bokt
-            const buck = Math.max(0, Math.sin(cycle * Math.PI * 2 + 1.0)) * suppress;
+            // Achterhand schopt alleen omhoog / bokt wanneer de romp zich in de vluchtfase bevindt
+            const buck = Math.max(0, leap) * 0.30 * suppress;
             this._applyLocalRot('spine1', buck * 0.15, 0, 0);
-            this._applyLocalRot('upperLegHL', buck * 0.45, 0, buck * 0.15);
-            this._applyLocalRot('upperLegHR', buck * 0.45, 0, -buck * 0.15);
+            this._applyLocalRot('upperLegHL', buck * 0.40, 0, buck * 0.15);
+            this._applyLocalRot('upperLegHR', buck * 0.40, 0, -buck * 0.15);
 
             // Staart vrolijk omhoog gekruld over de rug
             this._applyLocalRot('tail0', 0.85 * suppress, 0, 0);
             this._applyLocalRot('tail1', 0.65 * suppress, 0, 0);
             return;
+        } else {
+            if (this.bones.root) this.bones.root.position.set(0, 0, 0);
         }
 
         // ── B. Achteruitlopen (Backing Up) ───────────────────────────────────
@@ -1944,7 +1946,7 @@ export class CowBehavior {
     // ═══════════════════════════════════════════════════════════════════════════
 
     _applyGroundContactGuard(dt) {
-        // Biomechanische grondzekering:
+        // 1. Biomechanische grondzekering voor de snuit & kop:
         // Voorkomt dat de snuit of kop onder het maaiveld zakt bij samenvallende halsbuiging (grazen, dreighouding, kreupelheid)
         if (this.bones.jaw) {
             const jawPos = _tempVecGuard.copy(this.bones.jaw.position);
@@ -1954,6 +1956,25 @@ export class CowBehavior {
                 const corr = Math.min(0.50, pen * 2.5);
                 this._applyLocalRot('neck1', -corr * 0.6, 0, 0);
                 this._applyLocalRot('head',  -corr * 0.4, 0, 0);
+            }
+        }
+
+        // 2. Biomechanische klauwgrondzekering:
+        // Voorkomt dat klauwen door het vloervlak zakken bij extreme sprongen (gallopPlay)
+        // of ruwe sleutelframes in geïmporteerde clips
+        if (this.bones.root) {
+            const hooves = ['hoofFL', 'hoofFR', 'hoofHL', 'hoofHR'];
+            let lowestY = 999;
+            for (let i = 0; i < hooves.length; i++) {
+                const h = this.bones[hooves[i]];
+                if (h) {
+                    h.getWorldPosition(_tempVecGuard);
+                    if (_tempVecGuard.y < lowestY) lowestY = _tempVecGuard.y;
+                }
+            }
+            if (lowestY < 0.0) {
+                // In lokale RigRoot coördinaten is -Z gelijk aan wereld +Y
+                this.bones.root.position.z -= (-lowestY) * 100;
             }
         }
     }
