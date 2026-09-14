@@ -265,6 +265,25 @@ export class CowBehavior {
                         obj.geometry.userData.basePositions = new Float32Array(obj.geometry.attributes.position.array);
                     }
                     if (obj.geometry.userData.basePositions) {
+                        // Pre-bereken exact hoorn-masker (479 vertices).
+                        // Onderscheidt de hoorns 100% scherp van de hersenpan/schedel en van de oren!
+                        if (!obj.geometry.userData.hornMask) {
+                            const count = obj.geometry.attributes.position.count;
+                            const uv = obj.geometry.attributes.uv;
+                            const b = obj.geometry.userData.basePositions;
+                            const mask = new Uint8Array(count);
+                            if (uv) {
+                                for (let i = 0; i < count; i++) {
+                                    const u = uv.getX(i), v = uv.getY(i);
+                                    const idx = i * 3;
+                                    const x = b[idx], y = b[idx + 1];
+                                    if (u <= 0.105 && v <= 0.195 && y > 1.40 && Math.abs(x) > 0.06) {
+                                        mask[i] = 1;
+                                    }
+                                }
+                            }
+                            obj.geometry.userData.hornMask = mask;
+                        }
                         this.sculptMeshes.push(obj);
                     }
                 }
@@ -336,6 +355,7 @@ export class CowBehavior {
             const p = posAttr.array;
             const b = geom.userData.basePositions;
             if (!b) return;
+            const hornMask = geom.userData.hornMask;
 
             for (let i = 0; i < posAttr.count; i++) {
                 const idx = i * 3;
@@ -557,12 +577,14 @@ export class CowBehavior {
                 }
 
                 // 14. HOORNS (Gehoornd vs Onthoorn / Genetisch Hoornloos / Scurs)
-                // Hoorns bevinden zich bij: absX > 0.06, y > 1.35, z > 0.85 && z < 1.15
-                if (absX > 0.06 && y > 1.35 && z > 0.85 && z < 1.15) {
+                // Maakt uitsluitend gebruik van het specifieke hoornmasker (479 vertices).
+                // Hierdoor blijven de schedelkruin/hersenpan en de oren 100% onaangeroerd!
+                const isHorn = hornMask ? hornMask[i] : (geom.attributes.uv && geom.attributes.uv.getX(i) <= 0.105 && geom.attributes.uv.getY(i) <= 0.195 && b[idx + 1] > 1.40 && absX > 0.06);
+                if (isHorn) {
                     if (hornScale !== 1.0) {
-                        const baseX = signX * 0.085;
-                        const baseY = 1.390;
-                        const baseZ = 0.960;
+                        const baseX = signX * 0.118;
+                        const baseY = 1.432;
+                        const baseZ = 0.972;
                         const retract = 1.0 - Math.max(0.0, Math.min(1.4, hornScale));
                         x = x + (baseX - x) * retract;
                         y = y + (baseY - y) * retract;

@@ -131,7 +131,7 @@ Met één klik kunnen wetenschappelijk gevalideerde profielen worden geactiveerd
 
 ### 2.4 Hoorns & Hoornstatus
 * **Gehoornd (Standaard)**: Volledig ontwikkelde runderhoorns (`hornScale = 1.0`).
-* **Onthoorn / Polled**: Volledig hoornloos fenotype (`hornScale = 0.0`). Alle hoornvertices worden via continue morphometrische retractie teruggetrokken in het pariëtale schedeldak.
+* **Onthoorn / Polled**: Volledig hoornloos fenotype (`hornScale = 0.0`). Alle 479 hoornvertices worden via een strikt geïsoleerd geometrisch hoornmasker ingetrokken in de hoornbasis (`x = ±0.118, y = 1.432, z = 0.972`). Hierdoor blijven de pariëtale hersenpan, de schedelkruin (*poll*) en de oren 100% anatomisch gaaf en onaangeroerd.
 * **Hoornstompjes (Scurs)**: Rudimentaire stompjes (`hornScale = 0.35`), typisch voor heterozygoot hoornloze runderen.
 
 ### 2.5 Rassen & Vachtpatronen
