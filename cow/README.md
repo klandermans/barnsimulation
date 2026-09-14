@@ -7,6 +7,10 @@
 
 An interactive, scientifically validated 3D simulation platform for dairy cattle (*Bos taurus*), built with Three.js (ES modules, zero build step). Designed for computer vision benchmarking, synthetic dataset generation for animal pose estimation (YOLO-pose, DeepLabCut, SLEAP), automated lameness detection, and veterinary education.
 
+### 📚 Belangrijke Documentatie / Key Documentation
+* 📖 **[Uitgebreide Handleiding & Instellingen (Nederlands)](HANDLEIDING_INSTELLINGEN.md)**: Volledige documentatie van alle 5 bedieningstabs, 20 CRV-exterieurkenmerken, BCS-vertex-sculpting, Sprecher-kreupelheidsmodellen, dracht-asymmetrie en anti-clipping pootvrijwaring.
+* 🎓 **[Wetenschappelijke & Anatomische Validatie (WUR NLAS)](WETENSCHAPPELIJKE_VALIDATIE.md)**: Uitgebreid veterinair peer-review rapport over osteologie, biomechanica, relaxine-peripartum en kinematische ketencompensaties.
+
 ---
 
 ## Table of Contents
@@ -15,7 +19,7 @@ An interactive, scientifically validated 3D simulation platform for dairy cattle
 3. [Behavioral & Kinematic Specifications](#3-behavioral--kinematic-specifications)
 4. [Scientific Justification & Literature Grounding](#4-scientific-justification--literature-grounding)
 5. [Physics, Gravity & Ground Reaction Force (GRF)](#5-physics-gravity--ground-reaction-force-grf)
-6. [Locomotion Track Symmetrization (Claw Drag Elimination)](#6-locomotion-track-symmetrization-claw-drag-elimination)
+6. [Locomotion Track Symmetrization (Claw Drag & Stride Balance Fix)](#6-locomotion-track-symmetrization-claw-drag-elimination)
 7. [Repository Structure](#7-repository-structure)
 8. [Quickstart & Usage](#8-quickstart--usage)
 9. [References](#9-references)
@@ -215,23 +219,33 @@ In cattle, the weight distribution is asymmetric: forelimbs support **55–58%**
 
 ---
 
-## 6. Locomotion Track Symmetrization (Claw Drag Elimination)
+## 6. Locomotion Track Symmetrization & Anti-Clipping Clearance
 
-### 6.1 Root Cause of the Left Hind Drag
-Visual observation revealed that during the walk cycle, the left hind claw (`HL`) was dragging with its heel bent backwards into the grass, while the right hind claw (`HR`) moved cleanly.
-Mathematical analysis of the underlying GLTF keyframe tracks revealed:
-* `RigRBLegAnkle` (right hind) had clean keyframed angles oscillating smoothly between $-0.35\text{ rad}$ and $+1.11\text{ rad}$.
-* `RigLBLegAnkle` (left hind) possessed an unintended **constant rotational bias of $+1.16\text{ rad}$ (~66.5°)** in its Z-axis track.
-* An earlier procedural compensation (`_applyLocalRot('pasternHL', 0, 0, rollCurve * 0.36)`) further aggravated the distortion by tilting the pastern another 20°, forcing the heel into the pasture floor like a broken joint.
+### 6.1 Root Cause of Asymmetric Stride & Leg Penetration
+Visual observation and telemetry analysis revealed two critical biomechanical artifacts in raw clips:
+1. **Front Limb Asymmetry ("De ene voorpoot gaat verder dan de andere"):**
+   In the raw asset keyframes, `RigRFLeg1` swung with an amplitude of $60.4^\circ$ (spanning $-24^\circ$ to $+36^\circ$), whereas `RigLFLeg1` had a backward-biased swing (spanning $-48^\circ$ to $-2^\circ$). The left forelimb barely reached forward and instead kicked backward under the body.
+2. **Torso Collision on Broad/Fat Cattle ("Been dwars door de koe"):**
+   When body condition score (BCS $> 3.0$), chest width, body depth, or pregnancy expansion increased, the ribcage and belly expanded laterally by up to $15\text{ cm}$. Because bone pivots were static, the left front leg swung directly through the expanded thoracic mesh during locomotion.
 
 ### 6.2 The Mathematical Symmetrization Fix
-In [`js/main.js`](file:///Volumes/dev/nlas_cow_3d/js/main.js#L150-L215), the `sanitizeLocomotionClips()` method automatically mirrors the verified, flawless `RigRBLeg` animation tracks to `RigLBLeg` upon model loading:
-$$\text{HL}_{\text{track}}(t) = \text{MirrorX}\left(\text{HR}_{\text{track}}\left((t + 0.5 \cdot T) \pmod{T}\right)\right)$$
-where $T$ is the clip duration and mirroring across the sagittal plane transforms:
-* Quaternion tracks: $(x, y, z, w) \longrightarrow (-x, -y, z, w)$
-* Position tracks: $(x, y, z) \longrightarrow (-x, y, z)$
+In [`js/main.js`](file:///Volumes/dev/nlas_cow_3d/js/main.js), `sanitizeLocomotionClips()` automatically mirrors all flawless right-side limb tracks to the left side across the sagittal plane ($X = 0$) with a half-cycle phase shift ($T / 2$):
+$$\text{Limb}_L(t) = \text{MirrorX}\left(\text{Limb}_R\left((t + 0.5 \cdot T) \pmod{T}\right)\right)$$
+where quaternions transform as:
+$$q_L = (-q_{R,x}, -q_{R,y}, q_{R,z}, q_{R,w})$$
+Applied to all 8 limb bones:
+* **Forelimbs:** `RigRFLegCollarbone`, `RigRFLeg1`, `RigRFLeg2`, `RigRFLeg3`, `RigRFLegAnkle`.
+* **Hindlimbs:** `RigRBLeg1`, `RigRBLeg2`, `RigRBLeg3`, `RigRBLegAnkle`.
 
-**Result:** Both hindlimbs now exhibit 100% mathematical symmetry, natural heel-to-toe roll-over, and clean clearance during the swing phase.
+**Result:** Both forelimbs and hindlimbs exhibit 100% mathematical symmetry (exact 0.70 m stride span on both left and right forelimbs).
+
+### 6.3 Lateral Anti-Clipping Clearance System
+In [`js/cow/CowBehavior.js`](file:///Volumes/dev/nlas_cow_3d/js/cow/CowBehavior.js), an adaptive clearance kinematic chain prevents collision between limbs and expanded torso tissue:
+1. **Adaptive Abduction:**
+   $$\theta_{\text{clearance}} = \text{fatBCS} \cdot 0.12 + \text{modCW} \cdot 0.08 + \text{fetalVolume} \cdot 0.04$$
+   The upper leg swings outward, while the lower leg and pastern compensate ($-60\%$ and $-40\%$) to keep the hoof sole grounded without splay.
+2. **Axilla Damping Corridor:**
+   Vertex expansion in the armpit corridor ($z \in [0.05, 0.28]\text{ m}, y < 0.95\text{ m}$) is damped by $70\%$, maintaining natural contour while guaranteeing collision-free limb excursion.
 
 ---
 

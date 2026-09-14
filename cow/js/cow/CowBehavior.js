@@ -497,12 +497,14 @@ export class CowBehavior {
                 // 12. CRV LINEAIRE KENMERKEN SCULPTING (Voorhand, Inhoud, Kruisbreedte, Uier)
                 // A. Voorhand / Chest Width: Z = -0.15 tot 0.30, Y = 0.60 tot 1.30, absX > 0.10
                 if (z > -0.15 && z < 0.30 && y > 0.60 && y < 1.30 && absX > 0.10) {
-                    x += signX * modChestWidth * 0.045;
+                    const axillaDamp = (z > 0.05 && z < 0.28 && y < 0.95 && absX > 0.14) ? 0.30 : 1.0;
+                    x += signX * modChestWidth * 0.045 * axillaDamp;
                 }
                 // B. Inhoud / Rompdiepte: Z = -0.65 tot 0.15, Y = 0.50 tot 1.05
                 if (z > -0.65 && z < 0.15 && y > 0.50 && y < 1.05) {
+                    const axillaDamp = (z > 0.02 && z < 0.15 && y < 0.95 && absX > 0.14) ? 0.30 : 1.0;
                     y -= modBodyDepth * 0.055;
-                    x += signX * modBodyDepth * 0.035;
+                    x += signX * modBodyDepth * 0.035 * axillaDamp;
                 }
                 // C. Kruisbreedte: Z = -1.25 tot -0.75, Y = 1.05 tot 1.38, absX > 0.10
                 if (z > -1.25 && z < -0.75 && y > 1.05 && y < 1.38 && absX > 0.10) {
@@ -1218,9 +1220,9 @@ export class CowBehavior {
     _applyStandingLameness() {
         const hScores = this.state.hoofScores || { FL: 1.0, FR: 1.0, HL: 1.0, HR: 1.0 };
         const maxScore = Math.max(...Object.values(hScores));
-        if (maxScore >= 2.0) {
-            // Sprecher et al. (1997): rugboog ook in stilstand zichtbaar bij score >= 2
-            const arch = (maxScore - 1.5) / 3.5 * 0.15;
+        if (maxScore >= 3.0) {
+            // Sprecher et al. (1997): Score 1 & 2 zijn vlak in stand; rugboog in stilstand treedt pas op vanaf score 3
+            const arch = (maxScore - 2.0) / 3.0 * 0.16;
             this._applyLocalRot('spine1', arch * 0.40, 0, 0);
             this._applyLocalRot('spine2', arch * 0.35, 0, 0);
             this._applyLocalRot('spine3', arch * 0.25, 0, 0);
@@ -1233,6 +1235,9 @@ export class CowBehavior {
                 const sideSign = rearDiff > 0 ? 1 : -1;
                 this._applyLocalRot('pelvis', 0, 0, sideSign * Math.abs(rearDiff) * 0.025);
             }
+        } else {
+            // Score 1 en 2: ruglijn is vlak in stand
+            this.telemetry.spineArchDeg = 0;
         }
     }
 
@@ -1709,6 +1714,12 @@ export class CowBehavior {
                 const hockTilt = (bt.rearLegSide - 100) * 0.025;
                 this._applyLocalRot('lowerLegHL', hockTilt, 0, 0);
                 this._applyLocalRot('lowerLegHR', hockTilt, 0, 0);
+                // Kinematische ketencompensatie (WHFF & Sprecher validatie):
+                // koot en bovenbeen compenseren zodat zool horizontaal en op de grond blijft (P_hoof,y == 0)
+                this._applyLocalRot('pasternHL', -hockTilt * 0.65, 0, 0);
+                this._applyLocalRot('pasternHR', -hockTilt * 0.65, 0, 0);
+                this._applyLocalRot('upperLegHL', -hockTilt * 0.35, 0, 0);
+                this._applyLocalRot('upperLegHR', -hockTilt * 0.35, 0, 0);
             }
             // Klauwhoek (88 plat/lage verzenen .. 100 normaal .. 112 steil)
             if (bt.clawAngle) {
@@ -1724,6 +1735,37 @@ export class CowBehavior {
                 this._applyLocalRot('lowerLegFL', 0, frontLegYaw, 0);
                 this._applyLocalRot('lowerLegFR', 0, -frontLegYaw, 0);
             }
+        }
+
+        // ── 1c. Vetzucht, Inhoud & Dracht: Laterale Pootvrijwaring (Anti-Clipping) ──
+        // Wanneer de koe dikker of hoogdrachtig wordt (BCS > 3.0, diepe inhoud/voorhand, kalfbuik),
+        // zwaaien en staan de voorbenen en achterbenen natuurlijk wijder uit om de romp en uier vrij te houden.
+        // Dit voorkomt dat de voorbenen dwars door de ribben/buikwand snijden bij zware koeien.
+        const fatBCS = Math.max(0, (bcs - 3.0) / 2.0); // 0 .. 1
+        const modCW = bt ? Math.max(0, ((bt.chestWidth || 100) - 100) / 12.0) : 0;
+        const modBD = bt ? Math.max(0, ((bt.bodyDepth || 100) - 100) / 12.0) : 0;
+        const modRW = bt ? Math.max(0, ((bt.rumpWidth || 100) - 100) / 12.0) : 0;
+
+        const frontClearance = fatBCS * 0.12 + modCW * 0.08 + modBD * 0.04 + fetalVolume * 0.04;
+        if (frontClearance > 0.001) {
+            // Laterale roll op de schouder/bovenbeen houdt het been buiten de verbrede ribbenwand
+            this._applyLocalRot('upperLegFL', 0, 0, frontClearance);
+            this._applyLocalRot('upperLegFR', 0, 0, -frontClearance);
+            // Koot en onderbeen compenseren zodat de klauwzool vlak op de vloer landt
+            this._applyLocalRot('lowerLegFL', 0, 0, -frontClearance * 0.60);
+            this._applyLocalRot('lowerLegFR', 0, 0, frontClearance * 0.60);
+            this._applyLocalRot('pasternFL',  0, 0, -frontClearance * 0.40);
+            this._applyLocalRot('pasternFR',  0, 0, frontClearance * 0.40);
+        }
+
+        const hindClearance = fatBCS * 0.08 + modRW * 0.06 + fetalVolume * 0.08;
+        if (hindClearance > 0.001) {
+            this._applyLocalRot('upperLegHL', 0, 0, -hindClearance);
+            this._applyLocalRot('upperLegHR', 0, 0, hindClearance);
+            this._applyLocalRot('lowerLegHL', 0, 0, hindClearance * 0.60);
+            this._applyLocalRot('lowerLegHR', 0, 0, -hindClearance * 0.60);
+            this._applyLocalRot('pasternHL',  0, 0, hindClearance * 0.40);
+            this._applyLocalRot('pasternHR',  0, 0, -hindClearance * 0.40);
         }
 
         // Vergrendel alle wervelkolom- en bekkenbotten permanent op 1.0 (schaalvermenigvuldiging uitgesloten)

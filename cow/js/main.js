@@ -184,8 +184,17 @@ class SceneController {
 
             const halfDur = clip.duration * 0.5;
             const bonesToMirror = [
+                // Achterbenen
+                { r: 'RigRBLeg1', l: 'RigLBLeg1' },
+                { r: 'RigRBLeg2', l: 'RigLBLeg2' },
                 { r: 'RigRBLeg3', l: 'RigLBLeg3' },
-                { r: 'RigRBLegAnkle', l: 'RigLBLegAnkle' }
+                { r: 'RigRBLegAnkle', l: 'RigLBLegAnkle' },
+                // Voorbenen (symmetriseert paslengte zodat links even ver reikt als rechts)
+                { r: 'RigRFLegCollarbone', l: 'RigLFLegCollarbone' },
+                { r: 'RigRFLeg1', l: 'RigLFLeg1' },
+                { r: 'RigRFLeg2', l: 'RigLFLeg2' },
+                { r: 'RigRFLeg3', l: 'RigLFLeg3' },
+                { r: 'RigRFLegAnkle', l: 'RigLFLegAnkle' }
             ];
 
             bonesToMirror.forEach(pair => {
