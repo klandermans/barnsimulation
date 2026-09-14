@@ -68,8 +68,8 @@ export class CowBehavior {
             parity:             2,           // 0=vaars, 1=eersterangs, 2-3=volwassen, 4-5=oudere meerkalfs
             gestationDays:      0,           // 0 - 282 dagen (rund ~280d)
             bcs:                3.0,         // Body Condition Score: 1.0 - 5.0 (stappen 0.25)
-            hasHorns:           false,       // false = Onthoorn / Hoornloos (polled), true = Gehoornd
-            hornScale:          0.0,         // 0.0 = Glad onthoorn, 0.35 = Scurs / Stompen, 1.0 = Gehoornd, 1.3 = Lang
+            hasHorns:           true,        // false = Onthoorn / Hoornloos (polled), true = Gehoornd
+            hornScale:          1.0,         // 0.0 = Glad onthoorn, 0.35 = Scurs / Stompen, 1.0 = Gehoornd, 1.3 = Lang
 
             // Micro-gedragingen: Vertering & Voeding
             ruminating:         false,       // Herkauwen

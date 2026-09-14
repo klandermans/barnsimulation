@@ -49,8 +49,8 @@ export class HerdManager {
                 parity: 3,           // Volwassen 3e kalfs
                 gestationDays: 140,  // Midden-dracht (5 maanden)
                 bcs: 3.0,            // Optimaal
-                hasHorns: false,     // Onthoorn / Genetisch hoornloos
-                hornScale: 0.0,
+                hasHorns: true,      // Gehoornd (standaard)
+                hornScale: 1.0,
             },
             {
                 id: 1,
@@ -65,8 +65,8 @@ export class HerdManager {
                 parity: 2,           // 2e kalfs (vroege lactatie)
                 gestationDays: 45,   // Vroege dracht
                 bcs: 2.75,          // Melktypisch
-                hasHorns: false,     // Onthoorn
-                hornScale: 0.0,
+                hasHorns: true,      // Gehoornd
+                hornScale: 1.0,
             },
             {
                 id: 2,

@@ -15,6 +15,7 @@ export class ControlPanel {
         this._updateLocoScoreLabel();
         this._syncBreedingUI();
         this._syncProductionUI();
+        this._syncHornUI();
         this._syncCowPassportUI();
     }
 
