@@ -33,7 +33,10 @@
     <div id="control-panel">
         <div id="panel-header">
             <span>🐄 Koe Simulator — Gedrag & Exterieur</span>
-            <button id="panel-toggle" title="Klap paneel in/uit">◀</button>
+            <div style="display:flex; gap:6px; align-items:center;">
+                <button id="btn-run-validation-header" style="background:#10b981; color:#fff; border:none; padding:3px 8px; border-radius:4px; font-size:10px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px;" title="Start geautomatiseerde biomechanische validatietests">🧪 Validatie</button>
+                <button id="panel-toggle" title="Klap paneel in/uit">◀</button>
+            </div>
         </div>
 
         <!-- Tab Navigatie Header (5 Tabs: Fenotype, Productie, Gangwerk, Welzijn, Kudde) -->
@@ -893,6 +896,8 @@
                             <div class="cit-text">• <em>Flower & Weary (2006)</em>: J. Dairy Sci. 89:2084-2093.</div>
                             <div class="cit-text">• <em>van der Tol et al. (2002, 2003)</em>: J. Dairy Sci. 85:1476 & 86:2875.</div>
                         </div>
+
+                        <button id="btn-run-validation-tab3" class="btn" style="width:100%; margin-top:10px; background:linear-gradient(135deg, #10b981, #059669); color:#fff; font-weight:700; font-size:11px; padding:9px 12px; border-radius:6px; border:none; cursor:pointer; box-shadow:0 2px 4px rgba(0,0,0,0.2); display:flex; align-items:center; justify-content:center; gap:6px;">🧪 Start Geautomatiseerde Biomechanische Validatietest</button>
                     </div>
                 </div>
 
@@ -903,6 +908,34 @@
                 <span id="fps-counter">FPS: --</span>
                 <span id="behavior-status">Gedrag: Lopen</span>
                 <span id="cycle-indicator">Cyclus: 0%</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Biomechanical Validation Modal -->
+    <div id="validation-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(15,23,42,0.85); backdrop-filter:blur(8px); z-index:999999; justify-content:center; align-items:center;">
+        <div style="background:#0f172a; border:1px solid #334155; border-radius:12px; max-width:680px; width:92%; max-height:90vh; display:flex; flex-direction:column; box-shadow:0 20px 50px rgba(0,0,0,0.6); overflow:hidden; font-family:system-ui, -apple-system, sans-serif;">
+            <div style="padding:14px 20px; background:#1e293b; border-bottom:1px solid #334155; display:flex; justify-content:space-between; align-items:center;">
+                <div style="font-weight:700; color:#f8fafc; font-size:14px; display:flex; align-items:center; gap:8px;">
+                    <span>🔬 WUR NLAS — Biomechanische & Veterinaire Validatie</span>
+                </div>
+                <button id="btn-close-val-modal" style="background:transparent; border:none; color:#94a3b8; font-size:18px; cursor:pointer; padding:2px 6px;">✕</button>
+            </div>
+            <div id="val-modal-body" style="padding:18px 20px; overflow-y:auto; flex:1; color:#cbd5e1; font-size:12px; line-height:1.5;">
+                <div id="val-progress-box" style="text-align:center; padding:30px 10px;">
+                    <div style="font-size:13px; color:#38bdf8; margin-bottom:12px;" id="val-progress-text">Klaar om validatietest te starten...</div>
+                    <div style="background:#334155; height:8px; border-radius:4px; overflow:hidden; width:80%; margin:0 auto;">
+                        <div id="val-progress-bar" style="background:#10b981; width:0%; height:100%; transition:width 0.3s ease;"></div>
+                    </div>
+                </div>
+                <div id="val-results-content" style="display:none;"></div>
+            </div>
+            <div style="padding:12px 20px; background:#1e293b; border-top:1px solid #334155; display:flex; justify-content:space-between; align-items:center;">
+                <button id="btn-re-run-val" style="background:#3b82f6; color:#fff; border:none; padding:7px 14px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;">🔄 Test Uitvoeren</button>
+                <div style="display:flex; gap:8px;">
+                    <button id="btn-export-val-json" style="background:#334155; color:#f8fafc; border:1px solid #475569; padding:7px 14px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; display:none;">📥 Exporteer JSON Rapport</button>
+                    <button id="btn-close-val-footer" style="background:#475569; color:#fff; border:none; padding:7px 14px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer;">Sluiten</button>
+                </div>
             </div>
         </div>
     </div>

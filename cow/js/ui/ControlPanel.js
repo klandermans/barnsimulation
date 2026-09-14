@@ -17,6 +17,7 @@ export class ControlPanel {
         this._syncProductionUI();
         this._syncHornUI();
         this._syncCowPassportUI();
+        this._initValidationModal();
     }
 
     _attachEvents() {
@@ -1297,6 +1298,117 @@ export class ControlPanel {
                 bmAbduct.textContent = '✅ Rechtsporig (0°)';
                 bmAbduct.className = 'bm-status';
             }
+        }
+    }
+
+    _initValidationModal() {
+        const modal = document.getElementById('validation-modal');
+        const btnHeader = document.getElementById('btn-run-validation-header');
+        const btnTab3 = document.getElementById('btn-run-validation-tab3');
+        const btnCloseX = document.getElementById('btn-close-val-modal');
+        const btnCloseFooter = document.getElementById('btn-close-val-footer');
+        const btnReRun = document.getElementById('btn-re-run-val');
+        const btnExport = document.getElementById('btn-export-val-json');
+        const progressBox = document.getElementById('val-progress-box');
+        const progressBar = document.getElementById('val-progress-bar');
+        const progressText = document.getElementById('val-progress-text');
+        const resultsContent = document.getElementById('val-results-content');
+
+        if (!modal) return;
+
+        let latestReport = null;
+
+        const closeModal = () => {
+            modal.style.display = 'none';
+        };
+
+        [btnCloseX, btnCloseFooter].forEach(b => {
+            if (b) b.addEventListener('click', closeModal);
+        });
+
+        // Sluit ook bij klik op backdrop
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeModal();
+        });
+
+        const startValidation = async () => {
+            modal.style.display = 'flex';
+            progressBox.style.display = 'block';
+            resultsContent.style.display = 'none';
+            if (btnExport) btnExport.style.display = 'none';
+            progressBar.style.width = '0%';
+            progressText.textContent = 'Validatietests voorbereiden...';
+
+            try {
+                const { BiomechanicalValidator } = await import('../tests/BiomechanicalValidator.js?v=' + Date.now());
+                const report = await BiomechanicalValidator.runFullValidation(this.behavior, (step, total, msg) => {
+                    const pct = Math.round((step / total) * 100);
+                    progressBar.style.width = pct + '%';
+                    progressText.textContent = `[${step}/${total}] ${msg}`;
+                });
+
+                latestReport = report;
+                progressBox.style.display = 'none';
+                resultsContent.style.display = 'block';
+                if (btnExport) btnExport.style.display = 'inline-block';
+
+                let html = `
+                    <div style="margin-bottom:14px; padding:12px 14px; border-radius:8px; background:${report.overallPassed ? '#064e3b' : '#7f1d1d'}; border:1px solid ${report.overallPassed ? '#059669' : '#dc2626'};">
+                        <div style="font-weight:700; font-size:13px; color:#fff; display:flex; justify-content:space-between; align-items:center;">
+                            <span>${report.overallPassed ? '🎉 ALLE BIOMECHANISCHE INVARIANTEN SUCCESVOL GEVALIDEERD' : '⚠️ VALIDATIEAFWIJKING GEDETECTEERD'}</span>
+                            <span style="background:rgba(0,0,0,0.25); padding:3px 8px; border-radius:4px;">${report.passedSuites}/${report.totalSuites} geslaagd</span>
+                        </div>
+                        <div style="font-size:11px; color:#e2e8f0; margin-top:5px;">
+                            WUR NLAS automatische inspectie van botten, hoeven, gewrichten, romp-penetratie en Sprecher-locomotie.
+                        </div>
+                    </div>
+                `;
+
+                report.suites.forEach((s, idx) => {
+                    const isPass = s.passed;
+                    html += `
+                        <div style="background:#1e293b; border:1px solid ${isPass ? '#334155' : '#ef4444'}; border-radius:8px; padding:10px 14px; margin-bottom:8px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                                <span style="font-weight:700; color:#f8fafc; font-size:12px;">${idx + 1}. ${s.title}</span>
+                                <span style="font-size:10px; font-weight:700; padding:2px 7px; border-radius:4px; background:${isPass ? '#059669' : '#dc2626'}; color:#fff;">
+                                    ${isPass ? '✅ PASS' : '❌ FAIL'}
+                                </span>
+                            </div>
+                            <div style="font-size:11px; color:#94a3b8; margin-bottom:6px;">${s.verdict}</div>
+                            ${s.threshold ? `<div style="font-size:10px; color:#64748b; margin-bottom:4px;"><strong>Norm / Grenswaarde:</strong> ${s.threshold}</div>` : ''}
+                            ${s.measured ? `
+                                <div style="display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:6px; background:#0f172a; padding:6px 10px; border-radius:5px; font-size:10.5px;">
+                                    ${Object.entries(s.measured).map(([k, v]) => `<div><span style="color:#64748b;">${k}:</span> <strong style="color:#38bdf8;">${v}</strong></div>`).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+
+                resultsContent.innerHTML = html;
+
+            } catch (err) {
+                progressBox.style.display = 'none';
+                resultsContent.style.display = 'block';
+                resultsContent.innerHTML = `<div style="color:#ef4444; padding:15px; background:#1e293b; border-radius:8px;"><strong>Fout tijdens validatietest:</strong> ${err.message}</div>`;
+            }
+        };
+
+        [btnHeader, btnTab3, btnReRun].forEach(b => {
+            if (b) b.addEventListener('click', startValidation);
+        });
+
+        if (btnExport) {
+            btnExport.addEventListener('click', () => {
+                if (!latestReport) return;
+                const blob = new Blob([JSON.stringify(latestReport, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `WUR_NLAS_Biomechanische_Validatie_${Date.now()}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            });
         }
     }
 }

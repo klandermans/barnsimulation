@@ -1746,26 +1746,27 @@ export class CowBehavior {
         const modBD = bt ? Math.max(0, ((bt.bodyDepth || 100) - 100) / 12.0) : 0;
         const modRW = bt ? Math.max(0, ((bt.rumpWidth || 100) - 100) / 12.0) : 0;
 
-        const frontClearance = fatBCS * 0.12 + modCW * 0.08 + modBD * 0.04 + fetalVolume * 0.04;
+        const frontClearance = 0.018 + fatBCS * 0.12 + modCW * 0.08 + modBD * 0.04 + fetalVolume * 0.04;
         if (frontClearance > 0.001) {
-            // Laterale roll op de schouder/bovenbeen houdt het been buiten de verbrede ribbenwand
-            this._applyLocalRot('upperLegFL', 0, 0, frontClearance);
-            this._applyLocalRot('upperLegFR', 0, 0, -frontClearance);
+            // Laterale abductie op schouder/bovenbeen (Y-as) houdt het been buiten de verbrede ribbenwand
+            this._applyLocalRot('upperLegFL', 0, frontClearance, 0);
+            this._applyLocalRot('upperLegFR', 0, -frontClearance, 0);
             // Koot en onderbeen compenseren zodat de klauwzool vlak op de vloer landt
-            this._applyLocalRot('lowerLegFL', 0, 0, -frontClearance * 0.60);
-            this._applyLocalRot('lowerLegFR', 0, 0, frontClearance * 0.60);
-            this._applyLocalRot('pasternFL',  0, 0, -frontClearance * 0.40);
-            this._applyLocalRot('pasternFR',  0, 0, frontClearance * 0.40);
+            this._applyLocalRot('lowerLegFL', 0, -frontClearance * 0.60, 0);
+            this._applyLocalRot('lowerLegFR', 0, frontClearance * 0.60, 0);
+            this._applyLocalRot('pasternFL',  0, -frontClearance * 0.40, 0);
+            this._applyLocalRot('pasternFR',  0, frontClearance * 0.40, 0);
         }
 
-        const hindClearance = fatBCS * 0.08 + modRW * 0.06 + fetalVolume * 0.08;
+        const hindClearance = 0.012 + fatBCS * 0.08 + modRW * 0.06 + fetalVolume * 0.08;
         if (hindClearance > 0.001) {
-            this._applyLocalRot('upperLegHL', 0, 0, -hindClearance);
-            this._applyLocalRot('upperLegHR', 0, 0, hindClearance);
-            this._applyLocalRot('lowerLegHL', 0, 0, hindClearance * 0.60);
-            this._applyLocalRot('lowerLegHR', 0, 0, -hindClearance * 0.60);
-            this._applyLocalRot('pasternHL',  0, 0, hindClearance * 0.40);
-            this._applyLocalRot('pasternHR',  0, 0, -hindClearance * 0.40);
+            // Laterale abductie op heup/bovenbeen achter (Y-as) houdt achterbeen vrij van uier en flank
+            this._applyLocalRot('upperLegHL', 0, hindClearance, 0);
+            this._applyLocalRot('upperLegHR', 0, -hindClearance, 0);
+            this._applyLocalRot('lowerLegHL', 0, -hindClearance * 0.60, 0);
+            this._applyLocalRot('lowerLegHR', 0, hindClearance * 0.60, 0);
+            this._applyLocalRot('pasternHL',  0, -hindClearance * 0.40, 0);
+            this._applyLocalRot('pasternHR',  0, hindClearance * 0.40, 0);
         }
 
         // Vergrendel alle wervelkolom- en bekkenbotten permanent op 1.0 (schaalvermenigvuldiging uitgesloten)
